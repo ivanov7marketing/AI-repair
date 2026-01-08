@@ -7,18 +7,18 @@ import { PERMISSIONS } from '../config/permissions';
 const router = express.Router();
 
 const createPriceItemSchema = z.object({
-  name: z.string().min(1),
+  name: z.string(), // Allow empty string for new items that will be edited later
   unit: z.string().min(1),
-  price: z.number().positive(),
+  price: z.number().min(0), // Allow 0 for new items that will be edited later
   category: z.string().min(1),
   subcategory: z.string().optional(),
   type: z.enum(['work', 'rough', 'finish']),
 });
 
 const updatePriceItemSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: z.string().optional(), // Allow empty string for editing
   unit: z.string().min(1).optional(),
-  price: z.number().positive().optional(),
+  price: z.number().min(0).optional(), // Allow 0 for editing
   category: z.string().min(1).optional(),
   subcategory: z.string().optional(),
   type: z.enum(['work', 'rough', 'finish']).optional(),
@@ -311,7 +311,15 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.EDIT_PRICES), asy
       `INSERT INTO price_items (organization_id, name, unit, price, category, subcategory, type)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, name, unit, price, category, subcategory, type, created_at, updated_at`,
-      [req.user.organizationId, body.name, body.unit, body.price, body.category, body.subcategory || null, body.type]
+      [
+        req.user.organizationId, 
+        body.name || '', 
+        body.unit, 
+        body.price, 
+        body.category, 
+        body.subcategory || null, 
+        body.type
+      ]
     );
 
     const row = result.rows[0];

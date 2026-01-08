@@ -44,6 +44,11 @@ class ApiClient {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ error: 'Request failed' }));
+        // Include validation details if available
+        if (error.details && Array.isArray(error.details)) {
+          const details = error.details.map((d: any) => `${d.path.join('.')}: ${d.message}`).join(', ');
+          throw new Error(error.error || 'Validation error' + (details ? `: ${details}` : ''));
+        }
         throw new Error(error.error || `HTTP ${response.status}`);
       }
 
