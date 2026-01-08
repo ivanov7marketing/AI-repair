@@ -344,6 +344,8 @@ const App: React.FC = () => {
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const recognitionRef = React.useRef<any>(null);
+  const finalTranscriptRef = React.useRef<string>('');
+  const isStoppingRef = React.useRef<boolean>(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1377,9 +1379,13 @@ const App: React.FC = () => {
     recognition.onstart = () => {
       setIsRecording(true);
       setVoiceTranscript('');
+      finalTranscriptRef.current = '';
+      isStoppingRef.current = false;
     };
     
     recognition.onresult = (event: any) => {
+      if (isStoppingRef.current) return; // Игнорируем результаты после остановки
+      
       let finalTranscript = '';
       let interimTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -1390,29 +1396,40 @@ const App: React.FC = () => {
           interimTranscript += transcript;
         }
       }
-      // Показываем промежуточный результат во время говорения
-      if (interimTranscript) {
-        setVoiceTranscript(interimTranscript);
-      }
+      // Сохраняем финальный текст
       if (finalTranscript) {
-        setVoiceTranscript(prev => (prev ? prev + ' ' : '') + finalTranscript);
+        finalTranscriptRef.current = (finalTranscriptRef.current ? finalTranscriptRef.current + ' ' : '') + finalTranscript;
       }
+      // Показываем промежуточный результат во время говорения
+      const displayText = finalTranscriptRef.current + (interimTranscript ? ' ' + interimTranscript : '');
+      setVoiceTranscript(displayText);
     };
     
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
       setIsRecording(false);
+      isStoppingRef.current = false;
+      
+      // Не показываем ошибку, если мы сами остановили распознавание
+      if (event.error === 'aborted') {
+        return;
+      }
+      
       if (event.error === 'not-allowed') {
         alert('Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.');
       } else if (event.error === 'no-speech') {
         // Молча обрабатываем - пользователь просто не говорил
       } else if (event.error === 'network') {
         alert('Ошибка сети при распознавании речи.');
+      } else {
+        // Для других ошибок не показываем alert, чтобы не мешать пользователю
+        console.warn('Speech recognition error (non-critical):', event.error);
       }
     };
     
     recognition.onend = () => {
       setIsRecording(false);
+      isStoppingRef.current = false;
     };
     
     recognitionRef.current = recognition;
@@ -1420,16 +1437,34 @@ const App: React.FC = () => {
   };
 
   const stopVoiceRecording = async () => {
+    if (isStoppingRef.current) return; // Предотвращаем множественные вызовы
+    isStoppingRef.current = true;
+    
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        // Используем abort() для немедленной остановки вместо stop()
+        recognitionRef.current.abort();
+      } catch (e) {
+        // Если abort не работает, пробуем stop
+        try {
+          recognitionRef.current.stop();
+        } catch (e2) {
+          console.warn('Error stopping recognition:', e2);
+        }
+      }
     }
+    
     setIsRecording(false);
     
-    // Небольшая задержка, чтобы получить финальный текст
+    // Используем сохраненный финальный текст
+    const transcript = (finalTranscriptRef.current || voiceTranscript).trim();
+    
+    // Небольшая задержка, чтобы убедиться, что распознавание остановлено
     setTimeout(async () => {
-      const transcript = voiceTranscript.trim();
       if (!transcript || !selectedRoom) {
         setVoiceTranscript('');
+        finalTranscriptRef.current = '';
+        isStoppingRef.current = false;
         return;
       }
       
@@ -1534,12 +1569,18 @@ const App: React.FC = () => {
         
       } catch (error: any) {
         console.error('Error processing voice:', error);
-        alert('Ошибка обработки голосового ввода: ' + (error.message || 'Неизвестная ошибка'));
+        // Не показываем alert для ошибок, которые могут быть временными
+        const errorMessage = error.message || 'Неизвестная ошибка';
+        if (!errorMessage.includes('aborted') && !errorMessage.includes('cancelled')) {
+          alert('Ошибка обработки голосового ввода: ' + errorMessage);
+        }
       } finally {
         setVoiceTranscript('');
+        finalTranscriptRef.current = '';
         setIsProcessingVoice(false);
+        isStoppingRef.current = false;
       }
-    }, 300);
+    }, 500); // Увеличиваем задержку для надежности
   };
 
   const calculateSubtotalByType = (items?: EstimationItem[], type?: 'work' | 'rough' | 'finish') => {
@@ -2664,13 +2705,44 @@ const App: React.FC = () => {
                                                       
                                                       {/* Кнопка голосового ввода */}
                                                       <button
-                                                        onMouseDown={startVoiceRecording}
-                                                        onMouseUp={stopVoiceRecording}
-                                                        onMouseLeave={() => isRecording && stopVoiceRecording()}
-                                                        onTouchStart={startVoiceRecording}
-                                                        onTouchEnd={stopVoiceRecording}
+                                                        onMouseDown={(e) => {
+                                                          e.preventDefault();
+                                                          if (!isProcessingVoice && !isRecording) {
+                                                            startVoiceRecording();
+                                                          }
+                                                        }}
+                                                        onMouseUp={(e) => {
+                                                          e.preventDefault();
+                                                          if (isRecording) {
+                                                            stopVoiceRecording();
+                                                          }
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                          // Останавливаем только если кнопка была нажата
+                                                          if (isRecording && e.buttons === 0) {
+                                                            stopVoiceRecording();
+                                                          }
+                                                        }}
+                                                        onTouchStart={(e) => {
+                                                          e.preventDefault();
+                                                          if (!isProcessingVoice && !isRecording) {
+                                                            startVoiceRecording();
+                                                          }
+                                                        }}
+                                                        onTouchEnd={(e) => {
+                                                          e.preventDefault();
+                                                          if (isRecording) {
+                                                            stopVoiceRecording();
+                                                          }
+                                                        }}
+                                                        onTouchCancel={(e) => {
+                                                          e.preventDefault();
+                                                          if (isRecording) {
+                                                            stopVoiceRecording();
+                                                          }
+                                                        }}
                                                         disabled={isProcessingVoice}
-                                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 select-none ${
                                                           isRecording 
                                                             ? 'bg-red-500 text-white animate-pulse' 
                                                             : isProcessingVoice
