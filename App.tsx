@@ -360,9 +360,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (user && !isLoading) {
       loadProjects();
-      setState(projects.length > 0 ? AppState.PROJECT_LIST : AppState.UPLOAD);
     } else if (!user && !isLoading) {
       setState(AppState.LOGIN);
+      setProjects([]); // Clear projects on logout
     }
   }, [user, isLoading]);
 
@@ -382,8 +382,16 @@ const App: React.FC = () => {
       }));
       setProjects(transformedProjects);
       console.log(`Loaded ${transformedProjects.length} projects from backend`);
+      
+      // Update state after projects are loaded
+      if (transformedProjects.length > 0) {
+        setState(AppState.PROJECT_LIST);
+      } else {
+        setState(AppState.UPLOAD);
+      }
     } catch (error) {
       console.error('Failed to load projects:', error);
+      setState(AppState.UPLOAD); // Show upload screen on error
     }
   };
 
@@ -501,8 +509,7 @@ const App: React.FC = () => {
     setLoginError(null);
     try {
       await login({ email, password });
-      await loadProjects();
-      setState(projects.length > 0 ? AppState.PROJECT_LIST : AppState.UPLOAD);
+      await loadProjects(); // loadProjects will set state internally
     } catch (error: any) {
       setLoginError(error.message || 'Ошибка входа');
     }
@@ -514,8 +521,7 @@ const App: React.FC = () => {
     setIsRegistering(true);
     try {
       await registerAdmin(registerData);
-      await loadProjects();
-      setState(projects.length > 0 ? AppState.PROJECT_LIST : AppState.UPLOAD);
+      await loadProjects(); // loadProjects will set state internally
       setShowRegister(false);
     } catch (error: any) {
       setRegisterError(error.message || 'Ошибка регистрации');
