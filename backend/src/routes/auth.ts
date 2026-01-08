@@ -24,7 +24,7 @@ router.post('/register-admin', async (req: Request, res: Response) => {
   try {
     const body = registerSchema.parse(req.body) as RegisterAdminRequest;
 
-    // Check if email already exists
+    // Check if email already exists (including deleted users to prevent reuse)
     const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [body.email]);
     if (existingUser.rows.length > 0) {
       res.status(400).json({ error: 'Email already registered' });
@@ -108,11 +108,11 @@ router.post('/login', async (req: Request, res: Response) => {
   try {
     const body = loginSchema.parse(req.body) as LoginRequest;
 
-    // Find user
+    // Find user (exclude deleted users)
     const userResult = await pool.query(
       `SELECT u.id, u.email, u.password_hash, u.name, u.organization_id, u.role
        FROM users u
-       WHERE u.email = $1`,
+       WHERE u.email = $1 AND u.deleted_at IS NULL`,
       [body.email]
     );
 

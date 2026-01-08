@@ -36,14 +36,14 @@ export const authMiddleware = async (
 
     const decoded = jwt.verify(token, secret) as JWTPayload;
     
-    // Load user from database
+    // Load user from database (exclude deleted users)
     const result = await pool.query(
-      'SELECT id, email, name, organization_id, role, created_at, created_by FROM users WHERE id = $1',
+      'SELECT id, email, name, organization_id, role, created_at, created_by FROM users WHERE id = $1 AND deleted_at IS NULL',
       [decoded.userId]
     );
 
     if (result.rows.length === 0) {
-      res.status(401).json({ error: 'User not found' });
+      res.status(401).json({ error: 'User not found or deleted' });
       return;
     }
 
