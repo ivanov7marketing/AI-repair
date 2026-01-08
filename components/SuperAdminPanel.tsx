@@ -317,16 +317,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                             <span className="text-sm font-bold text-architect-700 dark:text-architect-300">{sub}</span>
                             <span className="text-xs text-architect-400">({items.length} позиций)</span>
                           </button>
-                          {!isFinishingSection && (
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => { handleAddPriceItem('work', sub); setExpandedPriceSections(prev => ({ ...prev, [`work-${sub}`]: true })); }}
-                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
-                              >
-                                <Plus className="w-3 h-3" /> Добавить
-                              </button>
-                            </div>
-                          )}
                         </div>
                         {isExpanded && (
                           <div className="p-4 border-t border-architect-50 dark:border-architect-700">
@@ -357,12 +347,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                                           <span className={`text-sm font-bold ${titleClass}`}>{subSec}</span>
                                           <span className="text-xs text-architect-400">({subItems.length})</span>
                                         </div>
-                                        <button 
-                                          onClick={() => { handleAddPriceItem('work', sub, subSec); }}
-                                          className={`flex items-center gap-1 px-2 py-1 text-[10px] font-bold bg-white dark:bg-architect-800 rounded transition-all ${btnClass}`}
-                                        >
-                                          <Plus className="w-2.5 h-2.5" />
-                                        </button>
                                       </div>
                                       <div className="overflow-x-auto">
                                         {subItems.length > 0 ? (
@@ -413,6 +397,15 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                                             Нет позиций
                                           </div>
                                         )}
+                                      </div>
+                                      {/* Кнопки добавления внизу подраздела */}
+                                      <div className="flex items-center justify-start gap-2 px-3 py-2 border-t border-architect-50 dark:border-architect-700">
+                                        <button 
+                                          onClick={() => { handleAddPriceItem('work', sub, subSec); }}
+                                          className={`flex items-center gap-1 px-2 py-1 text-[10px] font-bold bg-white dark:bg-architect-800 rounded transition-all ${btnClass}`}
+                                        >
+                                          <Plus className="w-2.5 h-2.5" />
+                                        </button>
                                       </div>
                                     </div>
                                   );
@@ -479,6 +472,17 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                                 )}
                               </div>
                             )}
+                            {/* Кнопки добавления внизу обычной секции */}
+                            {!isFinishingSection && (
+                              <div className="flex items-center justify-start gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
+                                <button 
+                                  onClick={() => { handleAddPriceItem('work', sub); setExpandedPriceSections(prev => ({ ...prev, [`work-${sub}`]: true })); }}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
+                                >
+                                  <Plus className="w-3 h-3" /> Добавить
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -493,12 +497,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <h3 className="text-xl font-bold dark:text-white flex items-center gap-2 shrink-0"><Package className="w-5 h-5 text-amber-500" /> Справочник черновых материалов</h3>
-                  <button 
-                    onClick={() => { handleAddPriceItem('rough', 'Черновые материалы'); }}
-                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all"
-                  >
-                    <Plus className="w-3 h-3" /> Добавить
-                  </button>
                 </div>
                 <div className="border border-architect-100 dark:border-architect-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-architect-800">
                   <div className="p-4 border-t border-architect-50 dark:border-architect-700">
@@ -561,6 +559,15 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                       </div>
                     )}
                   </div>
+                  {/* Кнопки добавления внизу черновых материалов */}
+                  <div className="flex items-center justify-start gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
+                    <button 
+                      onClick={() => { handleAddPriceItem('rough', 'Черновые материалы'); }}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all"
+                    >
+                      <Plus className="w-3 h-3" /> Добавить
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -570,12 +577,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <h3 className="text-xl font-bold dark:text-white flex items-center gap-2 shrink-0"><Sparkles className="w-5 h-5 text-blue-500" /> Справочник чистовых материалов</h3>
-                  <button 
-                    onClick={() => { handleAddPriceItem('finish', 'Чистовые материалы'); }}
-                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
-                  >
-                    <Plus className="w-3 h-3" /> Добавить
-                  </button>
                 </div>
                 <div className="border border-architect-100 dark:border-architect-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-architect-800">
                   <div className="p-4 border-t border-architect-50 dark:border-architect-700">
@@ -637,6 +638,15 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                         <p className="text-sm font-medium">Нет чистовых материалов</p>
                       </div>
                     )}
+                  </div>
+                  {/* Кнопки добавления внизу чистовых материалов */}
+                  <div className="flex items-center justify-start gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
+                    <button 
+                      onClick={() => { handleAddPriceItem('finish', 'Чистовые материалы'); }}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                    >
+                      <Plus className="w-3 h-3" /> Добавить
+                    </button>
                   </div>
                 </div>
               </div>
