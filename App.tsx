@@ -1527,62 +1527,111 @@ const App: React.FC = () => {
           // Пользователь сказал своё название, значит нужна новая позиция
           
           // Если позиции нет в прайс-листе, создаём её
-          if (!priceItem && hasPermission(PERMISSIONS.EDIT_PRICES)) {
-            try {
-              // Определяем количество для новой позиции
-              let quantity = item.quantity;
-              if (item.quantitySource !== 'voice' && (item.quantity === null || item.quantity === undefined)) {
-                switch (item.quantitySource) {
-                  case 'floorArea':
-                  case 'ceilingArea':
-                    quantity = floorArea;
-                    break;
-                  case 'wallArea':
-                    quantity = wallArea;
-                    break;
-                  case 'perimeter':
-                    quantity = perimeter;
-                    break;
-                  case 'doors':
-                    quantity = doors;
-                    break;
-                  case 'windows':
-                    quantity = windows;
-                    break;
-                  default:
-                    quantity = 1;
+          if (!priceItem) {
+            // Проверяем права на редактирование прайсов
+            if (!hasPermission(PERMISSIONS.EDIT_PRICES)) {
+              console.warn('No permission to create price item:', item.name);
+              // Продолжаем без создания в прайс-листе, но добавляем в смету
+            } else {
+              try {
+                // Определяем количество для новой позиции
+                let quantity = item.quantity;
+                if (item.quantitySource !== 'voice' && (item.quantity === null || item.quantity === undefined)) {
+                  switch (item.quantitySource) {
+                    case 'floorArea':
+                    case 'ceilingArea':
+                      quantity = floorArea;
+                      break;
+                    case 'wallArea':
+                      quantity = wallArea;
+                      break;
+                    case 'perimeter':
+                      quantity = perimeter;
+                      break;
+                    case 'doors':
+                      quantity = doors;
+                      break;
+                    case 'windows':
+                      quantity = windows;
+                      break;
+                    default:
+                      quantity = 1;
+                  }
                 }
-              }
-              
-              // Извлекаем цену из голосового ввода, если она была указана
-              // Ищем числа с "р", "руб", "рублей" после них
-              let extractedPrice = item.suggestedPrice || 0;
-              if (extractedPrice === 0 || extractedPrice === null) {
-                // Пытаемся извлечь цену из названия или транскрипта
-                const priceMatch = transcript.match(/(\d+)\s*(?:р|руб|рублей|₽)/i);
-                if (priceMatch) {
-                  extractedPrice = parseFloat(priceMatch[1]);
+                
+                // Извлекаем цену из голосового ввода, если она была указана
+                // Ищем числа с "р", "руб", "рублей" после них
+                let extractedPrice = item.suggestedPrice || 0;
+                if (extractedPrice === 0 || extractedPrice === null) {
+                  // Пытаемся извлечь цену из названия или транскрипта
+                  const priceMatch = transcript.match(/(\d+)\s*(?:р|руб|рублей|₽)/i);
+                  if (priceMatch) {
+                    extractedPrice = parseFloat(priceMatch[1]);
+                  }
                 }
+                
+                // Определяем категорию и подкатегорию
+                let category = item.category || 'Черновые отделочные работы';
+                let subcategory: string | undefined = undefined;
+                
+                // Определяем подкатегорию для отделочных работ
+                if (category === 'Черновые отделочные работы' || category === 'Чистовые отделочные работы') {
+                  // Определяем по quantitySource
+                  if (item.quantitySource === 'wallArea') {
+                    subcategory = 'Стены';
+                  } else if (item.quantitySource === 'floorArea') {
+                    subcategory = 'Пол';
+                  } else if (item.quantitySource === 'ceilingArea') {
+                    subcategory = 'Потолок';
+                  } else {
+                    // Пытаемся определить по названию
+                    const nameLower = item.name.toLowerCase();
+                    if (nameLower.includes('стен') || nameLower.includes('стена') || 
+                        nameLower.includes('плитка на стен') || nameLower.includes('запил плитки')) {
+                      subcategory = 'Стены';
+                    } else if (nameLower.includes('пол') || nameLower.includes('пола') || 
+                               nameLower.includes('плитка на пол')) {
+                      subcategory = 'Пол';
+                    } else if (nameLower.includes('потолок') || nameLower.includes('потолка')) {
+                      subcategory = 'Потолок';
+                    }
+                    // Если не определили, но это работа со стенами по умолчанию - ставим Стены
+                    if (!subcategory && (nameLower.includes('плитк') || nameLower.includes('штукатурк') || 
+                                         nameLower.includes('шпаклёвк') || nameLower.includes('покраск'))) {
+                      subcategory = 'Стены';
+                    }
+                  }
+                }
+                
+                console.log('Creating new price item:', {
+                  name: item.name,
+                  category,
+                  subcategory,
+                  type: item.type || 'work',
+                  unit: item.unit || 'шт',
+                  price: extractedPrice > 0 ? extractedPrice : 1
+                });
+                
+                // Создаём новую позицию в прайс-листе
+                const newPriceItem = await api.createPriceItem({
+                  name: item.name,
+                  unit: item.unit || 'шт',
+                  price: extractedPrice > 0 ? extractedPrice : 1, // Если цена не указана, ставим 1 руб.
+                  category,
+                  subcategory,
+                  type: item.type || 'work',
+                });
+                
+                console.log('Successfully created price item:', newPriceItem);
+                
+                // Добавляем в локальный список прайсов
+                setPriceList(prev => [...prev, newPriceItem]);
+                priceItem = newPriceItem;
+              } catch (error) {
+                console.error('Failed to create price item:', error);
+                console.error('Item data:', item);
+                // Продолжаем без добавления в прайс-лист, но добавляем в смету
               }
-              
-              // Создаём новую позицию в прайс-листе
-              const newPriceItem = await api.createPriceItem({
-                name: item.name,
-                unit: item.unit || 'шт',
-                price: extractedPrice > 0 ? extractedPrice : 1, // Если цена не указана, ставим 1 руб.
-                category: item.category || 'Черновые отделочные работы',
-                subcategory: item.category === 'Черновые отделочные работы' || item.category === 'Чистовые отделочные работы' 
-                  ? (item.quantitySource === 'wallArea' ? 'Стены' : item.quantitySource === 'floorArea' ? 'Пол' : item.quantitySource === 'ceilingArea' ? 'Потолок' : undefined)
-                  : undefined,
-                type: item.type || 'work',
-              });
-              
-              // Добавляем в локальный список прайсов
-              setPriceList(prev => [...prev, newPriceItem]);
-              priceItem = newPriceItem;
-            } catch (error) {
-              console.error('Failed to create price item:', error);
-              // Продолжаем без добавления в прайс-лист
             }
           }
           
