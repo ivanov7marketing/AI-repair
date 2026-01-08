@@ -536,13 +536,15 @@ const App: React.FC = () => {
     if (!isEmail) {
       // Try superadmin login
       try {
-        await api.superadminLogin(email, password);
+        const result = await api.superadminLogin(email, password);
+        console.log('Superadmin login successful:', result);
         setIsSuperadmin(true);
         setEmail('');
         setPassword('');
         return;
       } catch (error: any) {
-        setLoginError(error.message || 'Ошибка входа');
+        console.error('Superadmin login error:', error);
+        setLoginError(error.message || 'Ошибка входа суперадмина');
         return;
       }
     }
@@ -552,6 +554,7 @@ const App: React.FC = () => {
       await login({ email, password });
       await loadProjects(); // loadProjects will set state internally
     } catch (error: any) {
+      console.error('User login error:', error);
       setLoginError(error.message || 'Ошибка входа');
     }
   };
