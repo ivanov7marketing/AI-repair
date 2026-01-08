@@ -185,6 +185,83 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // Superadmin endpoints
+  async superadminLogin(username: string, password: string) {
+    const response = await fetch(`${API_URL}/superadmin/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Login failed');
+    }
+
+    const data = await response.json();
+    localStorage.setItem('superadmin_token', data.token);
+    return data;
+  }
+
+  async superadminChangePassword(currentPassword: string, newPassword: string) {
+    return this.superadminRequest('/superadmin/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  async getDefaultPrices() {
+    return this.superadminRequest('/superadmin/default-prices');
+  }
+
+  async createDefaultPrice(data: { name: string; unit: string; price: number; category: string; subcategory?: string; type: 'work' | 'rough' | 'finish'; sort_order?: number }) {
+    return this.superadminRequest('/superadmin/default-prices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDefaultPrice(id: string, data: Partial<{ name: string; unit: string; price: number; category: string; subcategory?: string; type: 'work' | 'rough' | 'finish'; sort_order?: number }>) {
+    return this.superadminRequest(`/superadmin/default-prices/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDefaultPrice(id: string) {
+    return this.superadminRequest(`/superadmin/default-prices/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  private async superadminRequest(endpoint: string, options: RequestInit = {}) {
+    const token = localStorage.getItem('superadmin_token');
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    };
+
+    const url = `${API_URL}${endpoint}`;
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Request failed');
+    }
+
+    return response.json();
+  }
 }
 
 export const api = new ApiClient();

@@ -13,6 +13,7 @@ import * as XLSX from 'xlsx';
 import { PlanUploader } from './components/PlanUploader.tsx';
 import { ImageEditorModal } from './components/ImageEditorModal.tsx';
 import { UsersManagement } from './components/UsersManagement.tsx';
+import { SuperAdminPanel } from './components/SuperAdminPanel.tsx';
 import { analyzeFloorPlan, generateIsometricView, generateRoomInterior, fileToGenerativePart, identifyStyleFromImage, parseVoiceEstimation, VoiceEstimationItem } from './services/routeraiService.ts';
 import { AppState, AnalysisResult, Room, ImageSize, FurnitureItem, Project, EstimationItem, RoomEstimation, PERMISSIONS } from './types.ts';
 import { useAuth, usePermission } from './contexts/AuthContext.tsx';
@@ -357,6 +358,40 @@ const App: React.FC = () => {
   });
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
+
+  // Superadmin state
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
+  const [superadminUsername, setSuperadminUsername] = useState('');
+  const [superadminPassword, setSuperadminPassword] = useState('');
+  const [superadminError, setSuperadminError] = useState<string | null>(null);
+
+  // Check if superadmin is logged in on mount
+  useEffect(() => {
+    const token = localStorage.getItem('superadmin_token');
+    if (token) {
+      setIsSuperadmin(true);
+    }
+  }, []);
+
+  const handleSuperadminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSuperadminError(null);
+    try {
+      await api.superadminLogin(superadminUsername, superadminPassword);
+      setIsSuperadmin(true);
+      setSuperadminUsername('');
+      setSuperadminPassword('');
+    } catch (error: any) {
+      setSuperadminError(error.message || 'Ошибка входа');
+    }
+  };
+
+  const handleSuperadminLogout = () => {
+    localStorage.removeItem('superadmin_token');
+    setIsSuperadmin(false);
+    setSuperadminUsername('');
+    setSuperadminPassword('');
+  };
 
   // Load projects and prices from backend when user is authenticated
   useEffect(() => {

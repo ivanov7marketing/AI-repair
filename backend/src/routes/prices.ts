@@ -200,52 +200,84 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       [req.user.organizationId]
     );
 
-    // If no prices exist, initialize default prices for this organization
+    // If no prices exist, initialize default prices for this organization from template
     if (result.rows.length === 0) {
       console.log(`Initializing default prices for organization ${req.user.organizationId}`);
       
-      // Insert all default prices in a transaction
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        
-        for (const price of DEFAULT_PRICES) {
-          await client.query(
-            `INSERT INTO price_items (organization_id, name, unit, price, category, subcategory, type)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [req.user.organizationId, price.name, price.unit, price.price, price.category, price.subcategory || null, price.type]
-          );
+      // Get default prices from template
+      const defaultPricesResult = await pool.query(
+        `SELECT name, unit, price, category, subcategory, type
+         FROM default_price_items
+         ORDER BY sort_order, category, subcategory, name`
+      );
+      
+      if (defaultPricesResult.rows.length === 0) {
+        console.warn('No default price items found in template, using hardcoded defaults');
+        // Fallback to hardcoded defaults if template is empty
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          
+          for (const price of DEFAULT_PRICES) {
+            await client.query(
+              `INSERT INTO price_items (organization_id, name, unit, price, category, subcategory, type)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [req.user.organizationId, price.name, price.unit, price.price, price.category, price.subcategory || null, price.type]
+            );
+          }
+          
+          await client.query('COMMIT');
+          console.log(`✓ Initialized ${DEFAULT_PRICES.length} default prices (fallback)`);
+        } catch (error) {
+          await client.query('ROLLBACK');
+          throw error;
+        } finally {
+          client.release();
         }
-        
-        await client.query('COMMIT');
-        console.log(`✓ Initialized ${DEFAULT_PRICES.length} default prices`);
-        
-        // Fetch the newly created prices
-        const newResult = await pool.query(
-          `SELECT id, name, unit, price, category, subcategory, type, created_at, updated_at
-           FROM price_items
-           WHERE organization_id = $1 AND deleted_at IS NULL
-           ORDER BY category, subcategory, name`,
-          [req.user.organizationId]
-        );
-        
-        res.json(newResult.rows.map(row => ({
-          id: row.id,
-          name: row.name,
-          unit: row.unit,
-          price: parseFloat(row.price),
-          category: row.category,
-          subcategory: row.subcategory || undefined,
-          type: row.type,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
-        })));
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
+      } else {
+        // Copy from template
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          
+          for (const price of defaultPricesResult.rows) {
+            await client.query(
+              `INSERT INTO price_items (organization_id, name, unit, price, category, subcategory, type)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [req.user.organizationId, price.name, price.unit, price.price, price.category, price.subcategory || null, price.type]
+            );
+          }
+          
+          await client.query('COMMIT');
+          console.log(`✓ Initialized ${defaultPricesResult.rows.length} default prices from template`);
+        } catch (error) {
+          await client.query('ROLLBACK');
+          throw error;
+        } finally {
+          client.release();
+        }
       }
+      
+      // Fetch the newly created prices
+      const newResult = await pool.query(
+        `SELECT id, name, unit, price, category, subcategory, type, created_at, updated_at
+         FROM price_items
+         WHERE organization_id = $1 AND deleted_at IS NULL
+         ORDER BY category, subcategory, name`,
+        [req.user.organizationId]
+      );
+      
+      res.json(newResult.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        unit: row.unit,
+        price: parseFloat(row.price),
+        category: row.category,
+        subcategory: row.subcategory || undefined,
+        type: row.type,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      })));
     } else {
       res.json(result.rows.map(row => ({
         id: row.id,
