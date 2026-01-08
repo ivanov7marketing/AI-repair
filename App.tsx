@@ -326,7 +326,6 @@ const App: React.FC = () => {
   const [priceSearchQuery, setPriceSearchQuery] = useState('');
   const [priceSearchFocused, setPriceSearchFocused] = useState(false);
   const [highlightedPriceId, setHighlightedPriceId] = useState<string | null>(null);
-  const priceUpdateTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   
   // Импорт из Excel
   const [importModalOpen, setImportModalOpen] = useState(false);
