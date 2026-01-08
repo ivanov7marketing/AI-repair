@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Settings, LogOut, Plus, Trash2, Edit2, Save, X, Lock, 
-  Hammer, Package, Sparkles, Search, ChevronDown, ChevronUp 
+  Hammer, Package, Sparkles, Search, ChevronDown, ChevronUp, Upload
 } from 'lucide-react';
 import { api } from '../services/api';
 import { PriceItem } from '../types';
@@ -10,12 +10,28 @@ interface SuperAdminPanelProps {
   onLogout: () => void;
 }
 
+const WORK_SUBSECTIONS = [
+  "Подготовительные работы",
+  "Демонтажные работы",
+  "Черновая электрика",
+  "Черновая сантехника",
+  "Черновые отделочные работы",
+  "Чистовые отделочные работы",
+  "Чистовая сантехника",
+  "Чистовая электрика"
+];
+
+const FINISHING_SUBSECTIONS = ['Стены', 'Пол', 'Потолок'] as const;
+
 export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<'prices' | 'settings'>('prices');
+  const [activePriceTab, setActivePriceTab] = useState<'works' | 'rough' | 'finish'>('works');
   const [priceList, setPriceList] = useState<PriceItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [priceSearchQuery, setPriceSearchQuery] = useState('');
+  const [priceSearchFocused, setPriceSearchFocused] = useState(false);
+  const [expandedPriceSections, setExpandedPriceSections] = useState<Record<string, boolean>>({});
+  const [highlightedPriceId, setHighlightedPriceId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<Partial<PriceItem>>({});
   const [showAddForm, setShowAddForm] = useState(false);
@@ -52,7 +68,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
         const key = `${p.type}-${p.category}${p.subcategory ? `-${p.subcategory}` : ''}`;
         sections[key] = true;
       });
-      setExpandedSections(sections);
+      setExpandedPriceSections(sections);
     } catch (error: any) {
       alert(`Ошибка загрузки прайсов: ${error.message}`);
     } finally {
@@ -60,28 +76,31 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
     }
   };
 
-  const handleEdit = (item: PriceItem) => {
-    setEditingId(item.id);
-    setEditingData({ ...item });
+  const handleUpdatePriceItem = async (id: string, field: keyof PriceItem, value: string | number) => {
+    // Optimistically update UI
+    setPriceList(prev => prev.map(item => {
+      if (item.id === id) {
+        return { ...item, [field]: field === 'price' ? Number(value) : value };
+      }
+      return item;
+    }));
+
+    // Save to backend with debounce
+    const timeoutId = setTimeout(async () => {
+      try {
+        const updateData: any = {};
+        updateData[field] = field === 'price' ? Number(value) : value;
+        await api.updateDefaultPrice(id, updateData);
+      } catch (error) {
+        console.error('Failed to update price item:', error);
+        await loadPrices();
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
   };
 
-  const handleSave = async (id: string) => {
-    try {
-      await api.updateDefaultPrice(id, editingData);
-      await loadPrices();
-      setEditingId(null);
-      setEditingData({});
-    } catch (error: any) {
-      alert(`Ошибка сохранения: ${error.message}`);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditingId(null);
-    setEditingData({});
-  };
-
-  const handleDelete = async (id: string) => {
+  const handleDeletePriceItem = async (id: string) => {
     if (!confirm('Вы уверены, что хотите удалить этот пункт?')) return;
     
     try {
@@ -92,32 +111,20 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
     }
   };
 
-  const handleAdd = async () => {
-    if (!newPrice.name || !newPrice.category || !newPrice.type) {
-      alert('Заполните все обязательные поля');
-      return;
-    }
-
+  const handleAddPriceItem = async (type: 'work' | 'rough' | 'finish', category: string, subcategory?: string) => {
     try {
-      await api.createDefaultPrice({
-        name: newPrice.name!,
-        unit: newPrice.unit || 'м2',
-        price: newPrice.price || 0,
-        category: newPrice.category!,
-        subcategory: newPrice.subcategory,
-        type: newPrice.type!,
-      });
-      await loadPrices();
-      setShowAddForm(false);
-      setNewPrice({
+      const newItem = await api.createDefaultPrice({
         name: '',
-        unit: 'м2',
+        unit: type === 'work' ? 'м2' : type === 'rough' ? 'кг' : 'м2',
         price: 0,
-        category: '',
-        type: 'work',
+        category,
+        subcategory,
+        type,
       });
+      setPriceList(prev => [...prev, newItem]);
+      setExpandedPriceSections(prev => ({ ...prev, [`${type}-${category}${subcategory ? `-${subcategory}` : ''}`]: true }));
     } catch (error: any) {
-      alert(`Ошибка добавления: ${error.message}`);
+      alert(`Ошибка при создании позиции прайса: ${error.message}`);
     }
   };
 
@@ -147,19 +154,16 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
     }
   };
 
-  const filteredPrices = priceList.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const groupedPrices = filteredPrices.reduce((acc, price) => {
-    const key = `${price.type}-${price.category}${price.subcategory ? `-${price.subcategory}` : ''}`;
-    if (!acc[key]) {
-      acc[key] = [];
+  const scrollToPriceItem = (item: PriceItem) => {
+    const element = document.getElementById(`price-item-${item.id}`);
+    if (element) {
+      setHighlightedPriceId(item.id);
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => setHighlightedPriceId(null), 2000);
     }
-    acc[key].push(price);
-    return acc;
-  }, {} as Record<string, PriceItem[]>);
+    setPriceSearchQuery('');
+    setPriceSearchFocused(false);
+  };
 
   if (loading) {
     return (
@@ -173,16 +177,16 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-architect-50 dark:bg-architect-900">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-architect-800 shadow-sm border-b border-architect-200 dark:border-architect-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-architect-900 dark:text-white">
                 Панель суперадмина
               </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-sm text-architect-500 dark:text-architect-400 mt-1">
                 Управление дефолтными прайсами для новых организаций
               </p>
             </div>
@@ -199,23 +203,23 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 mb-6">
+        <div className="flex gap-2 border-b border-architect-200 dark:border-architect-700 mb-6">
           <button
             onClick={() => setActiveTab('prices')}
             className={`px-4 py-2 font-medium transition-colors ${
               activeTab === 'prices'
                 ? 'text-purple-600 border-b-2 border-purple-600'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                : 'text-architect-500 hover:text-architect-700 dark:text-architect-400 dark:hover:text-architect-200'
             }`}
           >
-            Дефолтные прайсы
+            Дефолтные прайсы ({priceList.length})
           </button>
           <button
             onClick={() => setActiveTab('settings')}
             className={`px-4 py-2 font-medium transition-colors ${
               activeTab === 'settings'
                 ? 'text-purple-600 border-b-2 border-purple-600'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                : 'text-architect-500 hover:text-architect-700 dark:text-architect-400 dark:hover:text-architect-200'
             }`}
           >
             Настройки
@@ -224,262 +228,426 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
 
         {activeTab === 'prices' && (
           <div className="space-y-6">
-            {/* Search and Add */}
-            <div className="flex gap-4 items-center">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Поиск по названию или категории..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-              <button
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            {/* Табы для переключения между типами */}
+            <div className="flex gap-2 bg-white dark:bg-architect-800 p-2 rounded-xl border border-architect-200 dark:border-architect-700">
+              <button 
+                onClick={() => setActivePriceTab('works')} 
+                className={`flex-1 px-4 py-3 rounded-lg text-sm font-bold transition-all ${activePriceTab === 'works' ? 'bg-emerald-500 text-white shadow-lg' : 'text-architect-600 hover:bg-architect-50 dark:hover:bg-architect-700'}`}
               >
-                <Plus className="w-4 h-4" />
-                Добавить
+                <span className="flex items-center justify-center gap-2"><Hammer className="w-4 h-4" /> Работы</span>
+              </button>
+              <button 
+                onClick={() => setActivePriceTab('rough')} 
+                className={`flex-1 px-4 py-3 rounded-lg text-sm font-bold transition-all ${activePriceTab === 'rough' ? 'bg-amber-500 text-white shadow-lg' : 'text-architect-600 hover:bg-architect-50 dark:hover:bg-architect-700'}`}
+              >
+                <span className="flex items-center justify-center gap-2"><Package className="w-4 h-4" /> Черновые материалы</span>
+              </button>
+              <button 
+                onClick={() => setActivePriceTab('finish')} 
+                className={`flex-1 px-4 py-3 rounded-lg text-sm font-bold transition-all ${activePriceTab === 'finish' ? 'bg-blue-500 text-white shadow-lg' : 'text-architect-600 hover:bg-architect-50 dark:hover:bg-architect-700'}`}
+              >
+                <span className="flex items-center justify-center gap-2"><Sparkles className="w-4 h-4" /> Чистовые материалы</span>
               </button>
             </div>
 
-            {/* Add Form */}
-            {showAddForm && (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Новый пункт прайса</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Название *
-                    </label>
-                    <input
-                      type="text"
-                      value={newPrice.name}
-                      onChange={(e) => setNewPrice({ ...newPrice, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            {/* Блок работ */}
+            {activePriceTab === 'works' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-xl font-bold dark:text-white flex items-center gap-2 shrink-0"><Hammer className="w-5 h-5 text-emerald-500" /> Справочник работ</h3>
+                  {/* Поиск */}
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-architect-400" />
+                    <input 
+                      type="text" 
+                      value={priceSearchQuery}
+                      onChange={e => setPriceSearchQuery(e.target.value)}
+                      onFocus={() => setPriceSearchFocused(true)}
+                      onBlur={() => setTimeout(() => setPriceSearchFocused(false), 200)}
+                      placeholder="Поиск по работам..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-sm dark:text-white transition-all"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Единица измерения
-                    </label>
-                    <input
-                      type="text"
-                      value={newPrice.unit}
-                      onChange={(e) => setNewPrice({ ...newPrice, unit: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Цена *
-                    </label>
-                    <input
-                      type="number"
-                      value={newPrice.price}
-                      onChange={(e) => setNewPrice({ ...newPrice, price: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Категория *
-                    </label>
-                    <input
-                      type="text"
-                      value={newPrice.category}
-                      onChange={(e) => setNewPrice({ ...newPrice, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Подкатегория
-                    </label>
-                    <input
-                      type="text"
-                      value={newPrice.subcategory || ''}
-                      onChange={(e) => setNewPrice({ ...newPrice, subcategory: e.target.value || undefined })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Тип *
-                    </label>
-                    <select
-                      value={newPrice.type}
-                      onChange={(e) => setNewPrice({ ...newPrice, type: e.target.value as 'work' | 'rough' | 'finish' })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    >
-                      <option value="work">Работы</option>
-                      <option value="rough">Черновые материалы</option>
-                      <option value="finish">Чистовые материалы</option>
-                    </select>
+                    {/* Выпадающий список результатов */}
+                    {priceSearchFocused && priceSearchQuery && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto">
+                        {priceList
+                          .filter(p => p.type === 'work' && p.name.toLowerCase().includes(priceSearchQuery.toLowerCase()))
+                          .slice(0, 15)
+                          .map(item => (
+                            <div 
+                              key={item.id}
+                              onClick={() => scrollToPriceItem(item)}
+                              className="px-4 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer border-b border-architect-50 dark:border-architect-700 last:border-0"
+                            >
+                              <div className="text-sm font-medium dark:text-white">{item.name}</div>
+                              <div className="text-[10px] text-architect-400 mt-0.5">{item.category} • {item.price} ₽/{item.unit}</div>
+                            </div>
+                          ))
+                        }
+                        {priceList.filter(p => p.type === 'work' && p.name.toLowerCase().includes(priceSearchQuery.toLowerCase())).length === 0 && (
+                          <div className="px-4 py-4 text-center text-sm text-architect-400">Ничего не найдено</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex gap-2 mt-4">
-                  <button
-                    onClick={handleAdd}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    Сохранить
-                  </button>
-                  <button
-                    onClick={() => setShowAddForm(false)}
-                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    Отмена
-                  </button>
+                <div className="space-y-3">
+                  {WORK_SUBSECTIONS.map((sub, idx) => {
+                    const isExpanded = !!expandedPriceSections[`work-${sub}`];
+                    const isFinishingSection = sub === 'Черновые отделочные работы' || sub === 'Чистовые отделочные работы';
+                    const items = priceList.filter(p => {
+                      if (p.type === 'work' && p.category === sub) {
+                        if (isFinishingSection) {
+                          return p.subcategory && p.subcategory.trim() !== '';
+                        }
+                        return true;
+                      }
+                      return false;
+                    });
+                    
+                    return (
+                      <div key={idx} className="border border-architect-100 dark:border-architect-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-architect-800">
+                        <div className="w-full flex items-center justify-between px-4 py-4 bg-architect-50/50 dark:bg-architect-900/50">
+                          <button 
+                            onClick={() => setExpandedPriceSections(prev => ({ ...prev, [`work-${sub}`]: !isExpanded }))} 
+                            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                          >
+                            <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            <span className="text-sm font-bold text-architect-700 dark:text-architect-300">{sub}</span>
+                            <span className="text-xs text-architect-400">({items.length} позиций)</span>
+                          </button>
+                          {!isFinishingSection && (
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => { handleAddPriceItem('work', sub); setExpandedPriceSections(prev => ({ ...prev, [`work-${sub}`]: true })); }}
+                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
+                              >
+                                <Plus className="w-3 h-3" /> Добавить
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {isExpanded && (
+                          <div className="p-4 border-t border-architect-50 dark:border-architect-700">
+                            {isFinishingSection ? (
+                              <div className="space-y-4">
+                                {FINISHING_SUBSECTIONS.map((subSec) => {
+                                  const subItems = items.filter(item => item.subcategory === subSec);
+                                  const headerBg = subSec === 'Стены' 
+                                    ? 'bg-purple-50 dark:bg-purple-900/20' 
+                                    : subSec === 'Пол' 
+                                      ? 'bg-amber-50 dark:bg-amber-900/20' 
+                                      : 'bg-cyan-50 dark:bg-cyan-900/20';
+                                  const titleClass = subSec === 'Стены' 
+                                    ? 'text-purple-700 dark:text-purple-400' 
+                                    : subSec === 'Пол' 
+                                      ? 'text-amber-700 dark:text-amber-400' 
+                                      : 'text-cyan-700 dark:text-cyan-400';
+                                  const btnClass = subSec === 'Стены' 
+                                    ? 'text-purple-600 hover:bg-purple-100' 
+                                    : subSec === 'Пол' 
+                                      ? 'text-amber-600 hover:bg-amber-100' 
+                                      : 'text-cyan-600 hover:bg-cyan-100';
+                                  
+                                  return (
+                                    <div key={subSec} className="border border-architect-100 dark:border-architect-700 rounded-lg overflow-hidden">
+                                      <div className={`flex items-center justify-between px-3 py-2 ${headerBg}`}>
+                                        <div className="flex items-center gap-2">
+                                          <span className={`text-sm font-bold ${titleClass}`}>{subSec}</span>
+                                          <span className="text-xs text-architect-400">({subItems.length})</span>
+                                        </div>
+                                        <button 
+                                          onClick={() => { handleAddPriceItem('work', sub, subSec); }}
+                                          className={`flex items-center gap-1 px-2 py-1 text-[10px] font-bold bg-white dark:bg-architect-800 rounded transition-all ${btnClass}`}
+                                        >
+                                          <Plus className="w-2.5 h-2.5" />
+                                        </button>
+                                      </div>
+                                      <div className="overflow-x-auto">
+                                        {subItems.length > 0 ? (
+                                          <table className="w-full text-left text-xs min-w-[400px]">
+                                            <tbody>
+                                              {subItems.map((item, i) => (
+                                                <tr key={item.id} id={`price-item-${item.id}`} className={`border-b border-architect-50 dark:border-architect-900/50 group transition-all duration-500 ${highlightedPriceId === item.id ? 'bg-emerald-100 dark:bg-emerald-900/40 ring-2 ring-emerald-500' : ''}`}>
+                                                  <td className="py-1.5 px-2 text-architect-400 w-6">{i + 1}</td>
+                                                  <td className="py-1.5 px-2">
+                                                    <input 
+                                                      type="text" 
+                                                      value={item.name} 
+                                                      onChange={(e) => handleUpdatePriceItem(item.id, 'name', e.target.value)} 
+                                                      className="w-full bg-transparent outline-none focus:text-emerald-600 font-medium text-xs" 
+                                                      placeholder="Название работы..." 
+                                                    />
+                                                  </td>
+                                                  <td className="py-1.5 px-2 w-16">
+                                                    <input 
+                                                      type="text" 
+                                                      value={item.unit} 
+                                                      onChange={(e) => handleUpdatePriceItem(item.id, 'unit', e.target.value)} 
+                                                      className="w-full bg-transparent outline-none text-architect-500 text-xs" 
+                                                    />
+                                                  </td>
+                                                  <td className="py-1.5 px-2 w-20">
+                                                    <div className="flex items-center gap-1">
+                                                      <input 
+                                                        type="number" 
+                                                        value={item.price} 
+                                                        onChange={(e) => handleUpdatePriceItem(item.id, 'price', e.target.value)} 
+                                                        className="w-full bg-transparent outline-none font-bold text-xs" 
+                                                      />
+                                                      <span className="text-architect-400 text-[10px]">₽</span>
+                                                    </div>
+                                                  </td>
+                                                  <td className="py-1.5 px-2 w-6">
+                                                    <button onClick={() => handleDeletePriceItem(item.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all">
+                                                      <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                  </td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        ) : (
+                                          <div className="text-center py-3 text-architect-400 text-xs">
+                                            Нет позиций
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="overflow-x-auto">
+                                {items.length > 0 ? (
+                                  <table className="w-full text-left text-xs min-w-[500px]">
+                                    <thead>
+                                      <tr className="border-b border-architect-100 dark:border-architect-700 text-architect-400 uppercase tracking-tighter">
+                                        <th className="py-2 w-8">№</th>
+                                        <th className="py-2">Наименование</th>
+                                        <th className="py-2 w-20">Ед.изм</th>
+                                        <th className="py-2 w-24">Цена</th>
+                                        <th className="py-2 w-8"></th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {items.map((item, i) => (
+                                        <tr key={item.id} id={`price-item-${item.id}`} className={`border-b border-architect-50 dark:border-architect-900/50 group transition-all duration-500 ${highlightedPriceId === item.id ? 'bg-emerald-100 dark:bg-emerald-900/40 ring-2 ring-emerald-500' : ''}`}>
+                                          <td className="py-2 text-architect-400">{i + 1}</td>
+                                          <td className="py-2">
+                                            <input 
+                                              type="text" 
+                                              value={item.name} 
+                                              onChange={(e) => handleUpdatePriceItem(item.id, 'name', e.target.value)} 
+                                              className="w-full bg-transparent outline-none focus:text-emerald-600 font-medium" 
+                                              placeholder="Название работы..." 
+                                            />
+                                          </td>
+                                          <td className="py-2">
+                                            <input 
+                                              type="text" 
+                                              value={item.unit} 
+                                              onChange={(e) => handleUpdatePriceItem(item.id, 'unit', e.target.value)} 
+                                              className="w-full bg-transparent outline-none text-architect-500" 
+                                            />
+                                          </td>
+                                          <td className="py-2">
+                                            <div className="flex items-center gap-1">
+                                              <input 
+                                                type="number" 
+                                                value={item.price} 
+                                                onChange={(e) => handleUpdatePriceItem(item.id, 'price', e.target.value)} 
+                                                className="w-full bg-transparent outline-none font-bold" 
+                                              />
+                                              <span className="text-architect-400 text-[10px]">₽</span>
+                                            </div>
+                                          </td>
+                                          <td className="py-2">
+                                            <button onClick={() => handleDeletePriceItem(item.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all">
+                                              <Trash2 className="w-3 h-3" />
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                ) : (
+                                  <div className="text-center py-3 text-architect-400 text-xs">
+                                    Нет позиций
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* Price List */}
-            <div className="space-y-4">
-              {Object.entries(groupedPrices).map(([key, prices]) => {
-                const [type, category, subcategory] = key.split('-');
-                const isExpanded = expandedSections[key] ?? true;
-                
-                return (
-                  <div key={key} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <button
-                      onClick={() => setExpandedSections({ ...expandedSections, [key]: !isExpanded })}
-                      className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        {type === 'work' && <Hammer className="w-5 h-5 text-emerald-500" />}
-                        {type === 'rough' && <Package className="w-5 h-5 text-amber-500" />}
-                        {type === 'finish' && <Sparkles className="w-5 h-5 text-blue-500" />}
-                        <div className="text-left">
-                          <h3 className="font-semibold text-gray-900 dark:text-white">{category}</h3>
-                          {subcategory && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{subcategory}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {prices.length} {prices.length === 1 ? 'пункт' : 'пунктов'}
-                        </span>
-                        {isExpanded ? (
-                          <ChevronUp className="w-5 h-5 text-gray-400" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 text-gray-400" />
-                        )}
-                      </div>
-                    </button>
-                    
-                    {isExpanded && (
-                      <div className="border-t border-gray-200 dark:border-gray-700">
-                        <table className="w-full">
-                          <thead className="bg-gray-50 dark:bg-gray-700">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Название
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Ед. изм.
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Цена
-                              </th>
-                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Действия
-                              </th>
+            {/* Блок черновых материалов */}
+            {activePriceTab === 'rough' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-xl font-bold dark:text-white flex items-center gap-2 shrink-0"><Package className="w-5 h-5 text-amber-500" /> Справочник черновых материалов</h3>
+                  <button 
+                    onClick={() => { handleAddPriceItem('rough', 'Черновые материалы'); }}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all"
+                  >
+                    <Plus className="w-3 h-3" /> Добавить
+                  </button>
+                </div>
+                <div className="border border-architect-100 dark:border-architect-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-architect-800">
+                  <div className="p-4 border-t border-architect-50 dark:border-architect-700">
+                    {priceList.filter(p => p.type === 'rough').length > 0 ? (
+                      <table className="w-full text-left text-xs min-w-[500px]">
+                        <thead>
+                          <tr className="border-b border-architect-100 dark:border-architect-700 text-architect-400 uppercase tracking-tighter">
+                            <th className="py-2 w-8">№</th>
+                            <th className="py-2">Наименование</th>
+                            <th className="py-2 w-20">Ед.изм</th>
+                            <th className="py-2 w-24">Цена</th>
+                            <th className="py-2 w-8"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {priceList.filter(p => p.type === 'rough').map((item, i) => (
+                            <tr key={item.id} className="border-b border-architect-50 dark:border-architect-900/50 group">
+                              <td className="py-2 text-architect-400">{i + 1}</td>
+                              <td className="py-2">
+                                <input 
+                                  type="text" 
+                                  value={item.name} 
+                                  onChange={(e) => handleUpdatePriceItem(item.id, 'name', e.target.value)} 
+                                  className="w-full bg-transparent outline-none focus:text-amber-600 font-medium" 
+                                  placeholder="Название материала..." 
+                                />
+                              </td>
+                              <td className="py-2">
+                                <input 
+                                  type="text" 
+                                  value={item.unit} 
+                                  onChange={(e) => handleUpdatePriceItem(item.id, 'unit', e.target.value)} 
+                                  className="w-full bg-transparent outline-none text-architect-500" 
+                                />
+                              </td>
+                              <td className="py-2">
+                                <div className="flex items-center gap-1">
+                                  <input 
+                                    type="number" 
+                                    value={item.price} 
+                                    onChange={(e) => handleUpdatePriceItem(item.id, 'price', e.target.value)} 
+                                    className="w-full bg-transparent outline-none font-bold" 
+                                  />
+                                  <span className="text-architect-400 text-[10px]">₽</span>
+                                </div>
+                              </td>
+                              <td className="py-2">
+                                <button onClick={() => handleDeletePriceItem(item.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all">
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                            {prices.map((item) => (
-                              <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                {editingId === item.id ? (
-                                  <>
-                                    <td className="px-6 py-4">
-                                      <input
-                                        type="text"
-                                        value={editingData.name || ''}
-                                        onChange={(e) => setEditingData({ ...editingData, name: e.target.value })}
-                                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      />
-                                    </td>
-                                    <td className="px-6 py-4">
-                                      <input
-                                        type="text"
-                                        value={editingData.unit || ''}
-                                        onChange={(e) => setEditingData({ ...editingData, unit: e.target.value })}
-                                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      />
-                                    </td>
-                                    <td className="px-6 py-4">
-                                      <input
-                                        type="number"
-                                        value={editingData.price || 0}
-                                        onChange={(e) => setEditingData({ ...editingData, price: parseFloat(e.target.value) || 0 })}
-                                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                      />
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                      <div className="flex justify-end gap-2">
-                                        <button
-                                          onClick={() => handleSave(item.id)}
-                                          className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
-                                        >
-                                          <Save className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                          onClick={handleCancel}
-                                          className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                        >
-                                          <X className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </>
-                                ) : (
-                                  <>
-                                    <td className="px-6 py-4 text-gray-900 dark:text-white">{item.name}</td>
-                                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{item.unit}</td>
-                                    <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
-                                      {item.price.toLocaleString()} ₽
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                      <div className="flex justify-end gap-2">
-                                        <button
-                                          onClick={() => handleEdit(item)}
-                                          className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                                        >
-                                          <Edit2 className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                          onClick={() => handleDelete(item.id)}
-                                          className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </>
-                                )}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="text-center py-12 text-architect-400">
+                        <Package className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm font-medium">Нет черновых материалов</p>
                       </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              </div>
+            )}
+
+            {/* Блок чистовых материалов */}
+            {activePriceTab === 'finish' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-xl font-bold dark:text-white flex items-center gap-2 shrink-0"><Sparkles className="w-5 h-5 text-blue-500" /> Справочник чистовых материалов</h3>
+                  <button 
+                    onClick={() => { handleAddPriceItem('finish', 'Чистовые материалы'); }}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                  >
+                    <Plus className="w-3 h-3" /> Добавить
+                  </button>
+                </div>
+                <div className="border border-architect-100 dark:border-architect-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-architect-800">
+                  <div className="p-4 border-t border-architect-50 dark:border-architect-700">
+                    {priceList.filter(p => p.type === 'finish').length > 0 ? (
+                      <table className="w-full text-left text-xs min-w-[500px]">
+                        <thead>
+                          <tr className="border-b border-architect-100 dark:border-architect-700 text-architect-400 uppercase tracking-tighter">
+                            <th className="py-2 w-8">№</th>
+                            <th className="py-2">Наименование</th>
+                            <th className="py-2 w-20">Ед.изм</th>
+                            <th className="py-2 w-24">Цена</th>
+                            <th className="py-2 w-8"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {priceList.filter(p => p.type === 'finish').map((item, i) => (
+                            <tr key={item.id} className="border-b border-architect-50 dark:border-architect-900/50 group">
+                              <td className="py-2 text-architect-400">{i + 1}</td>
+                              <td className="py-2">
+                                <input 
+                                  type="text" 
+                                  value={item.name} 
+                                  onChange={(e) => handleUpdatePriceItem(item.id, 'name', e.target.value)} 
+                                  className="w-full bg-transparent outline-none focus:text-blue-600 font-medium" 
+                                  placeholder="Название материала..." 
+                                />
+                              </td>
+                              <td className="py-2">
+                                <input 
+                                  type="text" 
+                                  value={item.unit} 
+                                  onChange={(e) => handleUpdatePriceItem(item.id, 'unit', e.target.value)} 
+                                  className="w-full bg-transparent outline-none text-architect-500" 
+                                />
+                              </td>
+                              <td className="py-2">
+                                <div className="flex items-center gap-1">
+                                  <input 
+                                    type="number" 
+                                    value={item.price} 
+                                    onChange={(e) => handleUpdatePriceItem(item.id, 'price', e.target.value)} 
+                                    className="w-full bg-transparent outline-none font-bold" 
+                                  />
+                                  <span className="text-architect-400 text-[10px]">₽</span>
+                                </div>
+                              </td>
+                              <td className="py-2">
+                                <button onClick={() => handleDeletePriceItem(item.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all">
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="text-center py-12 text-architect-400">
+                        <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm font-medium">Нет чистовых материалов</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'settings' && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-architect-800 p-6 rounded-lg border border-architect-200 dark:border-architect-700">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-architect-900 dark:text-white flex items-center gap-2">
                   <Lock className="w-5 h-5" />
                   Смена пароля
                 </h3>
@@ -494,36 +662,36 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
               {showChangePassword && (
                 <div className="space-y-4 mt-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-architect-700 dark:text-architect-300 mb-1">
                       Текущий пароль
                     </label>
                     <input
                       type="password"
                       value={passwordData.currentPassword}
                       onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-800 text-architect-900 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-architect-700 dark:text-architect-300 mb-1">
                       Новый пароль
                     </label>
                     <input
                       type="password"
                       value={passwordData.newPassword}
                       onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-800 text-architect-900 dark:text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-architect-700 dark:text-architect-300 mb-1">
                       Подтвердите новый пароль
                     </label>
                     <input
                       type="password"
                       value={passwordData.confirmPassword}
                       onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-800 text-architect-900 dark:text-white"
                     />
                   </div>
                   {passwordError && (
@@ -544,4 +712,3 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
     </div>
   );
 };
-
