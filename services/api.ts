@@ -250,17 +250,34 @@ class ApiClient {
     };
 
     const url = `${API_URL}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Request failed');
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Request failed' }));
+        // Include validation details if available
+        if (error.details && Array.isArray(error.details)) {
+          const details = error.details.map((d: any) => `${d.path.join('.')}: ${d.message}`).join(', ');
+          throw new Error(error.error || 'Validation error' + (details ? `: ${details}` : ''));
+        }
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('Network error:', error);
+        console.error('API URL:', API_URL);
+        console.error('Full URL:', url);
+        throw new Error(`Не удалось подключиться к серверу. Проверьте, что бэкенд запущен и доступен по адресу: ${API_URL}`);
+      }
+      throw error;
     }
-
-    return response.json();
   }
 }
 
