@@ -271,9 +271,9 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
       createdBy: row.created_by,
       thumbnail: row.thumbnail,
       planPreview: row.plan_preview,
-      analysisData: row.analysis_data,
+      analysisData: row.analysis_data || null, // JSONB is already parsed by pg
       global3dImage: row.global_3d_image,
-      roomImages: row.room_images,
+      roomImages: row.room_images || {}, // JSONB is already parsed by pg
     });
   } catch (error) {
     console.error('Update project error:', error);
