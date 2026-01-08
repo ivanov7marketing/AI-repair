@@ -324,6 +324,7 @@ const App: React.FC = () => {
   const [priceSearchQuery, setPriceSearchQuery] = useState('');
   const [priceSearchFocused, setPriceSearchFocused] = useState(false);
   const [highlightedPriceId, setHighlightedPriceId] = useState<string | null>(null);
+  const priceUpdateTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   
   // Импорт из Excel
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -356,13 +357,15 @@ const App: React.FC = () => {
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
 
-  // Load projects from backend when user is authenticated
+  // Load projects and prices from backend when user is authenticated
   useEffect(() => {
     if (user && !isLoading) {
       loadProjects();
+      loadPriceItems();
     } else if (!user && !isLoading) {
       setState(AppState.LOGIN);
       setProjects([]); // Clear projects on logout
+      setPriceList([]); // Clear prices on logout
     }
   }, [user, isLoading]);
 
@@ -1591,31 +1594,121 @@ const App: React.FC = () => {
       return { totalWork, totalRough, totalFinish, grandTotal: totalWork + totalRough + totalFinish };
   };
 
+  // Load price items from backend
+  const loadPriceItems = async () => {
+    try {
+      const backendPrices = await api.getPriceItems();
+      if (backendPrices.length > 0) {
+        setPriceList(backendPrices);
+      } else {
+        // If no prices exist, initialize with default prices for this organization
+        await initializeDefaultPrices();
+      }
+    } catch (error) {
+      console.error('Failed to load price items:', error);
+      // Fallback to default prices on error
+      setPriceList(DEFAULT_PRICES);
+    }
+  };
+
+  // Initialize default prices for organization (only if empty)
+  const initializeDefaultPrices = async () => {
+    try {
+      // Create default prices in backend
+      for (const price of DEFAULT_PRICES) {
+        try {
+          await api.createPriceItem({
+            name: price.name,
+            unit: price.unit,
+            price: price.price,
+            category: price.category,
+            subcategory: price.subcategory,
+            type: price.type,
+          });
+        } catch (error) {
+          // Ignore duplicates or errors
+          console.error('Failed to create default price:', error);
+        }
+      }
+      // Reload prices after initialization
+      await loadPriceItems();
+    } catch (error) {
+      console.error('Failed to initialize default prices:', error);
+      // Fallback to local default prices
+      setPriceList(DEFAULT_PRICES);
+    }
+  };
+
   // CRUD функции для прайсов
-  const handleAddPriceItem = (type: 'work' | 'rough' | 'finish', category: string, subcategory?: string) => {
-      const newItem: PriceItem = {
-          id: `price-${Date.now()}`,
-          name: '',
-          unit: type === 'work' ? 'м2' : type === 'rough' ? 'кг' : 'м2',
-          price: 0,
-          category,
-          subcategory,
-          type,
-      };
+  const handleAddPriceItem = async (type: 'work' | 'rough' | 'finish', category: string, subcategory?: string) => {
+    if (!hasPermission(PERMISSIONS.EDIT_PRICES)) {
+      alert('У вас нет прав для редактирования прайсов');
+      return;
+    }
+
+    try {
+      const newItem = await api.createPriceItem({
+        name: '',
+        unit: type === 'work' ? 'м2' : type === 'rough' ? 'кг' : 'м2',
+        price: 0,
+        category,
+        subcategory,
+        type,
+      });
       setPriceList(prev => [...prev, newItem]);
+    } catch (error) {
+      console.error('Failed to create price item:', error);
+      alert('Ошибка при создании позиции прайса');
+    }
   };
 
   const handleUpdatePriceItem = (id: string, field: keyof PriceItem, value: string | number) => {
-      setPriceList(prev => prev.map(item => {
-          if (item.id === id) {
-              return { ...item, [field]: field === 'price' ? Number(value) : value };
-          }
-          return item;
-      }));
+    if (!hasPermission(PERMISSIONS.EDIT_PRICES)) {
+      return;
+    }
+
+    // Optimistically update UI
+    setPriceList(prev => prev.map(item => {
+      if (item.id === id) {
+        return { ...item, [field]: field === 'price' ? Number(value) : value };
+      }
+      return item;
+    }));
+
+    // Clear existing timeout for this item
+    if (priceUpdateTimeouts.current[id]) {
+      clearTimeout(priceUpdateTimeouts.current[id]);
+    }
+
+    // Save to backend with debounce
+    priceUpdateTimeouts.current[id] = setTimeout(async () => {
+      try {
+        const updateData: any = {};
+        updateData[field] = field === 'price' ? Number(value) : value;
+        await api.updatePriceItem(id, updateData);
+        delete priceUpdateTimeouts.current[id];
+      } catch (error) {
+        console.error('Failed to update price item:', error);
+        // Reload prices on error to restore correct state
+        await loadPriceItems();
+        delete priceUpdateTimeouts.current[id];
+      }
+    }, 1000);
   };
 
-  const handleDeletePriceItem = (id: string) => {
+  const handleDeletePriceItem = async (id: string) => {
+    if (!hasPermission(PERMISSIONS.EDIT_PRICES)) {
+      alert('У вас нет прав для удаления позиций прайса');
+      return;
+    }
+
+    try {
+      await api.deletePriceItem(id);
       setPriceList(prev => prev.filter(item => item.id !== id));
+    } catch (error) {
+      console.error('Failed to delete price item:', error);
+      alert('Ошибка при удалении позиции прайса');
+    }
   };
 
   // Автоматическое добавление позиции в справочник, если её нет
@@ -1673,6 +1766,40 @@ const App: React.FC = () => {
             [`work-${category || fallbackCategory}`]: true
           }));
         }
+
+        // Save new item to backend
+        (async () => {
+          try {
+            const savedItem = await api.createPriceItem({
+              name: newItem.name,
+              unit: newItem.unit,
+              price: newItem.price,
+              category: newItem.category,
+              subcategory: newItem.subcategory,
+              type: newItem.type,
+            });
+            setPriceList(prev => prev.map(p => p.id === newItem.id ? savedItem : p));
+          } catch (error) {
+            console.error('Failed to save auto-added price item:', error);
+          }
+        })();
+
+        // Save new item to backend
+        (async () => {
+          try {
+            const savedItem = await api.createPriceItem({
+              name: newItem.name,
+              unit: newItem.unit,
+              price: newItem.price,
+              category: newItem.category,
+              subcategory: newItem.subcategory,
+              type: newItem.type,
+            });
+            setPriceList(prev => prev.map(p => p.id === newItem.id ? savedItem : p));
+          } catch (error) {
+            console.error('Failed to save auto-added price item:', error);
+          }
+        })();
 
         return [...prev, newItem];
       }

@@ -160,6 +160,31 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Price items endpoints
+  async getPriceItems() {
+    return this.request('/prices');
+  }
+
+  async createPriceItem(data: { name: string; unit: string; price: number; category: string; subcategory?: string; type: 'work' | 'rough' | 'finish' }) {
+    return this.request('/prices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePriceItem(id: string, data: Partial<{ name: string; unit: string; price: number; category: string; subcategory?: string; type: 'work' | 'rough' | 'finish' }>) {
+    return this.request(`/prices/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePriceItem(id: string) {
+    return this.request(`/prices/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiClient();

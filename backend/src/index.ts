@@ -7,6 +7,7 @@ import userRoutes from './routes/users';
 import permissionRoutes from './routes/permissions';
 import projectRoutes from './routes/projects';
 import aiRoutes from './routes/ai';
+import priceRoutes from './routes/prices';
 
 dotenv.config();
 
@@ -60,6 +61,7 @@ app.use('/users', userRoutes);
 app.use('/permissions', permissionRoutes);
 app.use('/projects', projectRoutes);
 app.use('/ai', aiRoutes);
+app.use('/prices', priceRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: express.NextFunction): void => {
