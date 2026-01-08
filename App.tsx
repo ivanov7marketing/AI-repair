@@ -293,7 +293,7 @@ const GenerationLoader = ({ planUrl, label }: { planUrl: string | null, label: s
 );
 
 const App: React.FC = () => {
-  const { user, login, logout, isLoading, hasPermission } = useAuth();
+  const { user, login, registerAdmin, logout, isLoading, hasPermission } = useAuth();
   const [state, setState] = useState<AppState>(AppState.LOGIN);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
@@ -346,6 +346,15 @@ const App: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
+  const [registerData, setRegisterData] = useState({
+    email: '',
+    password: '',
+    name: '',
+    organizationName: '',
+  });
+  const [registerError, setRegisterError] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   // Load projects from backend when user is authenticated
   useEffect(() => {
@@ -489,6 +498,22 @@ const App: React.FC = () => {
       setState(projects.length > 0 ? AppState.PROJECT_LIST : AppState.UPLOAD);
     } catch (error: any) {
       setLoginError(error.message || 'Ошибка входа');
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegisterError(null);
+    setIsRegistering(true);
+    try {
+      await registerAdmin(registerData);
+      await loadProjects();
+      setState(projects.length > 0 ? AppState.PROJECT_LIST : AppState.UPLOAD);
+      setShowRegister(false);
+    } catch (error: any) {
+      setRegisterError(error.message || 'Ошибка регистрации');
+    } finally {
+      setIsRegistering(false);
     }
   };
 
@@ -1779,38 +1804,125 @@ const App: React.FC = () => {
             <div className="flex flex-col items-center mb-8">
                 <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl mb-4"><Box className="w-8 h-8 text-white dark:text-architect-900" /></div>
                 <h1 className="text-3xl font-bold text-architect-900 dark:text-white mb-1">InteriorAI</h1>
-                <p className="text-architect-500 dark:text-architect-400 text-sm">Вход в систему управления проектами</p>
+                <p className="text-architect-500 dark:text-architect-400 text-sm">
+                  {showRegister ? 'Регистрация администратора' : 'Вход в систему управления проектами'}
+                </p>
             </div>
-            {loginError && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                <p className="text-sm text-red-600 dark:text-red-400">{loginError}</p>
-              </div>
+            
+            {showRegister ? (
+              <>
+                {registerError && (
+                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                    <p className="text-sm text-red-600 dark:text-red-400">{registerError}</p>
+                  </div>
+                )}
+                <form onSubmit={handleRegister} className="space-y-4 text-left">
+                  <div>
+                    <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">E-mail</label>
+                    <input 
+                      type="email" 
+                      required 
+                      value={registerData.email} 
+                      onChange={e => { setRegisterData({ ...registerData, email: e.target.value }); setRegisterError(null); }} 
+                      className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Пароль</label>
+                    <input 
+                      type="password" 
+                      required 
+                      minLength={8}
+                      value={registerData.password} 
+                      onChange={e => { setRegisterData({ ...registerData, password: e.target.value }); setRegisterError(null); }} 
+                      className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Имя</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={registerData.name} 
+                      onChange={e => { setRegisterData({ ...registerData, name: e.target.value }); setRegisterError(null); }} 
+                      className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Название организации</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={registerData.organizationName} 
+                      onChange={e => { setRegisterData({ ...registerData, organizationName: e.target.value }); setRegisterError(null); }} 
+                      className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
+                    />
+                  </div>
+                  <button 
+                    type="submit" 
+                    disabled={isRegistering}
+                    className="w-full bg-architect-900 dark:bg-white text-white dark:text-architect-900 font-bold py-3 rounded-xl hover:opacity-90 flex items-center justify-center gap-2 text-sm mt-4 disabled:opacity-50"
+                  >
+                    {isRegistering ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" /> Регистрация...
+                      </>
+                    ) : (
+                      <>
+                        Зарегистрироваться <ChevronRight className="w-5 h-5" />
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowRegister(false); setRegisterError(null); }}
+                    className="w-full text-architect-500 hover:text-architect-700 dark:hover:text-architect-300 text-sm mt-2"
+                  >
+                    Уже есть аккаунт? Войти
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                {loginError && (
+                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                    <p className="text-sm text-red-600 dark:text-red-400">{loginError}</p>
+                  </div>
+                )}
+                <form onSubmit={handleLogin} className="space-y-4 text-left">
+                  <div>
+                    <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">E-mail</label>
+                    <input 
+                      type="email" 
+                      required 
+                      value={email} 
+                      onChange={e => { setEmail(e.target.value); setLoginError(null); }} 
+                      className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Пароль</label>
+                    <input 
+                      type="password" 
+                      required 
+                      value={password} 
+                      onChange={e => { setPassword(e.target.value); setLoginError(null); }} 
+                      className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
+                    />
+                  </div>
+                  <button type="submit" className="w-full bg-architect-900 dark:bg-white text-white dark:text-architect-900 font-bold py-3 rounded-xl hover:opacity-90 flex items-center justify-center gap-2 text-sm mt-4">
+                    Войти в дашборд <ChevronRight className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRegister(true)}
+                    className="w-full text-architect-500 hover:text-architect-700 dark:hover:text-architect-300 text-sm mt-2"
+                  >
+                    Нет аккаунта? Зарегистрироваться
+                  </button>
+                </form>
+              </>
             )}
-            <form onSubmit={handleLogin} className="space-y-4 text-left">
-                <div>
-                  <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">E-mail</label>
-                  <input 
-                    type="email" 
-                    required 
-                    value={email} 
-                    onChange={e => { setEmail(e.target.value); setLoginError(null); }} 
-                    className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Пароль</label>
-                  <input 
-                    type="password" 
-                    required 
-                    value={password} 
-                    onChange={e => { setPassword(e.target.value); setLoginError(null); }} 
-                    className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
-                  />
-                </div>
-                <button type="submit" className="w-full bg-architect-900 dark:bg-white text-white dark:text-architect-900 font-bold py-3 rounded-xl hover:opacity-90 flex items-center justify-center gap-2 text-sm mt-4">
-                  Войти в дашборд <ChevronRight className="w-5 h-5" />
-                </button>
-            </form>
         </div>
       </div>
     );
