@@ -1554,11 +1554,22 @@ const App: React.FC = () => {
                 }
               }
               
+              // Извлекаем цену из голосового ввода, если она была указана
+              // Ищем числа с "р", "руб", "рублей" после них
+              let extractedPrice = item.suggestedPrice || 0;
+              if (extractedPrice === 0 || extractedPrice === null) {
+                // Пытаемся извлечь цену из названия или транскрипта
+                const priceMatch = transcript.match(/(\d+)\s*(?:р|руб|рублей|₽)/i);
+                if (priceMatch) {
+                  extractedPrice = parseFloat(priceMatch[1]);
+                }
+              }
+              
               // Создаём новую позицию в прайс-листе
               const newPriceItem = await api.createPriceItem({
                 name: item.name,
                 unit: item.unit || 'шт',
-                price: item.suggestedPrice || 1, // Если цена не указана, ставим 1 руб.
+                price: extractedPrice > 0 ? extractedPrice : 1, // Если цена не указана, ставим 1 руб.
                 category: item.category || 'Черновые отделочные работы',
                 subcategory: item.category === 'Черновые отделочные работы' || item.category === 'Чистовые отделочные работы' 
                   ? (item.quantitySource === 'wallArea' ? 'Стены' : item.quantitySource === 'floorArea' ? 'Пол' : item.quantitySource === 'ceilingArea' ? 'Потолок' : undefined)
@@ -1601,8 +1612,18 @@ const App: React.FC = () => {
           }
           quantity = Math.round(quantity * 10) / 10;
           
-          // Используем цену из прайс-листа, если позиция найдена, иначе используем suggestedPrice или 1
-          const price = priceItem ? priceItem.price : (item.suggestedPrice || 1);
+          // Используем цену из прайс-листа, если позиция найдена
+          // Если позиция новая, пытаемся извлечь цену из голосового ввода
+          let price = priceItem ? priceItem.price : (item.suggestedPrice || 0);
+          if (price === 0 && !priceItem) {
+            // Пытаемся извлечь цену из транскрипта
+            const priceMatch = transcript.match(/(\d+)\s*(?:р|руб|рублей|₽)/i);
+            if (priceMatch) {
+              price = parseFloat(priceMatch[1]);
+            } else {
+              price = 1; // По умолчанию 1 руб. если цена не указана
+            }
+          }
           
           const newItem: EstimationItem = {
             id: `voice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
