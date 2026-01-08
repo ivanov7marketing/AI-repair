@@ -21,7 +21,7 @@ const changePasswordSchema = z.object({
 const createPriceItemSchema = z.object({
   name: z.string().min(1),
   unit: z.string().min(1),
-  price: z.number().positive(),
+  price: z.number().min(0), // Allow 0 for new items that will be edited later
   category: z.string().min(1),
   subcategory: z.string().optional(),
   type: z.enum(['work', 'rough', 'finish']),
@@ -31,7 +31,7 @@ const createPriceItemSchema = z.object({
 const updatePriceItemSchema = z.object({
   name: z.string().min(1).optional(),
   unit: z.string().min(1).optional(),
-  price: z.number().positive().optional(),
+  price: z.number().min(0).optional(), // Allow 0 for editing
   category: z.string().min(1).optional(),
   subcategory: z.string().optional(),
   type: z.enum(['work', 'rough', 'finish']).optional(),
