@@ -1596,46 +1596,15 @@ const App: React.FC = () => {
   };
 
   // Load price items from backend
+  // Backend automatically initializes default prices if none exist
   const loadPriceItems = async () => {
     try {
       const backendPrices = await api.getPriceItems();
-      if (backendPrices.length > 0) {
-        setPriceList(backendPrices);
-      } else {
-        // If no prices exist, initialize with default prices for this organization
-        await initializeDefaultPrices();
-      }
+      setPriceList(backendPrices);
+      console.log(`Loaded ${backendPrices.length} price items from backend`);
     } catch (error) {
       console.error('Failed to load price items:', error);
       // Fallback to default prices on error
-      setPriceList(DEFAULT_PRICES);
-    }
-  };
-
-  // Initialize default prices for organization (only if empty)
-  const initializeDefaultPrices = async () => {
-    try {
-      // Create default prices in backend
-      for (const price of DEFAULT_PRICES) {
-        try {
-          await api.createPriceItem({
-            name: price.name,
-            unit: price.unit,
-            price: price.price,
-            category: price.category,
-            subcategory: price.subcategory,
-            type: price.type,
-          });
-        } catch (error) {
-          // Ignore duplicates or errors
-          console.error('Failed to create default price:', error);
-        }
-      }
-      // Reload prices after initialization
-      await loadPriceItems();
-    } catch (error) {
-      console.error('Failed to initialize default prices:', error);
-      // Fallback to local default prices
       setPriceList(DEFAULT_PRICES);
     }
   };
