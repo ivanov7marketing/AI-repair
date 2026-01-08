@@ -3496,23 +3496,23 @@ const App: React.FC = () => {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        {/* Кнопки добавления внизу обычной секции */}
-                                                        {!isFinishingSection && hasPermission(PERMISSIONS.EDIT_PRICES) && (
-                                                            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
-                                                                <button 
-                                                                    onClick={() => openImportModal(sub)}
-                                                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
-                                                                >
-                                                                    <Upload className="w-3 h-3" /> Загрузить
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => { handleAddPriceItem('work', sub); setExpandedPriceSections(prev => ({ ...prev, [`work-${sub}`]: true })); }}
-                                                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
-                                                                >
-                                                                    <Plus className="w-3 h-3" /> Добавить
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                    )}
+                                                    {/* Кнопки добавления внизу обычной секции */}
+                                                    {!isFinishingSection && hasPermission(PERMISSIONS.EDIT_PRICES) && (
+                                                        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
+                                                            <button 
+                                                                onClick={() => openImportModal(sub)}
+                                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                                                            >
+                                                                <Upload className="w-3 h-3" /> Загрузить
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => { handleAddPriceItem('work', sub); setExpandedPriceSections(prev => ({ ...prev, [`work-${sub}`]: true })); }}
+                                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
+                                                            >
+                                                                <Plus className="w-3 h-3" /> Добавить
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
