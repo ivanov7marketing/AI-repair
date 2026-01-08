@@ -3416,18 +3416,18 @@ const App: React.FC = () => {
                                                                         </div>
                                                                         {/* Кнопки добавления внизу подраздела */}
                                                                         {hasPermission(PERMISSIONS.EDIT_PRICES) && (
-                                                                            <div className="flex items-center justify-end gap-2 px-3 py-2 border-t border-architect-50 dark:border-architect-700">
-                                                                                <button 
-                                                                                    onClick={() => openImportModal(sub, subSec)}
-                                                                                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-all"
-                                                                                >
-                                                                                    <Upload className="w-2.5 h-2.5" /> xlsx
-                                                                                </button>
+                                                                            <div className="flex items-center justify-start gap-2 px-3 py-2 border-t border-architect-50 dark:border-architect-700">
                                                                                 <button 
                                                                                     onClick={() => { handleAddPriceItem('work', sub, subSec); }}
                                                                                     className={`flex items-center gap-1 px-2 py-1 text-[10px] font-bold bg-white dark:bg-architect-800 rounded transition-all ${btnClass}`}
                                                                                 >
                                                                                     <Plus className="w-2.5 h-2.5" />
+                                                                                </button>
+                                                                                <button 
+                                                                                    onClick={() => openImportModal(sub, subSec)}
+                                                                                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-all"
+                                                                                >
+                                                                                    <Upload className="w-2.5 h-2.5" /> xlsx
                                                                                 </button>
                                                                             </div>
                                                                         )}
@@ -3499,18 +3499,18 @@ const App: React.FC = () => {
                                                     )}
                                                     {/* Кнопки добавления внизу обычной секции */}
                                                     {!isFinishingSection && hasPermission(PERMISSIONS.EDIT_PRICES) && (
-                                                        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
-                                                            <button 
-                                                                onClick={() => openImportModal(sub)}
-                                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
-                                                            >
-                                                                <Upload className="w-3 h-3" /> Загрузить
-                                                            </button>
+                                                        <div className="flex items-center justify-start gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
                                                             <button 
                                                                 onClick={() => { handleAddPriceItem('work', sub); setExpandedPriceSections(prev => ({ ...prev, [`work-${sub}`]: true })); }}
                                                                 className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
                                                             >
                                                                 <Plus className="w-3 h-3" /> Добавить
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => openImportModal(sub)}
+                                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                                                            >
+                                                                <Upload className="w-3 h-3" /> Загрузить
                                                             </button>
                                                         </div>
                                                     )}
@@ -3640,18 +3640,18 @@ const App: React.FC = () => {
                                 )}
                                 {/* Кнопки добавления внизу черновых материалов */}
                                 {hasPermission(PERMISSIONS.EDIT_PRICES) && (
-                                    <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
-                                        <button 
-                                            onClick={() => openImportModal('Черновые материалы')}
-                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
-                                        >
-                                            <Upload className="w-3 h-3" /> Загрузить
-                                        </button>
+                                    <div className="flex items-center justify-start gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
                                         <button 
                                             onClick={() => handleAddPriceItem('rough', 'Черновые материалы')}
                                             className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all"
                                         >
                                             <Plus className="w-3 h-3" /> Добавить
+                                        </button>
+                                        <button 
+                                            onClick={() => openImportModal('Черновые материалы')}
+                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                                        >
+                                            <Upload className="w-3 h-3" /> Загрузить
                                         </button>
                                     </div>
                                 )}
@@ -3776,18 +3776,18 @@ const App: React.FC = () => {
                                 )}
                                 {/* Кнопки добавления внизу чистовых материалов */}
                                 {hasPermission(PERMISSIONS.EDIT_PRICES) && (
-                                    <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
-                                        <button 
-                                            onClick={() => openImportModal('Чистовые материалы')}
-                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
-                                        >
-                                            <Upload className="w-3 h-3" /> Загрузить
-                                        </button>
+                                    <div className="flex items-center justify-start gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
                                         <button 
                                             onClick={() => handleAddPriceItem('finish', 'Чистовые материалы')}
                                             className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
                                         >
                                             <Plus className="w-3 h-3" /> Добавить
+                                        </button>
+                                        <button 
+                                            onClick={() => openImportModal('Чистовые материалы')}
+                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                                        >
+                                            <Upload className="w-3 h-3" /> Загрузить
                                         </button>
                                     </div>
                                 )}
