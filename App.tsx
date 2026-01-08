@@ -2143,17 +2143,17 @@ const App: React.FC = () => {
                 )}
                 <form onSubmit={handleLogin} className="space-y-4 text-left">
                   <div>
-                    <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Логин / E-mail</label>
+                    <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">E-mail</label>
                     <input 
                       type="text" 
                       required 
                       value={email} 
                       onChange={e => { setEmail(e.target.value); setLoginError(null); }} 
-                      placeholder="ivanovmax или email@example.com"
+                      placeholder="email@example.com"
                       className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
                     />
                     <p className="text-xs text-architect-400 dark:text-architect-500 mt-1 ml-1">
-                      Введите email для входа или логин суперадмина
+                      Введите email для входа
                     </p>
                   </div>
                   <div>
