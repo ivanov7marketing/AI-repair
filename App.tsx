@@ -1272,8 +1272,26 @@ const App: React.FC = () => {
       
       // Добавляем работы
       worksToAdd.forEach(workDef => {
-        const priceItem = priceList.find(p => p.id === workDef.workId);
-        if (!priceItem) return;
+        // Сначала пытаемся найти по ID (для обратной совместимости)
+        let priceItem = priceList.find(p => p.id === workDef.workId);
+        
+        // Если не найдено по ID, ищем по имени из DEFAULT_PRICES
+        if (!priceItem) {
+          const defaultPrice = DEFAULT_PRICES.find(p => p.id === workDef.workId);
+          if (defaultPrice) {
+            // Ищем в прайс-листе по имени и категории
+            priceItem = priceList.find(p => 
+              p.name === defaultPrice.name && 
+              p.category === defaultPrice.category &&
+              p.type === defaultPrice.type
+            );
+          }
+        }
+        
+        if (!priceItem) {
+          console.warn(`Price item not found for workId: ${workDef.workId}`);
+          return;
+        }
         
         // Рассчитываем количество
         let quantity = 1;
