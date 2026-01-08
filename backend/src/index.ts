@@ -16,7 +16,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // Middleware
 app.use(cors({
-  origin: function (origin, callback) {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
@@ -62,7 +62,7 @@ app.use('/projects', projectRoutes);
 app.use('/ai', aiRoutes);
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: express.NextFunction) => {
+app.use((err: Error, req: Request, res: Response, next: express.NextFunction): void => {
   console.error('Error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });

@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db';
-import { User, JWTPayload, UserRole, Permission } from '../types/auth';
-import { DEFAULT_ROLE_PERMISSIONS } from '../config/permissions';
+import { User, JWTPayload, UserRole } from '../types/auth';
+import { Permission, DEFAULT_ROLE_PERMISSIONS } from '../config/permissions';
 
 // Extend Express Request to include user
 declare global {
@@ -106,7 +106,7 @@ export const requirePermission = (permission: Permission) => {
       hasPermission = customPermResult.rows[0].allowed;
     } else {
       // Use default permission for role
-      const defaultPerms = DEFAULT_ROLE_PERMISSIONS[req.user.role] || [];
+      const defaultPerms: Permission[] = DEFAULT_ROLE_PERMISSIONS[req.user.role] || [];
       hasPermission = defaultPerms.includes(permission);
     }
 
