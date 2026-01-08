@@ -16,7 +16,24 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // Middleware
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow requests from frontend URL or any Railway subdomain
+    if (origin === FRONTEND_URL || 
+        origin.includes('.railway.app') || 
+        origin.includes('.up.railway.app')) {
+      return callback(null, true);
+    }
+    
+    // In development, allow localhost
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(express.json());

@@ -2,6 +2,11 @@ import { LoginRequest, LoginResponse, RegisterAdminRequest } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+// Log API URL in development
+if (import.meta.env.DEV) {
+  console.log('API URL:', API_URL);
+}
+
 class ApiClient {
   private getToken(): string | null {
     return localStorage.getItem('auth_token');
@@ -21,25 +26,38 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    const url = `${API_URL}${endpoint}`;
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
 
-    if (response.status === 401) {
-      // Unauthorized - clear token and redirect to login
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
-      window.location.href = '/';
-      throw new Error('Unauthorized');
+      if (response.status === 401) {
+        // Unauthorized - clear token and redirect to login
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+        throw new Error('Unauthorized');
+      }
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Request failed' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      // Handle network errors
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('Network error:', error);
+        console.error('API URL:', API_URL);
+        console.error('Full URL:', url);
+        throw new Error(`Не удалось подключиться к серверу. Проверьте, что бэкенд запущен и доступен по адресу: ${API_URL}`);
+      }
+      throw error;
     }
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Request failed' }));
-      throw new Error(error.error || `HTTP ${response.status}`);
-    }
-
-    return response.json();
   }
 
   // Auth endpoints
