@@ -3326,23 +3326,6 @@ const App: React.FC = () => {
                                                     <span className="text-sm font-bold text-architect-700 dark:text-architect-300">{sub}</span>
                                                     <span className="text-xs text-architect-400">({items.length} позиций)</span>
                                                 </button>
-                                                {/* Кнопки добавления только для НЕ-отделочных секций */}
-                                                {!isFinishingSection && hasPermission(PERMISSIONS.EDIT_PRICES) && (
-                                                    <div className="flex items-center gap-2">
-                                                        <button 
-                                                            onClick={() => openImportModal(sub)}
-                                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
-                                                        >
-                                                            <Upload className="w-3 h-3" /> Загрузить
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => { handleAddPriceItem('work', sub); setExpandedPriceSections(prev => ({ ...prev, [`work-${sub}`]: true })); }}
-                                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
-                                                        >
-                                                            <Plus className="w-3 h-3" /> Добавить
-                                                        </button>
-                                                    </div>
-                                                )}
                                                 {!isFinishingSection && !hasPermission(PERMISSIONS.EDIT_PRICES) && (
                                                     <span className="text-xs text-architect-400">Только просмотр</span>
                                                 )}
@@ -3378,20 +3361,6 @@ const App: React.FC = () => {
                                                                             <div className="flex items-center gap-2">
                                                                                 <span className={`text-sm font-bold ${titleClass}`}>{subSec}</span>
                                                                                 <span className="text-xs text-architect-400">({subItems.length})</span>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-2">
-                                                                                <button 
-                                                                                    onClick={() => openImportModal(sub, subSec)}
-                                                                                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-all"
-                                                                                >
-                                                                                    <Upload className="w-2.5 h-2.5" /> xlsx
-                                                                                </button>
-                                                                                <button 
-                                                                                    onClick={() => { handleAddPriceItem('work', sub, subSec); }}
-                                                                                    className={`flex items-center gap-1 px-2 py-1 text-[10px] font-bold bg-white dark:bg-architect-800 rounded transition-all ${btnClass}`}
-                                                                                >
-                                                                                    <Plus className="w-2.5 h-2.5" />
-                                                                                </button>
                                                                             </div>
                                                                         </div>
                                                                         {/* Таблица работ */}
@@ -3445,6 +3414,23 @@ const App: React.FC = () => {
                                                                                 </div>
                                                                             )}
                                                                         </div>
+                                                                        {/* Кнопки добавления внизу подраздела */}
+                                                                        {hasPermission(PERMISSIONS.EDIT_PRICES) && (
+                                                                            <div className="flex items-center justify-end gap-2 px-3 py-2 border-t border-architect-50 dark:border-architect-700">
+                                                                                <button 
+                                                                                    onClick={() => openImportModal(sub, subSec)}
+                                                                                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-all"
+                                                                                >
+                                                                                    <Upload className="w-2.5 h-2.5" /> xlsx
+                                                                                </button>
+                                                                                <button 
+                                                                                    onClick={() => { handleAddPriceItem('work', sub, subSec); }}
+                                                                                    className={`flex items-center gap-1 px-2 py-1 text-[10px] font-bold bg-white dark:bg-architect-800 rounded transition-all ${btnClass}`}
+                                                                                >
+                                                                                    <Plus className="w-2.5 h-2.5" />
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 );
                                                             })}
@@ -3510,6 +3496,23 @@ const App: React.FC = () => {
                                                                 </div>
                                                             )}
                                                         </div>
+                                                        {/* Кнопки добавления внизу обычной секции */}
+                                                        {!isFinishingSection && hasPermission(PERMISSIONS.EDIT_PRICES) && (
+                                                            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
+                                                                <button 
+                                                                    onClick={() => openImportModal(sub)}
+                                                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                                                                >
+                                                                    <Upload className="w-3 h-3" /> Загрузить
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => { handleAddPriceItem('work', sub); setExpandedPriceSections(prev => ({ ...prev, [`work-${sub}`]: true })); }}
+                                                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
+                                                                >
+                                                                    <Plus className="w-3 h-3" /> Добавить
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     )}
                                                 </div>
                                             )}
@@ -3559,12 +3562,6 @@ const App: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                                <button 
-                                    onClick={() => handleAddPriceItem('rough', 'Черновые материалы')}
-                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-xl transition-all shrink-0"
-                                >
-                                    <Plus className="w-4 h-4" /> Добавить материал
-                                </button>
                             </div>
                             <div className="bg-white dark:bg-architect-800 rounded-xl border border-architect-200 dark:border-architect-700 overflow-hidden">
                                 {priceList.filter(p => p.type === 'rough').length > 0 ? (
@@ -3641,6 +3638,23 @@ const App: React.FC = () => {
                                         <p className="text-xs mt-1">Добавьте материалы для использования в сметах</p>
                                     </div>
                                 )}
+                                {/* Кнопки добавления внизу черновых материалов */}
+                                {hasPermission(PERMISSIONS.EDIT_PRICES) && (
+                                    <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
+                                        <button 
+                                            onClick={() => openImportModal('Черновые материалы')}
+                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                                        >
+                                            <Upload className="w-3 h-3" /> Загрузить
+                                        </button>
+                                        <button 
+                                            onClick={() => handleAddPriceItem('rough', 'Черновые материалы')}
+                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all"
+                                        >
+                                            <Plus className="w-3 h-3" /> Добавить
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -3684,12 +3698,6 @@ const App: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                                <button 
-                                    onClick={() => handleAddPriceItem('finish', 'Чистовые материалы')}
-                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all shrink-0"
-                                >
-                                    <Plus className="w-4 h-4" /> Добавить материал
-                                </button>
                             </div>
                             <div className="bg-white dark:bg-architect-800 rounded-xl border border-architect-200 dark:border-architect-700 overflow-hidden">
                                 {priceList.filter(p => p.type === 'finish').length > 0 ? (
@@ -3764,6 +3772,23 @@ const App: React.FC = () => {
                                         <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-20" />
                                         <p className="text-sm font-medium">Нет чистовых материалов</p>
                                         <p className="text-xs mt-1">Добавьте материалы для использования в сметах</p>
+                                    </div>
+                                )}
+                                {/* Кнопки добавления внизу чистовых материалов */}
+                                {hasPermission(PERMISSIONS.EDIT_PRICES) && (
+                                    <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-architect-50 dark:border-architect-700">
+                                        <button 
+                                            onClick={() => openImportModal('Чистовые материалы')}
+                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                                        >
+                                            <Upload className="w-3 h-3" /> Загрузить
+                                        </button>
+                                        <button 
+                                            onClick={() => handleAddPriceItem('finish', 'Чистовые материалы')}
+                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                                        >
+                                            <Plus className="w-3 h-3" /> Добавить
+                                        </button>
                                     </div>
                                 )}
                             </div>
