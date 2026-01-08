@@ -2098,6 +2098,46 @@ const App: React.FC = () => {
                     Нет аккаунта? Зарегистрироваться
                   </button>
                 </form>
+
+                {/* Superadmin login form */}
+                <div className="mt-6 pt-6 border-t border-architect-200 dark:border-architect-700">
+                  <p className="text-xs text-center text-architect-500 dark:text-architect-400 mb-3">
+                    Суперадмин
+                  </p>
+                  {superadminError && (
+                    <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                      <p className="text-sm text-red-600 dark:text-red-400">{superadminError}</p>
+                    </div>
+                  )}
+                  <form onSubmit={handleSuperadminLogin} className="space-y-4 text-left">
+                    <div>
+                      <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Логин</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={superadminUsername} 
+                        onChange={e => { setSuperadminUsername(e.target.value); setSuperadminError(null); }} 
+                        className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Пароль</label>
+                      <input 
+                        type="password" 
+                        required 
+                        value={superadminPassword} 
+                        onChange={e => { setSuperadminPassword(e.target.value); setSuperadminError(null); }} 
+                        className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
+                      />
+                    </div>
+                    <button 
+                      type="submit"
+                      className="w-full bg-purple-600 text-white px-6 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-purple-700 active:scale-95 transition-all"
+                    >
+                      Войти как суперадмин
+                    </button>
+                  </form>
+                </div>
               </>
             )}
         </div>
