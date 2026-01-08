@@ -140,6 +140,12 @@ class ApiClient {
     });
   }
 
+  async deleteProject(id: string) {
+    return this.request(`/projects/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // AI endpoints
   async getAILimit() {
     return this.request('/ai/limit');

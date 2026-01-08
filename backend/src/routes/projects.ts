@@ -281,5 +281,53 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// Delete project (soft delete)
+router.delete('/:id', authMiddleware, requirePermission(PERMISSIONS.DELETE_PROJECTS), async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const projectId = req.params.id;
+
+    // Check access
+    const canViewAll = req.user.role === 'admin' || req.user.role === 'manager';
+    let accessCheck: any;
+
+    if (canViewAll) {
+      accessCheck = await pool.query(
+        'SELECT id FROM projects WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL',
+        [projectId, req.user.organizationId]
+      );
+    } else {
+      accessCheck = await pool.query(
+        `SELECT p.id FROM projects p
+         INNER JOIN project_assignments pa ON p.id = pa.project_id
+         WHERE p.id = $1 AND p.organization_id = $2 AND pa.user_id = $3 AND p.deleted_at IS NULL`,
+        [projectId, req.user.organizationId, req.user.id]
+      );
+    }
+
+    if (accessCheck.rows.length === 0) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    // Soft delete: set deleted_at timestamp
+    await pool.query(
+      `UPDATE projects 
+       SET deleted_at = NOW()
+       WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`,
+      [projectId, req.user.organizationId]
+    );
+
+    res.json({ message: 'Project deleted successfully' });
+  } catch (error) {
+    console.error('Delete project error:', error);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
 export default router;
 

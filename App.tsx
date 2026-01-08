@@ -857,13 +857,19 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteProject = () => {
+  const handleDeleteProject = async () => {
     if (!currentProject) return;
     if (window.confirm('Вы уверены, что хотите безвозвратно удалить этот проект?')) {
-      const newProjects = projects.filter(p => p.id !== currentProject.id);
-      setProjects(newProjects);
-      setCurrentProject(null);
-      setState(AppState.PROJECT_LIST);
+      try {
+        await api.deleteProject(currentProject.id);
+        const newProjects = projects.filter(p => p.id !== currentProject.id);
+        setProjects(newProjects);
+        setCurrentProject(null);
+        setState(AppState.PROJECT_LIST);
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+        alert('Ошибка при удалении проекта. Попробуйте еще раз.');
+      }
     }
   };
 
