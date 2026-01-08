@@ -1532,20 +1532,135 @@ const App: React.FC = () => {
           return str.charAt(0).toUpperCase() + str.slice(1);
         };
         
+        // Функция для нормализации названия (удаление окончаний для сравнения)
+        const normalizeName = (name: string): string => {
+          if (!name) return '';
+          const lower = name.toLowerCase().trim();
+          // Удаляем общие русские окончания (последние 1-3 символа)
+          // Это поможет игнорировать различия типа "полотенцесушителя" vs "полотенцесушитель"
+          const endings = ['а', 'я', 'и', 'ы', 'у', 'ю', 'е', 'о', 'ом', 'ой', 'ей', 'ами', 'ах', 'ами'];
+          for (const ending of endings) {
+            if (lower.endsWith(ending) && lower.length > ending.length + 3) {
+              return lower.slice(0, -ending.length);
+            }
+          }
+          return lower;
+        };
+        
+        // Функция для гибкого поиска совпадения в справочнике
+        const findSimilarPriceItem = (searchName: string, type: string): PriceItem | undefined => {
+          const normalizedSearch = normalizeName(searchName);
+          
+          // Сначала ищем точное совпадение
+          let exactMatch = priceList.find(p => 
+            p.name.toLowerCase().trim() === searchName.toLowerCase().trim() &&
+            p.type === type
+          );
+          if (exactMatch) return exactMatch;
+          
+          // Затем ищем совпадение по нормализованным названиям
+          // Считаем совпадением, если нормализованные названия совпадают
+          let normalizedMatch = priceList.find(p => {
+            if (p.type !== type) return false;
+            const normalizedPrice = normalizeName(p.name);
+            return normalizedPrice === normalizedSearch && normalizedSearch.length > 5; // Минимум 5 символов для надежности
+          });
+          if (normalizedMatch) return normalizedMatch;
+          
+          // Также проверяем, что одно название содержит другое (для случаев типа "демонтаж полотенцесушителя" vs "демонтаж полотенцесушитель")
+          let containsMatch = priceList.find(p => {
+            if (p.type !== type) return false;
+            const priceLower = p.name.toLowerCase().trim();
+            const searchLower = searchName.toLowerCase().trim();
+            // Проверяем, что одно содержит другое, и разница только в окончании
+            if (priceLower.includes(normalizedSearch) || normalizedSearch.includes(normalizeName(p.name))) {
+              // Проверяем, что разница не слишком большая (не более 3 символов)
+              const diff = Math.abs(priceLower.length - searchLower.length);
+              return diff <= 3 && normalizedSearch.length > 5;
+            }
+            return false;
+          });
+          if (containsMatch) return containsMatch;
+          
+          return undefined;
+        };
+        
         // Обрабатываем каждую позицию
         for (const item of parsedItems) {
           // Капитализируем название позиции
           const capitalizedName = capitalizeFirstLetter(item.name.trim());
           
-          // Проверяем, есть ли ТОЧНОЕ совпадение позиции в прайс-листе (только для справки)
-          // Используем строгое сравнение - название должно совпадать слово в слово
-          let priceItem = priceList.find(p => 
-            p.name.toLowerCase().trim() === capitalizedName.toLowerCase().trim() &&
-            p.type === item.type
-          );
+          // Проверяем, есть ли совпадение позиции в прайс-листе (с учетом окончаний)
+          let priceItem = findSimilarPriceItem(capitalizedName, item.type);
           
-          // Если найдено похожее, но не точное совпадение - игнорируем его
-          // Пользователь сказал своё название, значит нужна новая позиция
+          // Если найдено совпадение (точное или по нормализованному названию) - используем существующую позицию
+          // Это предотвращает создание дубликатов из-за различий в окончаниях
+          if (priceItem) {
+            console.log(`Found similar price item: "${priceItem.name}" for "${capitalizedName}"`);
+            // Используем название из справочника для единообразия
+            const finalName = priceItem.name;
+            
+            // Определяем количество для сметы
+            let quantity = item.quantity || 1;
+            if (item.quantitySource !== 'voice' && (item.quantity === null || item.quantity === undefined)) {
+              switch (item.quantitySource) {
+                case 'floorArea':
+                case 'ceilingArea':
+                  quantity = floorArea;
+                  break;
+                case 'wallArea':
+                  quantity = wallArea;
+                  break;
+                case 'perimeter':
+                  quantity = perimeter;
+                  break;
+                case 'doors':
+                  quantity = doors;
+                  break;
+                case 'windows':
+                  quantity = windows;
+                  break;
+                default:
+                  quantity = 1;
+              }
+            }
+            quantity = Math.round(quantity * 10) / 10;
+            
+            // Используем цену из справочника, если она есть
+            const price = priceItem.price || (item.suggestedPrice || 0);
+            
+            // Определяем категорию для добавления в смету
+            let subCategory = item.category || 'Общие';
+            if (priceItem.category && (ROUGH_WORK_SECTIONS.includes(priceItem.category) || FINISH_WORK_SECTIONS.includes(priceItem.category))) {
+              subCategory = priceItem.category;
+            }
+            
+            // Добавляем в смету с использованием существующей позиции из справочника
+            const newItem: EstimationItem = {
+              id: `voice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              name: finalName,
+              unit: priceItem.unit || item.unit || 'шт',
+              quantity,
+              price,
+              total: quantity * price,
+              type: item.type === 'work' ? 'work' : item.type,
+              linkedMaterials: []
+            };
+            
+            // Добавляем в соответствующую секцию сметы
+            if (item.type === 'work') {
+              if (!updatedEst.works[subCategory]) {
+                updatedEst.works[subCategory] = { items: [] };
+              }
+              updatedEst.works[subCategory].items.push(newItem);
+            } else if (item.type === 'rough') {
+              updatedEst.roughMaterials.items.push(newItem);
+            } else if (item.type === 'finish') {
+              updatedEst.finishMaterials.items.push(newItem);
+            }
+            
+            continue; // Переходим к следующей позиции
+          }
           
           // Если позиции нет в прайс-листе, создаём её
           if (!priceItem) {
