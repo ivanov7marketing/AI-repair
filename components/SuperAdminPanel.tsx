@@ -177,9 +177,9 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
   }
 
   return (
-    <div className="min-h-screen bg-architect-50 dark:bg-architect-900">
+    <div className="h-screen flex flex-col bg-architect-50 dark:bg-architect-900 overflow-hidden">
       {/* Header */}
-      <div className="bg-white dark:bg-architect-800 shadow-sm border-b border-architect-200 dark:border-architect-700">
+      <div className="bg-white dark:bg-architect-800 shadow-sm border-b border-architect-200 dark:border-architect-700 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -202,7 +202,8 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
       </div>
 
       {/* Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex gap-2 border-b border-architect-200 dark:border-architect-700 mb-6">
           <button
             onClick={() => setActiveTab('prices')}
