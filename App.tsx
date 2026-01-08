@@ -1514,10 +1514,66 @@ const App: React.FC = () => {
           }
         });
         
-        parsedItems.forEach((item: VoiceEstimationItem) => {
-          // Определяем количество
+        // Обрабатываем каждую позицию
+        for (const item of parsedItems) {
+          // Проверяем, есть ли позиция в прайс-листе
+          let priceItem = priceList.find(p => 
+            p.name.toLowerCase().trim() === item.name.toLowerCase().trim() &&
+            p.type === item.type
+          );
+          
+          // Если позиции нет в прайс-листе, создаём её
+          if (!priceItem && hasPermission(PERMISSIONS.EDIT_PRICES)) {
+            try {
+              // Определяем количество для новой позиции
+              let quantity = item.quantity;
+              if (item.quantitySource !== 'voice' && (item.quantity === null || item.quantity === undefined)) {
+                switch (item.quantitySource) {
+                  case 'floorArea':
+                  case 'ceilingArea':
+                    quantity = floorArea;
+                    break;
+                  case 'wallArea':
+                    quantity = wallArea;
+                    break;
+                  case 'perimeter':
+                    quantity = perimeter;
+                    break;
+                  case 'doors':
+                    quantity = doors;
+                    break;
+                  case 'windows':
+                    quantity = windows;
+                    break;
+                  default:
+                    quantity = 1;
+                }
+              }
+              
+              // Создаём новую позицию в прайс-листе
+              const newPriceItem = await api.createPriceItem({
+                name: item.name,
+                unit: item.unit || 'шт',
+                price: item.suggestedPrice || 1, // Если цена не указана, ставим 1 руб.
+                category: item.category || 'Черновые отделочные работы',
+                subcategory: item.category === 'Черновые отделочные работы' || item.category === 'Чистовые отделочные работы' 
+                  ? (item.quantitySource === 'wallArea' ? 'Стены' : item.quantitySource === 'floorArea' ? 'Пол' : item.quantitySource === 'ceilingArea' ? 'Потолок' : undefined)
+                  : undefined,
+                type: item.type || 'work',
+              });
+              
+              // Добавляем в локальный список прайсов
+              setPriceList(prev => [...prev, newPriceItem]);
+              priceItem = newPriceItem;
+            } catch (error) {
+              console.error('Failed to create price item:', error);
+              // Продолжаем без добавления в прайс-лист
+            }
+          }
+          
+          // Определяем количество для сметы
           let quantity = item.quantity || 1;
-          if (item.quantitySource !== 'voice' && item.quantity === null) {
+          if (item.quantitySource !== 'voice' && (item.quantity === null || item.quantity === undefined)) {
             switch (item.quantitySource) {
               case 'floorArea':
               case 'ceilingArea':
@@ -1541,13 +1597,16 @@ const App: React.FC = () => {
           }
           quantity = Math.round(quantity * 10) / 10;
           
+          // Используем цену из прайс-листа, если позиция найдена, иначе используем suggestedPrice или 1
+          const price = priceItem ? priceItem.price : (item.suggestedPrice || 1);
+          
           const newItem: EstimationItem = {
             id: `voice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             name: item.name,
-            unit: item.unit,
+            unit: item.unit || (priceItem ? priceItem.unit : 'шт'),
             quantity,
-            price: item.suggestedPrice || 0,
-            total: quantity * (item.suggestedPrice || 0),
+            price,
+            total: quantity * price,
             type: item.type === 'work' ? 'work' : item.type,
             linkedMaterials: []
           };
@@ -1560,7 +1619,7 @@ const App: React.FC = () => {
           } else if (item.type === 'finish') {
             updatedEst.finishMaterials.items.push(newItem);
           }
-        });
+        }
         
         handleUpdateRoom({ ...selectedRoom, estimation: updatedEst });
         
