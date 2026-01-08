@@ -1514,12 +1514,21 @@ const App: React.FC = () => {
           }
         });
         
+        // Функция для капитализации первой буквы
+        const capitalizeFirstLetter = (str: string): string => {
+          if (!str) return str;
+          return str.charAt(0).toUpperCase() + str.slice(1);
+        };
+        
         // Обрабатываем каждую позицию
         for (const item of parsedItems) {
+          // Капитализируем название позиции
+          const capitalizedName = capitalizeFirstLetter(item.name.trim());
+          
           // Проверяем, есть ли ТОЧНОЕ совпадение позиции в прайс-листе (только для справки)
           // Используем строгое сравнение - название должно совпадать слово в слово
           let priceItem = priceList.find(p => 
-            p.name.toLowerCase().trim() === item.name.toLowerCase().trim() &&
+            p.name.toLowerCase().trim() === capitalizedName.toLowerCase().trim() &&
             p.type === item.type
           );
           
@@ -1614,7 +1623,7 @@ const App: React.FC = () => {
                 
                 // Создаём новую позицию в прайс-листе
                 const newPriceItem = await api.createPriceItem({
-                  name: item.name,
+                  name: capitalizedName,
                   unit: item.unit || 'шт',
                   price: extractedPrice > 0 ? extractedPrice : 1, // Если цена не указана, ставим 1 руб.
                   category,
@@ -1676,7 +1685,7 @@ const App: React.FC = () => {
           
           const newItem: EstimationItem = {
             id: `voice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: item.name,
+            name: capitalizedName,
             unit: item.unit || (priceItem ? priceItem.unit : 'шт'),
             quantity,
             price,
