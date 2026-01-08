@@ -321,6 +321,7 @@ const App: React.FC = () => {
   const [expandedPriceSections, setExpandedPriceSections] = useState<Record<string, boolean>>({});
   const [activePriceTab, setActivePriceTab] = useState<'works' | 'rough' | 'finish'>('works');
   const priceUpdateTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
+  const estimationUpdateTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   
   // Поиск в прайсах
   const [priceSearchQuery, setPriceSearchQuery] = useState('');
@@ -984,6 +985,7 @@ const App: React.FC = () => {
     }
 
     // Синхронизация с прайс-листом: если изменились name/unit/price — создаём или обновляем позицию
+    // НО только если название имеет минимум 3 символа (чтобы не создавать позиции при вводе)
     if (field === 'name' || field === 'unit' || field === 'price') {
       let targetItem: EstimationItem | undefined;
 
@@ -1001,7 +1003,8 @@ const App: React.FC = () => {
         targetItem = updatedEst.finishMaterials.items.find((it: EstimationItem) => it.id === id);
       }
 
-      if (targetItem && targetItem.name && targetItem.name.trim()) {
+      // Проверяем, что название имеет минимум 3 символа (чтобы не создавать позиции при вводе)
+      if (targetItem && targetItem.name && targetItem.name.trim().length >= 3) {
         const typeForPrice: 'work' | 'rough' | 'finish' =
           (targetItem.type as 'work' | 'rough' | 'finish') ||
           (category === 'works' ? 'work' : category);
@@ -1030,14 +1033,23 @@ const App: React.FC = () => {
           priceCategory = typeForPrice === 'rough' ? 'Черновые материалы' : 'Чистовые материалы';
         }
 
-        autoAddToPriceList(
-          targetItem.name,
-          (targetItem.unit as string) || '',
-          Number(targetItem.price) || 0,
-          typeForPrice,
-          priceCategory,
-          subcategory
-        );
+        // Используем debounce для создания позиции в справочнике
+        const itemKey = `${category}-${id}-${materialId || ''}`;
+        if (estimationUpdateTimeouts.current[itemKey]) {
+          clearTimeout(estimationUpdateTimeouts.current[itemKey]);
+        }
+        
+        estimationUpdateTimeouts.current[itemKey] = setTimeout(() => {
+          autoAddToPriceList(
+            targetItem!.name,
+            (targetItem!.unit as string) || '',
+            Number(targetItem!.price) || 0,
+            typeForPrice,
+            priceCategory,
+            subcategory
+          );
+          delete estimationUpdateTimeouts.current[itemKey];
+        }, 1500); // Ждем 1.5 секунды после последнего изменения
       }
     }
 
