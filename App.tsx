@@ -360,9 +360,6 @@ const App: React.FC = () => {
 
   // Superadmin state
   const [isSuperadmin, setIsSuperadmin] = useState(false);
-  const [superadminUsername, setSuperadminUsername] = useState('');
-  const [superadminPassword, setSuperadminPassword] = useState('');
-  const [superadminError, setSuperadminError] = useState<string | null>(null);
 
   // Check if superadmin is logged in on mount
   useEffect(() => {
@@ -372,24 +369,11 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleSuperadminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuperadminError(null);
-    try {
-      await api.superadminLogin(superadminUsername, superadminPassword);
-      setIsSuperadmin(true);
-      setSuperadminUsername('');
-      setSuperadminPassword('');
-    } catch (error: any) {
-      setSuperadminError(error.message || 'Ошибка входа');
-    }
-  };
-
   const handleSuperadminLogout = () => {
     localStorage.removeItem('superadmin_token');
     setIsSuperadmin(false);
-    setSuperadminUsername('');
-    setSuperadminPassword('');
+    setEmail('');
+    setPassword('');
   };
 
   // Load projects and prices from backend when user is authenticated
@@ -545,6 +529,25 @@ const App: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
+    
+    // Check if it's superadmin login (username is not an email)
+    const isEmail = email.includes('@');
+    
+    if (!isEmail) {
+      // Try superadmin login
+      try {
+        await api.superadminLogin(email, password);
+        setIsSuperadmin(true);
+        setEmail('');
+        setPassword('');
+        return;
+      } catch (error: any) {
+        setLoginError(error.message || 'Ошибка входа');
+        return;
+      }
+    }
+    
+    // Regular user login
     try {
       await login({ email, password });
       await loadProjects(); // loadProjects will set state internally
@@ -2067,14 +2070,18 @@ const App: React.FC = () => {
                 )}
                 <form onSubmit={handleLogin} className="space-y-4 text-left">
                   <div>
-                    <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">E-mail</label>
+                    <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Логин / E-mail</label>
                     <input 
-                      type="email" 
+                      type="text" 
                       required 
                       value={email} 
                       onChange={e => { setEmail(e.target.value); setLoginError(null); }} 
+                      placeholder="ivanovmax или email@example.com"
                       className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
                     />
+                    <p className="text-xs text-architect-400 dark:text-architect-500 mt-1 ml-1">
+                      Введите email для входа или логин суперадмина
+                    </p>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Пароль</label>
@@ -2087,7 +2094,7 @@ const App: React.FC = () => {
                     />
                   </div>
                   <button type="submit" className="w-full bg-architect-900 dark:bg-white text-white dark:text-architect-900 font-bold py-3 rounded-xl hover:opacity-90 flex items-center justify-center gap-2 text-sm mt-4">
-                    Войти в дашборд <ChevronRight className="w-5 h-5" />
+                    Войти <ChevronRight className="w-5 h-5" />
                   </button>
                   <button
                     type="button"
@@ -2097,46 +2104,6 @@ const App: React.FC = () => {
                     Нет аккаунта? Зарегистрироваться
                   </button>
                 </form>
-
-                {/* Superadmin login form */}
-                <div className="mt-6 pt-6 border-t border-architect-200 dark:border-architect-700">
-                  <p className="text-xs text-center text-architect-500 dark:text-architect-400 mb-3">
-                    Суперадмин
-                  </p>
-                  {superadminError && (
-                    <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                      <p className="text-sm text-red-600 dark:text-red-400">{superadminError}</p>
-                    </div>
-                  )}
-                  <form onSubmit={handleSuperadminLogin} className="space-y-4 text-left">
-                    <div>
-                      <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Логин</label>
-                      <input 
-                        type="text" 
-                        required 
-                        value={superadminUsername} 
-                        onChange={e => { setSuperadminUsername(e.target.value); setSuperadminError(null); }} 
-                        className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-architect-500 dark:text-architect-400 uppercase mb-1.5 ml-1">Пароль</label>
-                      <input 
-                        type="password" 
-                        required 
-                        value={superadminPassword} 
-                        onChange={e => { setSuperadminPassword(e.target.value); setSuperadminError(null); }} 
-                        className="w-full px-4 py-3 bg-architect-50 dark:bg-architect-900 border border-architect-200 dark:border-architect-700 rounded-xl outline-none dark:text-white text-sm" 
-                      />
-                    </div>
-                    <button 
-                      type="submit"
-                      className="w-full bg-purple-600 text-white px-6 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-purple-700 active:scale-95 transition-all"
-                    >
-                      Войти как суперадмин
-                    </button>
-                  </form>
-                </div>
               </>
             )}
         </div>
