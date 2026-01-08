@@ -187,7 +187,15 @@ router.post('/default-prices', superadminAuthMiddleware, async (req: Request, re
       `INSERT INTO default_price_items (name, unit, price, category, subcategory, type, sort_order)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, name, unit, price, category, subcategory, type, sort_order, created_at, updated_at`,
-      [body.name, body.unit, body.price, body.category, body.subcategory || null, body.type, sortOrder]
+      [
+        body.name || '', 
+        body.unit, 
+        body.price, 
+        body.category, 
+        body.subcategory || null, 
+        body.type, 
+        sortOrder
+      ]
     );
 
     const row = result.rows[0];
