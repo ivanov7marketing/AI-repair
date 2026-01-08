@@ -1979,6 +1979,11 @@ const App: React.FC = () => {
     );
   }
 
+  // Show superadmin panel if logged in as superadmin
+  if (isSuperadmin) {
+    return <SuperAdminPanel onLogout={handleSuperadminLogout} />;
+  }
+
   if (state === AppState.LOGIN || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-architect-50 dark:bg-architect-900 p-4 transition-colors">
