@@ -376,11 +376,12 @@ const App: React.FC = () => {
         createdAt: new Date(p.createdAt).getTime(),
         thumbnail: p.thumbnail,
         planPreview: p.planPreview,
-        analysis: p.analysisData,
+        analysis: p.analysisData ? (typeof p.analysisData === 'string' ? JSON.parse(p.analysisData) : p.analysisData) : undefined,
         global3DImage: p.global3dImage,
-        roomImages: p.roomImages,
+        roomImages: p.roomImages ? (typeof p.roomImages === 'string' ? JSON.parse(p.roomImages) : p.roomImages) : {},
       }));
       setProjects(transformedProjects);
+      console.log(`Loaded ${transformedProjects.length} projects from backend`);
     } catch (error) {
       console.error('Failed to load projects:', error);
     }
@@ -389,18 +390,24 @@ const App: React.FC = () => {
   useEffect(() => {
     if (currentProject) {
       setProjects(prev => prev.map(p => p.id === currentProject.id ? currentProject : p));
-      // Save to backend
-      saveProject(currentProject);
+      // Save to backend with debounce to avoid too many requests
+      const timeoutId = setTimeout(() => {
+        saveProject(currentProject);
+      }, 1000); // Save 1 second after last change
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [currentProject]);
 
   const saveProject = async (project: Project) => {
     try {
+      // Don't save planFile (File object can't be serialized)
+      // Only save data that can be stored in database
       await api.updateProject(project.id, {
         name: project.name,
         thumbnail: project.thumbnail,
         planPreview: project.planPreview,
-        analysisData: project.analysis,
+        analysisData: project.analysis, // This includes all rooms with estimations
         global3dImage: project.global3DImage,
         roomImages: project.roomImages,
       });
@@ -582,6 +589,17 @@ const App: React.FC = () => {
       const updatedProject = { ...project, analysis: result, name: result.propertyDescription || project.name };
       setCurrentProject(updatedProject);
       setAnalysisProgress(100);
+      
+      // Save analysis results to backend
+      try {
+        await api.updateProject(updatedProject.id, {
+          name: updatedProject.name,
+          analysisData: updatedProject.analysis,
+        });
+      } catch (error) {
+        console.error('Failed to save analysis:', error);
+      }
+      
       setTimeout(() => setState(AppState.VIEW_PROJECT), 600);
     } catch (error: any) {
       console.error("Analysis error:", error);
@@ -746,7 +764,17 @@ const App: React.FC = () => {
     try {
       const part = await fileToGenerativePart(currentProject.planFile);
       const url = await generateIsometricView(part, currentProject.analysis.architecturalStyle, imageSize, currentProject.analysis.styleReferenceImage);
+      const updatedProject = { ...currentProject, global3DImage: url };
       updateCurrentProject({ global3DImage: url });
+      
+      // Save to backend immediately
+      try {
+        await api.updateProject(updatedProject.id, {
+          global3dImage: url,
+        });
+      } catch (error) {
+        console.error('Failed to save global 3D image:', error);
+      }
     } catch (error: any) {
       console.error("Error generating 3D view:", error);
       const errorMessage = error?.message || "Неизвестная ошибка при генерации 3D макета";
@@ -762,7 +790,18 @@ const App: React.FC = () => {
     try {
       const part = await fileToGenerativePart(currentProject.planFile);
       const url = await generateRoomInterior(selectedRoom, currentProject.analysis.architecturalStyle, part, imageSize, currentProject.analysis.styleReferenceImage);
-      updateCurrentProject({ roomImages: { ...(currentProject.roomImages || {}), [selectedRoom.id]: url } });
+      const updatedRoomImages = { ...(currentProject.roomImages || {}), [selectedRoom.id]: url };
+      const updatedProject = { ...currentProject, roomImages: updatedRoomImages };
+      updateCurrentProject({ roomImages: updatedRoomImages });
+      
+      // Save to backend immediately
+      try {
+        await api.updateProject(updatedProject.id, {
+          roomImages: updatedRoomImages,
+        });
+      } catch (error) {
+        console.error('Failed to save room image:', error);
+      }
     } finally {
       setIsGeneratingRoom(false);
     }
