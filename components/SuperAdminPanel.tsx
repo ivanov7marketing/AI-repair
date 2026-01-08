@@ -709,6 +709,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
