@@ -60,9 +60,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       thumbnail: row.thumbnail,
       planFileName: row.plan_file_name,
       planPreview: row.plan_preview,
-      analysisData: row.analysis_data,
+      analysisData: row.analysis_data || null, // JSONB is already parsed by pg
       global3dImage: row.global_3d_image,
-      roomImages: row.room_images,
+      roomImages: row.room_images || {}, // JSONB is already parsed by pg
     })));
   } catch (error) {
     console.error('Get projects error:', error);
@@ -122,9 +122,9 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
       thumbnail: row.thumbnail,
       planFileName: row.plan_file_name,
       planPreview: row.plan_preview,
-      analysisData: row.analysis_data,
+      analysisData: row.analysis_data || null, // JSONB is already parsed by pg
       global3dImage: row.global_3d_image,
-      roomImages: row.room_images,
+      roomImages: row.room_images || {}, // JSONB is already parsed by pg
     });
   } catch (error) {
     console.error('Get project error:', error);
