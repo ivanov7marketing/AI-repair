@@ -319,6 +319,7 @@ const App: React.FC = () => {
   const [priceList, setPriceList] = useState<PriceItem[]>(DEFAULT_PRICES);
   const [expandedPriceSections, setExpandedPriceSections] = useState<Record<string, boolean>>({});
   const [activePriceTab, setActivePriceTab] = useState<'works' | 'rough' | 'finish'>('works');
+  const priceUpdateTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
   
   // Поиск в прайсах
   const [priceSearchQuery, setPriceSearchQuery] = useState('');
