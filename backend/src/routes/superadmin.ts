@@ -19,7 +19,7 @@ const changePasswordSchema = z.object({
 });
 
 const createPriceItemSchema = z.object({
-  name: z.string().min(1),
+  name: z.string(), // Allow empty string for new items that will be edited later
   unit: z.string().min(1),
   price: z.number().min(0), // Allow 0 for new items that will be edited later
   category: z.string().min(1),
