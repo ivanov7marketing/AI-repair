@@ -12,7 +12,8 @@ export const AI_CONFIG = {
   CONFIDENCE_THRESHOLD: 70,
   
   // Максимальная длина HTML для отправки в AI (символов)
-  HTML_MAX_LENGTH: 10000,
+  // Увеличено до 15000 для лучшего захвата контекста цены
+  HTML_MAX_LENGTH: 15000,
   
   // Время жизни кэша (12 часов в миллисекундах)
   CACHE_DURATION_MS: 12 * 60 * 60 * 1000,

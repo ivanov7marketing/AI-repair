@@ -11,15 +11,46 @@ import { AI_CONFIG } from '../config/aiConfig';
  */
 const PRICE_KEYWORDS = [
   // Английские
-  'price', 'cost', 'product', 'item', 'card', 'buy', 'cart', 'order',
+  'price', 'cost', 'product', 'item', 'card', 'buy', 'cart', 'order', 'main', 'detail',
   // Русские
-  'цена', 'стоимость', 'товар', 'купить', 'корзин', 'заказ', 'руб', '₽'
+  'цена', 'стоимость', 'товар', 'купить', 'корзин', 'заказ', 'руб', '₽', 'карт', 'основн'
 ];
+
+/**
+ * Секции, которые нужно УДАЛИТЬ (похожие товары и т.д.)
+ */
+const EXCLUDE_SECTIONS = [
+  'similar', 'recommend', 'related', 'also', 'like', 'viewed',
+  'похож', 'рекоменд', 'вместе', 'смотрел', 'понравит', 'купают'
+];
+
+/**
+ * Удаляет секции с "похожими товарами" и рекомендациями
+ */
+function removeExcludedSections(html: string): string {
+  // Удаляем секции по классам/id
+  for (const keyword of EXCLUDE_SECTIONS) {
+    // Удаляем div/section с классом или id содержащим ключевое слово
+    const patterns = [
+      new RegExp(`<div[^>]*(class|id)=["'][^"']*${keyword}[^"']*["'][^>]*>[\\s\\S]*?<\\/div>`, 'gi'),
+      new RegExp(`<section[^>]*(class|id)=["'][^"']*${keyword}[^"']*["'][^>]*>[\\s\\S]*?<\\/section>`, 'gi'),
+    ];
+    
+    for (const pattern of patterns) {
+      html = html.replace(pattern, '');
+    }
+  }
+  
+  return html;
+}
 
 /**
  * Удаляет теги, которые не несут полезной информации для извлечения цен
  */
 function removeUselessTags(html: string): string {
+  // Сначала удаляем секции с похожими товарами
+  html = removeExcludedSections(html);
+  
   // Удаляем script теги с содержимым
   html = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
   
@@ -34,6 +65,13 @@ function removeUselessTags(html: string): string {
   
   // Удаляем iframe теги
   html = html.replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '');
+  
+  // Удаляем header и footer (обычно не содержат цену товара)
+  html = html.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
+  html = html.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
+  
+  // Удаляем nav (навигация)
+  html = html.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
   
   // Удаляем img теги (оставляем alt текст если есть)
   html = html.replace(/<img[^>]*alt=["']([^"']*)["'][^>]*>/gi, '$1');

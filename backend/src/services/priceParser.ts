@@ -142,6 +142,8 @@ function getSupplierNameFromUrl(url: string): string {
  */
 async function parseWithAI(url: string): Promise<ParsedPrice | null> {
   try {
+    console.log(`[parseWithAI] Fetching URL: ${url}`);
+    
     // Сначала получаем HTML через HTTP
     const response = await axios.get(url, {
       timeout: 30000,
@@ -149,18 +151,46 @@ async function parseWithAI(url: string): Promise<ParsedPrice | null> {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache',
       }
     });
 
     if (!response.data || typeof response.data !== 'string') {
-      console.warn('Empty or invalid HTML response');
+      console.warn('[parseWithAI] Empty or invalid HTML response');
       return null;
+    }
+    
+    const html = response.data;
+    console.log(`[parseWithAI] Received HTML: ${html.length} chars`);
+    
+    // Проверяем на блокировку
+    if (html.includes('__qrator') || html.includes('<title>Access denied</title>')) {
+      console.warn('[parseWithAI] Page blocked by anti-bot protection');
+      return null;
+    }
+    
+    // Ищем признаки того, что это страница товара
+    const hasProductInfo = html.includes('itemprop="price"') || 
+                          html.includes('data-price') ||
+                          html.includes('product-price') ||
+                          html.includes('В корзину') ||
+                          html.includes('Купить');
+    
+    if (!hasProductInfo) {
+      console.warn('[parseWithAI] Page does not appear to be a product page');
     }
 
     // Извлекаем цену через AI
-    const aiResult = await extractPriceWithAI(response.data, url);
+    const aiResult = await extractPriceWithAI(html, url);
     
     if (aiResult && aiResult.price > 0 && aiResult.confidence >= AI_CONFIG.CONFIDENCE_THRESHOLD) {
+      // Дополнительная проверка: цена должна быть разумной (больше 50 руб для стройматериалов)
+      if (aiResult.price < 50) {
+        console.warn(`[parseWithAI] Price too low (${aiResult.price}), might be incorrect`);
+      }
+      
       return {
         price: aiResult.price,
         currency: aiResult.currency,
@@ -171,8 +201,8 @@ async function parseWithAI(url: string): Promise<ParsedPrice | null> {
     }
     
     return null;
-  } catch (error) {
-    console.error('AI parsing failed:', error);
+  } catch (error: any) {
+    console.error('[parseWithAI] Failed:', error.message);
     return null;
   }
 }

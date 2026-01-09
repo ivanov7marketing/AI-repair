@@ -30,32 +30,81 @@ export interface BatchItem {
 }
 
 /**
+ * Извлекает название товара из URL
+ */
+function extractProductNameFromUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    
+    // Ищем последнюю часть пути (обычно slug товара)
+    const parts = pathname.split('/').filter(p => p.length > 0);
+    const lastPart = parts[parts.length - 1];
+    
+    if (lastPart) {
+      // Убираем ID товара если есть (обычно в конце через дефис)
+      let productSlug = lastPart.replace(/-\d+$/, '');
+      
+      // Заменяем дефисы на пробелы и капитализируем
+      productSlug = productSlug.replace(/-/g, ' ');
+      
+      return productSlug;
+    }
+    
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Формирует промпт для извлечения цены
  */
 function buildPriceExtractionPrompt(html: string, url: string, productName?: string): string {
-  return `Задача: Извлечь цену товара из HTML страницы интернет-магазина.
+  // Определяем магазин для специфичных инструкций
+  const isSaturn = url.includes('saturn.net');
+  
+  // Пробуем извлечь название из URL если не передано
+  const effectiveProductName = productName || extractProductNameFromUrl(url);
+  
+  let storeSpecificInstructions = '';
+  if (isSaturn) {
+    storeSpecificInstructions = `
+СПЕЦИФИЧНО ДЛЯ SATURN.NET:
+- На сайте Saturn есть две цены: "С картой" (меньшая) и "Без карты" (большая)
+- ВЫБИРАЙ ЦЕНУ "С КАРТОЙ" - она обычно выделена или помечена
+- Цена обычно в формате "X XXX ₽" с пробелами между тысячами
+- ГЛАВНАЯ цена товара находится в верхней части страницы рядом с названием и кнопкой "В корзину"
+- ИГНОРИРУЙ ВСЕ цены ниже основного блока товара (это похожие товары!)
+`;
+  }
 
-URL: ${url}
-${productName ? `Название товара: ${productName}` : ''}
+  return `Задача: Извлечь цену КОНКРЕТНОГО товара из HTML страницы интернет-магазина.
+
+URL страницы товара: ${url}
+${effectiveProductName ? `ИСКОМЫЙ ТОВАР: "${effectiveProductName}"` : ''}
+${storeSpecificInstructions}
 
 HTML фрагмент страницы:
 ${html}
 
-Инструкции:
-1. Найди ОСНОВНУЮ цену товара (не старую цену, не цену со скидкой, не цену доставки)
-2. Если есть несколько цен - выбери актуальную цену для покупки (обычно это цена "с картой" или текущая цена)
-3. Игнорируй цены других товаров в секциях "Похожие товары", "Вам может понравиться", "С этим покупают"
-4. Формат цены может быть: "2 359 ₽", "2359 руб", "2,359.00", "2359", "2 359 рублей"
-5. Если товара нет в наличии, но цена указана - верни цену и inStock: false
-6. Если цену найти невозможно - верни price: 0 и confidence: 0
+КРИТИЧЕСКИ ВАЖНЫЕ ИНСТРУКЦИИ:
+1. Найди ОСНОВНУЮ цену товара "${effectiveProductName || 'указанного в URL'}"
+2. Цена ЭТОГО товара находится в ВЕРХНЕЙ части страницы, рядом с его названием
+3. Если есть "старая цена" (зачеркнутая) и "новая цена" - бери НОВУЮ
+4. Если есть цена "с картой" и "без карты" - бери цену "С КАРТОЙ" (меньшую)
+5. ПОЛНОСТЬЮ ИГНОРИРУЙ: "Похожие товары", "Рекомендуем", "С этим покупают", карусели товаров внизу
+6. Формат цены: "2 359 ₽", "2359 руб", "2,359.00"
+7. Если НЕ УВЕРЕН в цене - верни confidence: 0
 
-ВАЖНО: Верни ТОЛЬКО JSON без дополнительного текста, markdown или комментариев:
+ВЕРНИ ТОЛЬКО JSON:
 {
-  "price": число (например: 2359, без пробелов и символов валюты),
+  "price": число (например: 2359),
   "currency": "RUB",
-  "inStock": true или false,
-  "confidence": число от 0 до 100 (насколько уверен в правильности),
-  "priceText": "оригинальный текст цены с сайта"
+  "inStock": true/false,
+  "confidence": 0-100,
+  "priceText": "текст цены с сайта",
+  "foundProductName": "название найденного товара на странице"
 }`;
 }
 
@@ -239,13 +288,27 @@ export async function extractPriceWithAI(
   }
   
   try {
+    // Логируем размер исходного HTML
+    console.log(`[AI] Original HTML size: ${html.length} chars for ${url}`);
+    
+    // Проверяем, не заблокирована ли страница
+    if (html.includes('__qrator') || html.includes('captcha') || html.includes('blocked')) {
+      console.warn(`[AI] Page appears to be blocked by anti-bot for ${url}`);
+      return null;
+    }
+    
     // Упрощаем HTML
     const simplifiedHTML = simplifyHTML(html);
     
+    console.log(`[AI] Simplified HTML size: ${simplifiedHTML.length} chars`);
+    
     if (!simplifiedHTML || simplifiedHTML.length < 100) {
-      console.warn('HTML too short after simplification');
+      console.warn('[AI] HTML too short after simplification');
       return null;
     }
+    
+    // Логируем первые 500 символов для отладки
+    console.log(`[AI] Simplified HTML preview: ${simplifiedHTML.substring(0, 500)}...`);
     
     // Формируем промпт
     const prompt = buildPriceExtractionPrompt(simplifiedHTML, url, productName);
@@ -253,21 +316,24 @@ export async function extractPriceWithAI(
     // Вызываем AI
     const response = await callRouterAI(prompt);
     
+    console.log(`[AI] Raw response: ${response}`);
+    
     // Парсим результат
     const result = parseExtractionResult(response);
     
     if (result && result.confidence >= AI_CONFIG.CONFIDENCE_THRESHOLD) {
+      console.log(`[AI] Extracted price: ${result.price}₽, priceText: "${result.priceText}", confidence: ${result.confidence}`);
       return result;
     }
     
     // Если confidence низкий, логируем предупреждение
     if (result) {
-      console.warn(`Low confidence (${result.confidence}) for ${url}`);
+      console.warn(`[AI] Low confidence (${result.confidence}) for ${url}`);
     }
     
     return result;
   } catch (error) {
-    console.error('AI price extraction failed:', error);
+    console.error('[AI] Price extraction failed:', error);
     return null;
   }
 }
