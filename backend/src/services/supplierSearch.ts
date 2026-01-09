@@ -269,9 +269,11 @@ async function parseSearchResultsPuppeteer(searchUrl: string): Promise<Array<{ n
     
     // Удаляем признаки автоматизации (stealth плагин делает это автоматически, но добавим дополнительную защиту)
     await page.evaluateOnNewDocument(() => {
+      // @ts-ignore - код выполняется в контексте браузера через Puppeteer
       // Удаляем webdriver флаг
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       
+      // @ts-ignore - код выполняется в контексте браузера через Puppeteer
       // Добавляем реалистичные свойства
       (window.navigator as any).chrome = {
         runtime: {},
@@ -280,11 +282,13 @@ async function parseSearchResultsPuppeteer(searchUrl: string): Promise<Array<{ n
         app: {}
       };
       
+      // @ts-ignore - код выполняется в контексте браузера через Puppeteer
       // Переопределяем plugins
       Object.defineProperty(navigator, 'plugins', {
         get: () => [1, 2, 3, 4, 5]
       });
       
+      // @ts-ignore - код выполняется в контексте браузера через Puppeteer
       // Переопределяем languages
       Object.defineProperty(navigator, 'languages', {
         get: () => ['ru-RU', 'ru', 'en-US', 'en']
