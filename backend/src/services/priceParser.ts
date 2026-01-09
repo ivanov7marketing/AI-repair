@@ -15,43 +15,70 @@ puppeteer.use(StealthPlugin());
  * Поиск пути к Chromium на системе
  */
 function findChromiumPath(): string | undefined {
-  // Список возможных путей
+  // Список возможных путей (включая Nix-специфичные)
   const possiblePaths = [
     process.env.PUPPETEER_EXECUTABLE_PATH,
+    // Nix paths (Railway uses Nixpacks)
+    '/nix/var/nix/profiles/default/bin/chromium',
+    '/root/.nix-profile/bin/chromium',
+    '/home/nixuser/.nix-profile/bin/chromium',
+    // Standard paths
     '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
     '/usr/bin/google-chrome',
     '/usr/bin/google-chrome-stable',
     '/snap/bin/chromium',
   ].filter(Boolean) as string[];
   
-  // Проверяем существующие пути
+  // Проверяем существующие пути (исключаем stub файлы)
   for (const path of possiblePaths) {
     if (fs.existsSync(path)) {
+      // Проверяем что это не заглушка snap
+      try {
+        const content = fs.readFileSync(path, 'utf-8').slice(0, 200);
+        if (content.includes('snap install') || content.includes('requires the')) {
+          console.log(`[Puppeteer] Skipping snap stub at: ${path}`);
+          continue;
+        }
+      } catch (e) {
+        // Binary file - это нормально
+      }
       console.log(`[Puppeteer] Found Chromium at: ${path}`);
       return path;
     }
   }
   
-  // Пробуем найти через which
+  // Пробуем найти в nix store (быстрый поиск)
   try {
-    const whichResult = execSync('which chromium chromium-browser google-chrome 2>/dev/null || true', { encoding: 'utf-8' });
-    const foundPath = whichResult.trim().split('\n')[0];
+    // Ищем через PATH
+    const pathResult = execSync('command -v chromium 2>/dev/null || true', { encoding: 'utf-8' });
+    const foundPath = pathResult.trim();
     if (foundPath && fs.existsSync(foundPath)) {
-      console.log(`[Puppeteer] Found Chromium via which: ${foundPath}`);
+      console.log(`[Puppeteer] Found Chromium via PATH: ${foundPath}`);
       return foundPath;
     }
   } catch (e) {
     // Ignore
   }
   
-  // Пробуем найти в nix store
+  // Глубокий поиск в nix store
   try {
-    const nixResult = execSync('find /nix/store -name "chromium" -type f -executable 2>/dev/null | head -1 || true', { encoding: 'utf-8' });
+    const nixResult = execSync('ls /nix/store/*/bin/chromium 2>/dev/null | head -1 || true', { encoding: 'utf-8', timeout: 5000 });
     const nixPath = nixResult.trim();
     if (nixPath && fs.existsSync(nixPath)) {
       console.log(`[Puppeteer] Found Chromium in nix store: ${nixPath}`);
       return nixPath;
+    }
+  } catch (e) {
+    // Ignore  
+  }
+  
+  // Еще один вариант для nix
+  try {
+    const nixResult2 = execSync('find /nix/store -maxdepth 3 -name "chromium" -type f 2>/dev/null | head -1 || true', { encoding: 'utf-8', timeout: 10000 });
+    const nixPath2 = nixResult2.trim();
+    if (nixPath2 && fs.existsSync(nixPath2)) {
+      console.log(`[Puppeteer] Found Chromium via find: ${nixPath2}`);
+      return nixPath2;
     }
   } catch (e) {
     // Ignore  
