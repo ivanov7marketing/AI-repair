@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Settings, LogOut, Plus, Trash2, Edit2, Save, X, Lock, 
-  Hammer, Package, Sparkles, ChevronDown, ChevronUp, Upload
+  Hammer, Package, Sparkles, Search, ChevronDown, ChevronUp, Upload
 } from 'lucide-react';
 import { api } from '../services/api';
 import { PriceItem } from '../App';
@@ -65,7 +65,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
       
       // Auto-expand all sections
       const sections: Record<string, boolean> = {};
-      pricesWithSuppliers.forEach(p => {
+      prices.forEach(p => {
         const key = `${p.type}-${p.category}${p.subcategory ? `-${p.subcategory}` : ''}`;
         sections[key] = true;
       });
