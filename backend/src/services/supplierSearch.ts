@@ -224,14 +224,21 @@ async function parseSearchResultsPuppeteer(searchUrl: string): Promise<Array<{ n
   for (const executablePath of possiblePaths) {
     try {
       browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        headless: 'new', // Используем новый headless режим
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-blink-features=AutomationControlled', // Важно для обхода защиты
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+        ],
         executablePath: executablePath || undefined,
       });
       break; // Успешно запустили
     } catch (error: any) {
       lastError = error;
-      console.log(`Failed to launch with ${executablePath}, trying next...`);
       continue;
     }
   }
@@ -240,25 +247,67 @@ async function parseSearchResultsPuppeteer(searchUrl: string): Promise<Array<{ n
   if (!browser) {
     try {
       browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        headless: 'new',
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-blink-features=AutomationControlled',
+        ],
       });
     } catch (error: any) {
-      console.error('Failed to launch Puppeteer with all paths:', lastError || error);
       return [];
     }
   }
   
   try {
-
     const page = await browser.newPage();
+    
+    // Устанавливаем реалистичные заголовки
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     await page.setViewport({ width: 1920, height: 1080 });
+    
+    // Удаляем признаки автоматизации (stealth плагин делает это автоматически, но добавим дополнительную защиту)
+    await page.evaluateOnNewDocument(() => {
+      // Удаляем webdriver флаг
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      
+      // Добавляем реалистичные свойства
+      (window.navigator as any).chrome = {
+        runtime: {},
+        loadTimes: function() {},
+        csi: function() {},
+        app: {}
+      };
+      
+      // Переопределяем plugins
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5]
+      });
+      
+      // Переопределяем languages
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['ru-RU', 'ru', 'en-US', 'en']
+      });
+    });
 
-    await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+    // Устанавливаем дополнительные заголовки
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+    });
 
-    // Ждем загрузки контента
+    await page.goto(searchUrl, { 
+      waitUntil: 'networkidle2', 
+      timeout: 30000 
+    });
+
+    // Ждем загрузки контента и даем время на выполнение JavaScript
     await page.waitForSelector('body', { timeout: 5000 });
+    await page.waitForTimeout(2000); // Дополнительное время для загрузки динамического контента
 
     // Получаем HTML после рендеринга JavaScript
     const html = await page.content();

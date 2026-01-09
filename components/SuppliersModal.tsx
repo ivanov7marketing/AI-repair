@@ -265,7 +265,10 @@ export const SuppliersModal: React.FC<SuppliersModalProps> = ({
           {/* Error message */}
           {error && (
             <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
-              {error}
+              <p className="font-semibold mb-2">{error}</p>
+              <p className="text-xs mt-2">
+                💡 Совет: Добавьте прямые ссылки на товары в столбец "Ссылка" и используйте кнопку обновления цены для каждого материала отдельно.
+              </p>
             </div>
           )}
 
