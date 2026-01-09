@@ -132,9 +132,21 @@ function validateUrl(url: string): boolean {
 function normalizePrice(priceText: string): number | null {
   if (!priceText) return null;
   
+  // Сначала проверяем формат с десятичной частью (284.55 или 284,55)
+  // Это важно делать ДО удаления разделителей тысяч
+  const decimalMatch = priceText.match(/(\d+)[.,](\d{1,2})(?:\s*[₽рРруб]|$)/);
+  if (decimalMatch) {
+    const intPart = decimalMatch[1].replace(/[\s\u00a0]/g, ''); // Убираем пробелы в целой части
+    const decPart = decimalMatch[2];
+    const price = parseFloat(`${intPart}.${decPart}`);
+    if (!isNaN(price) && price > 0) {
+      return price;
+    }
+  }
+  
   // Ищем паттерн цены: число с возможными пробелами между тысячами
   // Примеры: "2 359", "2359", "2,359.00", "603"
-  const priceMatch = priceText.match(/(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{1,2})?)/);
+  const priceMatch = priceText.match(/(\d{1,3}(?:[\s\u00a0]\d{3})*)/);
   
   if (!priceMatch) {
     // Fallback: просто первое число
@@ -146,10 +158,7 @@ function normalizePrice(priceText: string): number | null {
   }
   
   // Удаляем пробелы (разделители тысяч)
-  let cleaned = priceMatch[1].replace(/[\s\u00a0]/g, '');
-  
-  // Заменяем запятую на точку
-  cleaned = cleaned.replace(',', '.');
+  const cleaned = priceMatch[1].replace(/[\s\u00a0]/g, '');
   
   const price = parseFloat(cleaned);
   return isNaN(price) ? null : price;
