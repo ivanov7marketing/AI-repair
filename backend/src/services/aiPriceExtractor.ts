@@ -291,9 +291,16 @@ export async function extractPriceWithAI(
     // Логируем размер исходного HTML
     console.log(`[AI] Original HTML size: ${html.length} chars for ${url}`);
     
-    // Проверяем, не заблокирована ли страница
-    if (html.includes('__qrator') || html.includes('captcha') || html.includes('blocked')) {
-      console.warn(`[AI] Page appears to be blocked by anti-bot for ${url}`);
+    // Проверяем, не заблокирована ли страница (более точная проверка)
+    const isBlocked = (
+      html.includes('__qrator/qauth.js') || // Qrator protection
+      html.includes('<title>Access denied</title>') ||
+      html.includes('<title>Доступ запрещен</title>') ||
+      (html.includes('captcha') && html.length < 5000) // Капча на короткой странице
+    );
+    
+    if (isBlocked) {
+      console.warn(`[AI] Page is blocked by anti-bot for ${url}`);
       return null;
     }
     

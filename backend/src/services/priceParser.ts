@@ -102,15 +102,26 @@ function validateUrl(url: string): boolean {
 function normalizePrice(priceText: string): number | null {
   if (!priceText) return null;
   
-  // Удаляем все символы кроме цифр, точки, запятой и пробелов
-  let cleaned = priceText.replace(/[^\d.,\s]/g, '');
+  // Ищем паттерн цены: число с возможными пробелами между тысячами
+  // Примеры: "2 359", "2359", "2,359.00", "603"
+  const priceMatch = priceText.match(/(\d{1,3}(?:[\s\u00a0]\d{3})*(?:[.,]\d{1,2})?)/);
   
-  // Удаляем пробелы (они используются как разделители тысяч в русском формате)
-  cleaned = cleaned.replace(/\s/g, '');
+  if (!priceMatch) {
+    // Fallback: просто первое число
+    const simpleMatch = priceText.match(/(\d+)/);
+    if (simpleMatch) {
+      return parseInt(simpleMatch[1], 10);
+    }
+    return null;
+  }
   
-  // Заменяем запятую на точку (если есть)
-  const normalized = cleaned.replace(',', '.');
-  const price = parseFloat(normalized);
+  // Удаляем пробелы (разделители тысяч)
+  let cleaned = priceMatch[1].replace(/[\s\u00a0]/g, '');
+  
+  // Заменяем запятую на точку
+  cleaned = cleaned.replace(',', '.');
+  
+  const price = parseFloat(cleaned);
   return isNaN(price) ? null : price;
 }
 
@@ -165,8 +176,15 @@ async function parseWithAI(url: string): Promise<ParsedPrice | null> {
     const html = response.data;
     console.log(`[parseWithAI] Received HTML: ${html.length} chars`);
     
-    // Проверяем на блокировку
-    if (html.includes('__qrator') || html.includes('<title>Access denied</title>')) {
+    // Проверяем на блокировку (более точная проверка)
+    const isBlocked = (
+      html.includes('__qrator/qauth.js') ||
+      html.includes('<title>Access denied</title>') ||
+      html.includes('<title>Доступ запрещен</title>') ||
+      (html.includes('captcha') && html.length < 5000)
+    );
+    
+    if (isBlocked) {
       console.warn('[parseWithAI] Page blocked by anti-bot protection');
       return null;
     }
@@ -231,19 +249,45 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
 
     // Специфичные селекторы для Saturn
     if (isSaturn) {
-      const cardPrice = $('.price-card, [class*="price"][class*="card"], .product-price-card').first();
-      if (cardPrice.length > 0) {
-        priceText = cardPrice.text().trim();
+      // Saturn: ищем цену "с картой" (обычно меньше)
+      const cardPriceSelectors = [
+        '.price-card',
+        '[class*="price-card"]',
+        '[class*="card-price"]',
+        '.product-price-card'
+      ];
+      
+      for (const selector of cardPriceSelectors) {
+        const element = $(selector).first();
+        if (element.length > 0) {
+          const text = element.text().trim();
+          // Извлекаем только число с возможными пробелами
+          const priceMatch = text.match(/(\d{1,3}(?:[\s\u00a0]\d{3})*)/);
+          if (priceMatch) {
+            const priceNum = parseFloat(priceMatch[1].replace(/[\s\u00a0]/g, ''));
+            if (priceNum > 100 && priceNum < 100000) {
+              priceText = priceMatch[1];
+              console.log(`[HTTP Saturn] Found card price: ${priceNum}`);
+              break;
+            }
+          }
+        }
       }
       
+      // Если не нашли цену с картой, ищем основную цену
       if (!priceText) {
-        const priceSection = $('[class*="price"], [class*="cost"], [data-price]');
-        priceSection.each((_, el) => {
+        const priceElements = $('[class*="price"]').not('[class*="old"]').not('[class*="similar"]');
+        priceElements.each((_, el) => {
           const text = $(el).text().trim();
-          const priceMatch = text.match(/(\d+[\s.,]?\d*)\s*[₽руб]/);
-          if (priceMatch && parseFloat(priceMatch[1].replace(/\s/g, '')) > 100) {
-            priceText = priceMatch[1];
-            return false;
+          // Ищем паттерн цены: 1-3 цифры, потом опционально пробел и еще 3 цифры
+          const priceMatch = text.match(/(\d{1,3}(?:[\s\u00a0]\d{3})*)\s*[₽р]/);
+          if (priceMatch) {
+            const priceNum = parseFloat(priceMatch[1].replace(/[\s\u00a0]/g, ''));
+            if (priceNum > 100 && priceNum < 100000) {
+              priceText = priceMatch[1];
+              console.log(`[HTTP Saturn] Found price: ${priceNum}`);
+              return false; // break
+            }
           }
         });
       }
@@ -252,52 +296,69 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
     // Распространенные селекторы для цен
     if (!priceText) {
       const priceSelectors = [
-        '.price',
-        '[data-price]',
-        '.product-price',
+        '[itemprop="price"]',   // Microdata - самый надежный
+        '[data-price]',         // Data-атрибут с ценой
+        '.product-price__value',
         '.price-value',
-        '.cost',
-        '.product-cost',
-        '.price-current',
-        '.current-price',
-        '[itemprop="price"]',
-        '.product__price',
-        '.goods-price',
         '.price__value',
-        '[class*="price"]',
-        '[class*="cost"]'
+        '.current-price',
+        '.price-current',
+        '.product-price',
+        '.goods-price',
+        '.product__price',
+        '.price',
       ];
 
       for (const selector of priceSelectors) {
         const element = $(selector).first();
         if (element.length > 0) {
-          const text = element.text().trim();
+          // Приоритет: data-price > content > text
           const dataPrice = element.attr('data-price');
           const content = element.attr('content');
-          priceText = text || dataPrice || content || null;
-          if (priceText) {
-            const priceNum = normalizePrice(priceText);
-            if (priceNum && priceNum > 10) {
+          let text = element.text().trim();
+          
+          // Если текст слишком длинный, это не просто цена
+          if (text.length > 50) {
+            text = '';
+          }
+          
+          const rawValue = dataPrice || content || text || null;
+          
+          if (rawValue) {
+            const priceNum = normalizePrice(rawValue);
+            // Проверяем разумный диапазон цены
+            if (priceNum && priceNum > 10 && priceNum < 1000000) {
+              priceText = rawValue;
+              console.log(`[HTTP] Found price via selector "${selector}": ${priceNum}`);
               break;
-            } else {
-              priceText = null;
             }
           }
         }
       }
     }
 
-    // Поиск по тексту "₽" или "руб"
+    // Поиск по тексту "₽" или "руб" - более строгий паттерн
     if (!priceText) {
-      const priceRegex = /(\d{1,3}(?:\s?\d{3})*)\s*[₽руб]/g;
-      const matches = response.data.matchAll(priceRegex);
-      let maxPrice = 0;
-      for (const match of matches) {
-        const priceNum = parseFloat(match[1].replace(/\s/g, ''));
-        if (priceNum > maxPrice && priceNum > 100) {
-          maxPrice = priceNum;
-          priceText = match[1];
-        }
+      // Ищем цену в формате "XXX ₽" или "X XXX ₽" или "XX XXX руб"
+      // НЕ захватываем артикулы и другие числа
+      const priceRegex = /(\d{1,3}(?:[\s\u00a0]\d{3})*)\s*[₽р]/gi;
+      const matches = Array.from(response.data.matchAll(priceRegex));
+      
+      // Фильтруем и сортируем цены
+      const prices = matches
+        .map(m => ({
+          text: m[1],
+          value: parseFloat(m[1].replace(/[\s\u00a0]/g, ''))
+        }))
+        .filter(p => p.value > 50 && p.value < 1000000) // Разумный диапазон цен
+        .sort((a, b) => a.value - b.value); // Сортируем по возрастанию
+      
+      // Берем минимальную разумную цену (не самую маленькую, но и не артикул)
+      if (prices.length > 0) {
+        // Если есть цены < 10000, берем первую из них (вероятно основная цена товара)
+        const reasonablePrice = prices.find(p => p.value < 10000) || prices[0];
+        priceText = reasonablePrice.text;
+        console.log(`[HTTP] Found prices: ${prices.map(p => p.value).join(', ')}. Selected: ${reasonablePrice.value}`);
       }
     }
 
