@@ -182,12 +182,54 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
 async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
   let browser;
   try {
-    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      ...(executablePath ? { executablePath } : {})
-    });
+    // Пробуем разные пути к Chromium
+    const possiblePaths = [
+      process.env.PUPPETEER_EXECUTABLE_PATH,
+      '/usr/bin/chromium',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/google-chrome',
+      '/usr/bin/google-chrome-stable',
+    ].filter(Boolean);
+    
+    let lastError: Error | null = null;
+    
+    // Пробуем запустить с разными путями
+    for (const executablePath of possiblePaths) {
+      try {
+        browser = await puppeteer.launch({
+          headless: 'new',
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-blink-features=AutomationControlled',
+          ],
+          executablePath: executablePath || undefined,
+        });
+        break; // Успешно запустили
+      } catch (error: any) {
+        lastError = error;
+        continue;
+      }
+    }
+    
+    // Если не удалось запустить ни с одним путем, пробуем без указания пути
+    if (!browser) {
+      try {
+        browser = await puppeteer.launch({
+          headless: 'new',
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-blink-features=AutomationControlled',
+          ],
+        });
+      } catch (error: any) {
+        console.error('Failed to launch Puppeteer:', lastError || error);
+        return null;
+      }
+    }
 
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
