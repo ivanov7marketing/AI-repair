@@ -1,6 +1,10 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+
+// Используем stealth плагин для обхода защиты от ботов
+puppeteer.use(StealthPlugin());
 
 export interface SupplierSearchResult {
   supplier: string;
@@ -388,6 +392,14 @@ async function parseSearchResultsPuppeteer(searchUrl: string): Promise<Array<{ n
  * Проверка, является ли URL прямой ссылкой на товар (а не на поиск)
  */
 function isProductUrl(url: string): boolean {
+  const urlLower = url.toLowerCase();
+  
+  // Исключаем страницы поиска
+  if (urlLower.includes('/search') || urlLower.includes('?q=') || urlLower.includes('&q=')) {
+    return false;
+  }
+  
+  // Проверяем индикаторы товара
   const productIndicators = [
     '/product/',
     '/goods/',
@@ -395,12 +407,16 @@ function isProductUrl(url: string): boolean {
     '/item/',
     '/p/',
     '/tovar/',
+    '/product-',
+    '/goods-',
     'product_id=',
     'item_id=',
     'goods_id=',
+    'id=',
+    'art=',
+    'article=',
   ];
   
-  const urlLower = url.toLowerCase();
   return productIndicators.some(indicator => urlLower.includes(indicator));
 }
 
@@ -413,7 +429,7 @@ async function searchOnSupplier(
 ): Promise<SupplierSearchResult[]> {
   const supplierName = getSupplierName(supplierUrl);
   
-  // Если это прямая ссылка на товар, используем parsePrice
+  // Если это прямая ссылка на товар, используем parsePrice (более надежный метод)
   if (isProductUrl(supplierUrl)) {
     try {
       const { parsePrice } = await import('./priceParser');
@@ -421,24 +437,25 @@ async function searchOnSupplier(
       
       if (parsed.price > 0) {
         return [{
-          supplier: supplierName,
+          supplier: parsed.supplierName || supplierName,
           url: supplierUrl,
           price: parsed.price,
           name: materialName
         }];
       }
     } catch (error) {
-      // Если не удалось распарсить прямую ссылку, продолжаем с поиском
-      console.error(`Failed to parse direct URL ${supplierUrl}:`, error);
+      // Если не удалось распарсить прямую ссылку, пробуем поиск
+      // Но не логируем ошибку, чтобы не превысить лимит Railway
     }
   }
   
+  // Если это не прямая ссылка или парсинг не удался, используем поиск
   const searchUrl = getSearchUrl(supplierUrl, materialName);
   
   // Сначала пробуем простой парсинг (быстрее)
   let results = await parseSearchResultsSimple(searchUrl);
   
-  // Если не нашли, пробуем Puppeteer (для динамических страниц)
+  // Если не нашли, пробуем Puppeteer с stealth режимом (для динамических страниц и обхода защиты)
   if (results.length === 0) {
     results = await parseSearchResultsPuppeteer(searchUrl);
   }

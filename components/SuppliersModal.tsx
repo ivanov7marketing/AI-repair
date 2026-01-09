@@ -380,11 +380,17 @@ export const SuppliersModal: React.FC<SuppliersModalProps> = ({
           {results.length === 0 && !isSearching && (
             <div className="text-center py-12 text-architect-400">
               <Search className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p className="text-sm">Нажмите "Найти цены" для поиска цен у поставщиков</p>
-              <p className="text-xs mt-2 max-w-md mx-auto">
-                Поиск выполняется по названию материала на сайтах указанных поставщиков. 
-                Для лучших результатов используйте точные названия товаров.
-              </p>
+              <p className="text-sm font-semibold mb-3">Как найти цены на материалы:</p>
+              <div className="text-xs space-y-2 max-w-lg mx-auto text-left bg-architect-50 dark:bg-architect-900 p-4 rounded-lg">
+                <p className="font-semibold text-emerald-600 dark:text-emerald-400">✓ Рекомендуемый способ (самый надежный):</p>
+                <p className="pl-4">1. Добавьте прямую ссылку на товар в столбец "Ссылка" рядом с материалом</p>
+                <p className="pl-4">2. Нажмите кнопку обновления цены (↻) рядом со ссылкой</p>
+                <p className="pl-4">3. Цена будет автоматически извлечена со страницы товара</p>
+                <p className="mt-3 font-semibold text-amber-600 dark:text-amber-400">⚠ Массовый поиск:</p>
+                <p className="pl-4">• Может не работать из-за защиты сайтов от автоматизации</p>
+                <p className="pl-4">• Используйте точные названия товаров для лучших результатов</p>
+                <p className="pl-4">• Если поиск не находит товары, используйте прямые ссылки</p>
+              </div>
             </div>
           )}
         </div>
