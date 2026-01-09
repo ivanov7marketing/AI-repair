@@ -77,7 +77,10 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
     for (const selector of priceSelectors) {
       const element = $(selector).first();
       if (element.length > 0) {
-        priceText = element.text().trim() || element.attr('data-price') || element.attr('content') || null;
+        const text = element.text().trim();
+        const dataPrice = element.attr('data-price');
+        const content = element.attr('content');
+        priceText = text || dataPrice || content || null;
         if (priceText) break;
       }
     }
