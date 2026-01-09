@@ -476,14 +476,76 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
     
     const urlObjPuppeteer = new URL(url);
     const isSaturn = urlObjPuppeteer.hostname.includes('saturn');
+    const isLemana = urlObjPuppeteer.hostname.includes('lemanapro');
     
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-    await page.waitForTimeout(3000);
+    // Для Lemanapro нужно больше времени для прохождения Qrator защиты
+    const timeout = isLemana ? 60000 : 30000;
+    const waitTime = isLemana ? 5000 : 3000;
+    
+    await page.goto(url, { waitUntil: 'networkidle2', timeout });
+    await page.waitForTimeout(waitTime);
+    
+    // Для Lemanapro дополнительно ждём появления цены
+    if (isLemana) {
+      try {
+        await page.waitForSelector('[data-testid="product-price"], .price, [class*="Price"]', { timeout: 10000 });
+      } catch (e) {
+        console.log('[Lemanapro] Price selector not found, continuing...');
+      }
+    }
 
     let priceText: string | null = null;
 
+    // Специфичная логика для Lemanapro
+    if (isLemana) {
+      try {
+        priceText = await page.evaluate(() => {
+          // Lemanapro специфичные селекторы
+          const priceSelectors = [
+            '[data-testid="product-price"]',
+            '[class*="Price"]',
+            '[class*="price"]',
+            '.product-price',
+            '[itemprop="price"]'
+          ];
+          
+          for (const selector of priceSelectors) {
+            // @ts-ignore
+            const elements = document.querySelectorAll(selector);
+            for (const el of elements) {
+              const text = el.textContent?.trim() || '';
+              // Ищем цену в формате "205 ₽/шт" или "205₽" или просто "205"
+              const match = text.match(/(\d{1,3}(?:[\s\u00a0]?\d{3})*)\s*[₽Р]?/);
+              if (match) {
+                const priceNum = parseFloat(match[1].replace(/[\s\u00a0]/g, ''));
+                if (priceNum > 10 && priceNum < 1000000) {
+                  return match[1];
+                }
+              }
+            }
+          }
+          
+          // Fallback: ищем в body текст
+          // @ts-ignore
+          const bodyText = document.body.innerText;
+          const priceMatch = bodyText.match(/(\d{1,3}(?:[\s\u00a0]?\d{3})*)\s*[₽Р]\/шт/);
+          if (priceMatch) {
+            return priceMatch[1];
+          }
+          
+          return null;
+        });
+        
+        if (priceText) {
+          console.log(`[Puppeteer Lemanapro] Found price: ${priceText}`);
+        }
+      } catch (e) {
+        console.error('Lemanapro-specific parsing failed:', e);
+      }
+    }
+
     // Специфичная логика для Saturn
-    if (isSaturn) {
+    if (isSaturn && !priceText) {
       try {
         priceText = await page.evaluate(() => {
           const priceSelectors = [
@@ -642,6 +704,21 @@ export async function parsePrice(url: string): Promise<ParsedPrice> {
 
   const urlObj = new URL(url);
   const isSaturn = urlObj.hostname.includes('saturn');
+  const isLemana = urlObj.hostname.includes('lemanapro');
+  
+  // ========================================
+  // СПЕЦИАЛЬНАЯ ОБРАБОТКА: Lemanapro (защита Qrator блокирует HTTP)
+  // ========================================
+  if (isLemana) {
+    console.log(`[Lemanapro] Using Puppeteer directly (Qrator protection)`);
+    const puppeteerResult = await parseWithPuppeteer(url);
+    if (puppeteerResult && puppeteerResult.price > 10) {
+      console.log(`Puppeteer parsing success for ${url}: ${puppeteerResult.price}₽`);
+      setCachedPrice(url, puppeteerResult);
+      return puppeteerResult;
+    }
+    throw new Error('Не удалось извлечь цену со страницы Lemanapro');
+  }
   
   // ========================================
   // ЭТАП 1: AI парсинг (основной метод)
