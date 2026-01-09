@@ -17,25 +17,24 @@ function findChromiumPath(): string | undefined {
   // Если указан путь в env - используем его
   if (process.env.PUPPETEER_EXECUTABLE_PATH) {
     if (fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
-      console.log(`[Puppeteer] Using env path: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
-      return process.env.PUPPETEER_EXECUTABLE_PATH;
+      // Проверяем что это не snap заглушка
+      try {
+        const content = fs.readFileSync(process.env.PUPPETEER_EXECUTABLE_PATH, 'utf-8').slice(0, 500);
+        if (content.includes('snap install')) {
+          console.log(`[Puppeteer] Skipping snap stub at: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+        } else {
+          console.log(`[Puppeteer] Using env path: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+          return process.env.PUPPETEER_EXECUTABLE_PATH;
+        }
+      } catch (e) {
+        // Binary file - это хорошо, значит это реальный chromium
+        console.log(`[Puppeteer] Using env path: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+        return process.env.PUPPETEER_EXECUTABLE_PATH;
+      }
     }
   }
   
-  // Стандартные пути для apt-установленного chromium
-  const possiblePaths = [
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
-  ];
-  
-  for (const path of possiblePaths) {
-    if (fs.existsSync(path)) {
-      console.log(`[Puppeteer] Found system Chromium at: ${path}`);
-      return path;
-    }
-  }
-  
-  // Puppeteer сам найдет свой bundled Chromium
+  // Puppeteer использует свой bundled Chromium - это надёжнее всего
   console.log('[Puppeteer] Using Puppeteer bundled Chromium');
   return undefined;
 }
@@ -500,17 +499,32 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
     
     // Для Lemanapro нужно больше времени для прохождения Qrator защиты
     const timeout = isLemana ? 60000 : 30000;
-    const waitTime = isLemana ? 5000 : 3000;
+    const waitTime = isLemana ? 8000 : 3000;
     
-    await page.goto(url, { waitUntil: 'networkidle2', timeout });
+    console.log(`[Puppeteer] Navigating to: ${url}`);
+    await page.goto(url, { waitUntil: 'networkidle0', timeout });
+    console.log(`[Puppeteer] Page loaded, waiting ${waitTime}ms...`);
     await page.waitForTimeout(waitTime);
+    
+    // Проверяем, не заблокированы ли мы Qrator
+    const pageContent = await page.content();
+    if (pageContent.includes('qrator') || pageContent.includes('Access denied') || pageContent.length < 5000) {
+      console.log(`[Puppeteer] Page might be blocked (length: ${pageContent.length}), waiting more...`);
+      await page.waitForTimeout(5000);
+    }
     
     // Для Lemanapro дополнительно ждём появления цены
     if (isLemana) {
+      console.log('[Lemanapro] Waiting for price selector...');
       try {
-        await page.waitForSelector('[data-testid="product-price"], .price, [class*="Price"]', { timeout: 10000 });
+        await page.waitForSelector('[class*="price"], [class*="Price"], .product-price', { timeout: 15000 });
+        console.log('[Lemanapro] Price selector found!');
       } catch (e) {
-        console.log('[Lemanapro] Price selector not found, continuing...');
+        console.log('[Lemanapro] Price selector not found after 15s, trying anyway...');
+        // Логируем часть HTML для отладки
+        const html = await page.content();
+        console.log(`[Lemanapro] Page HTML length: ${html.length}`);
+        console.log(`[Lemanapro] Page title: ${await page.title()}`);
       }
     }
 
@@ -519,45 +533,62 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
     // Специфичная логика для Lemanapro
     if (isLemana) {
       try {
-        priceText = await page.evaluate(() => {
-          // Lemanapro специфичные селекторы
+        const result = await page.evaluate(() => {
+          // Lemanapro специфичные селекторы - ищем цену рядом с "В корзину"
           const priceSelectors = [
-            '[data-testid="product-price"]',
-            '[class*="Price"]',
-            '[class*="price"]',
+            // Основная цена товара (большая цифра рядом с кнопкой)
+            '[class*="price"]:not([class*="old"])',
+            '[class*="Price"]:not([class*="Old"])',
             '.product-price',
-            '[itemprop="price"]'
+            '[itemprop="price"]',
+            // Попробуем найти по структуре страницы
+            'span[class*="price"]',
+            'div[class*="price"]'
           ];
           
+          // @ts-ignore
+          const bodyText = document.body?.innerText || '';
+          
+          // Сначала ищем паттерн "цена ₽/шт" или просто "цена ₽"
+          const pricePatterns = [
+            /(\d{1,3}(?:[\s\u00a0]?\d{3})*)\s*[₽Р]\/шт/g,
+            /(\d{1,3}(?:[\s\u00a0]?\d{3})*)\s*[₽Р]/g
+          ];
+          
+          for (const pattern of pricePatterns) {
+            const matches = [...bodyText.matchAll(pattern)];
+            for (const match of matches) {
+              const priceNum = parseFloat(match[1].replace(/[\s\u00a0]/g, ''));
+              if (priceNum > 10 && priceNum < 1000000) {
+                return { price: match[1], debug: `Found via pattern in body: ${match[0]}` };
+              }
+            }
+          }
+          
+          // Если не нашли в тексте, ищем через селекторы
           for (const selector of priceSelectors) {
             // @ts-ignore
             const elements = document.querySelectorAll(selector);
             for (const el of elements) {
               const text = el.textContent?.trim() || '';
-              // Ищем цену в формате "205 ₽/шт" или "205₽" или просто "205"
               const match = text.match(/(\d{1,3}(?:[\s\u00a0]?\d{3})*)\s*[₽Р]?/);
               if (match) {
                 const priceNum = parseFloat(match[1].replace(/[\s\u00a0]/g, ''));
                 if (priceNum > 10 && priceNum < 1000000) {
-                  return match[1];
+                  return { price: match[1], debug: `Found via selector ${selector}: ${text}` };
                 }
               }
             }
           }
           
-          // Fallback: ищем в body текст
-          // @ts-ignore
-          const bodyText = document.body.innerText;
-          const priceMatch = bodyText.match(/(\d{1,3}(?:[\s\u00a0]?\d{3})*)\s*[₽Р]\/шт/);
-          if (priceMatch) {
-            return priceMatch[1];
-          }
-          
-          return null;
+          return { price: null, debug: `Body text length: ${bodyText.length}, sample: ${bodyText.slice(0, 500)}` };
         });
         
-        if (priceText) {
-          console.log(`[Puppeteer Lemanapro] Found price: ${priceText}`);
+        if (result.price) {
+          priceText = result.price;
+          console.log(`[Puppeteer Lemanapro] ${result.debug}`);
+        } else {
+          console.log(`[Puppeteer Lemanapro] Price not found. ${result.debug}`);
         }
       } catch (e) {
         console.error('Lemanapro-specific parsing failed:', e);
@@ -809,3 +840,5 @@ export async function parsePriceWithAIOnly(url: string): Promise<ParsedPrice | n
   
   return parseWithAI(url);
 }
+
+
