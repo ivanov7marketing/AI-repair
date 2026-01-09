@@ -64,8 +64,8 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
     });
 
     const $ = cheerio.load(response.data);
-    const urlObj = new URL(url);
-    const isSaturn = urlObj.hostname.includes('saturn');
+    const urlObjHttp = new URL(url);
+    const isSaturn = urlObjHttp.hostname.includes('saturn');
     
     let priceText: string | null = null;
 
@@ -155,13 +155,13 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
     }
 
     // Пытаемся определить название поставщика из URL
-    const urlObj = new URL(url);
+    const urlObjSupplier = new URL(url);
     let supplierName = '';
-    if (urlObj.hostname.includes('saturn')) {
+    if (urlObjSupplier.hostname.includes('saturn')) {
       supplierName = 'Сатурн';
-    } else if (urlObj.hostname.includes('lemanapro')) {
+    } else if (urlObjSupplier.hostname.includes('lemanapro')) {
       supplierName = 'Лемана Про';
-    } else if (urlObj.hostname.includes('sdvor')) {
+    } else if (urlObjSupplier.hostname.includes('sdvor')) {
       supplierName = 'Стройдвор';
     }
 
@@ -252,8 +252,8 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
       'Upgrade-Insecure-Requests': '1',
     });
     
-    const urlObj = new URL(url);
-    const isSaturn = urlObj.hostname.includes('saturn');
+    const urlObjPuppeteer = new URL(url);
+    const isSaturn = urlObjPuppeteer.hostname.includes('saturn');
     
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
@@ -267,6 +267,7 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
       try {
         // Ищем цену через JavaScript в браузере
         priceText = await page.evaluate(() => {
+          // @ts-ignore - код выполняется в контексте браузера через Puppeteer
           // Ищем элементы с ценой
           const priceSelectors = [
             '[class*="price"]',
@@ -277,6 +278,7 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
           ];
           
           for (const selector of priceSelectors) {
+            // @ts-ignore
             const elements = document.querySelectorAll(selector);
             for (const el of elements) {
               const text = el.textContent?.trim() || '';
@@ -292,11 +294,13 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
           }
           
           // Если не нашли, ищем в тексте страницы
+          // @ts-ignore
           const bodyText = document.body.innerText;
           const priceRegex = /(\d{1,3}(?:\s?\d{3})*)\s*[₽руб]/g;
-          const matches = Array.from(bodyText.matchAll(priceRegex));
+          // @ts-ignore
+          const matches = Array.from(bodyText.matchAll(priceRegex)) as RegExpMatchArray[];
           let maxPrice = 0;
-          let bestMatch = null;
+          let bestMatch: string | null = null;
           for (const match of matches) {
             const priceNum = parseFloat(match[1].replace(/\s/g, ''));
             if (priceNum > maxPrice && priceNum > 100) {
@@ -381,13 +385,13 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
     }
 
     // Определяем название поставщика
-    const urlObj = new URL(url);
+    const urlObjFinal = new URL(url);
     let supplierName = '';
-    if (urlObj.hostname.includes('saturn')) {
+    if (urlObjFinal.hostname.includes('saturn')) {
       supplierName = 'Сатурн';
-    } else if (urlObj.hostname.includes('lemanapro')) {
+    } else if (urlObjFinal.hostname.includes('lemanapro')) {
       supplierName = 'Лемана Про';
-    } else if (urlObj.hostname.includes('sdvor')) {
+    } else if (urlObjFinal.hostname.includes('sdvor')) {
       supplierName = 'Стройдвор';
     }
 
