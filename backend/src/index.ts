@@ -1,3 +1,19 @@
+// Polyfill for File API (Node.js 18 compatibility)
+// File API is required by undici (used by axios) but only available in Node.js 20+
+if (typeof globalThis.File === 'undefined') {
+  // @ts-ignore
+  globalThis.File = class File {
+    constructor(parts: any[], name: string, options?: any) {
+      this.parts = parts;
+      this.name = name;
+      this.options = options;
+    }
+    parts: any[];
+    name: string;
+    options?: any;
+  };
+}
+
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
