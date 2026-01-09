@@ -201,6 +201,7 @@ async function parseSearchResultsSimple(searchUrl: string): Promise<Array<{ name
 
 /**
  * Парсинг результатов поиска с помощью Puppeteer (для динамических страниц)
+ * Получаем HTML после рендеринга JavaScript, затем парсим через Cheerio
  */
 async function parseSearchResultsPuppeteer(searchUrl: string): Promise<Array<{ name: string; price: number; url: string }>> {
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
@@ -222,52 +223,118 @@ async function parseSearchResultsPuppeteer(searchUrl: string): Promise<Array<{ n
     // Ждем загрузки контента
     await page.waitForSelector('body', { timeout: 5000 });
 
-    // Извлекаем данные с помощью JavaScript в браузере
-    const results = await page.evaluate(() => {
-      const items: Array<{ name: string; price: number; url: string }> = [];
-      
-      // Ищем карточки товаров
-      const productCards = document.querySelectorAll(
-        '[data-product], .product-card, .product-item, .catalog-item, .goods-item, .product, .card-product'
-      );
+    // Получаем HTML после рендеринга JavaScript
+    const html = await page.content();
+    
+    // Парсим через Cheerio
+    const $ = cheerio.load(html);
+    const results: Array<{ name: string; price: number; url: string }> = [];
+    const baseUrl = new URL(searchUrl);
 
-      productCards.forEach((card, index) => {
-        if (index >= 5) return; // Ограничиваем 5 товарами
+    // Универсальные селекторы для поиска товаров
+    const productSelectors = [
+      '[data-product]',
+      '.product-card',
+      '.product-item',
+      '.catalog-item',
+      '.goods-item',
+      '.search-result-item',
+      '.product',
+      '[itemtype*="Product"]',
+      '.card-product',
+      '.product-tile',
+    ];
 
-        // Ищем название
-        const nameEl = card.querySelector('[data-name], .product-name, .product-title, .goods-name, .title, [itemprop="name"], h3, h4');
-        const name = nameEl?.textContent?.trim() || '';
+    const priceSelectors = [
+      '[data-price]',
+      '.price',
+      '.product-price',
+      '.price-value',
+      '.current-price',
+      '.sale-price',
+      '[itemprop="price"]',
+      '.price-current',
+      '.product__price',
+      '.goods-price',
+    ];
 
-        // Ищем цену
-        const priceEl = card.querySelector('[data-price], .price, .product-price, .price-value, .current-price, [itemprop="price"]');
-        let price = 0;
-        if (priceEl) {
-          const priceAttr = priceEl.getAttribute('data-price') || priceEl.getAttribute('content');
-          if (priceAttr) {
-            price = parseFloat(priceAttr);
-          } else {
-            const priceText = priceEl.textContent?.replace(/\s/g, '') || '';
-            const priceMatch = priceText.match(/[\d,.]+/);
-            if (priceMatch) {
-              price = parseFloat(priceMatch[0].replace(',', '.'));
+    const nameSelectors = [
+      '[data-name]',
+      '.product-name',
+      '.product-title',
+      '.goods-name',
+      '.title',
+      '[itemprop="name"]',
+      '.card-title',
+      'h3',
+      'h4',
+      '.name',
+    ];
+
+    const linkSelectors = [
+      'a[href*="/product"]',
+      'a[href*="/catalog"]',
+      'a[href*="/goods"]',
+      'a.product-link',
+      'a.card-link',
+      '.product-card a',
+      'a[itemprop="url"]',
+    ];
+
+    // Пробуем найти товары по селекторам
+    for (const productSelector of productSelectors) {
+      const products = $(productSelector);
+      if (products.length > 0) {
+        products.slice(0, 5).each((_, el) => {
+          const $product = $(el);
+          
+          let name = '';
+          for (const nameSelector of nameSelectors) {
+            const nameEl = $product.find(nameSelector).first();
+            if (nameEl.length > 0) {
+              name = nameEl.text().trim();
+              if (name) break;
             }
           }
-        }
 
-        // Ищем ссылку
-        const linkEl = card.querySelector('a[href*="/product"], a[href*="/catalog"], a[href*="/goods"], a.product-link, a[itemprop="url"]') as HTMLAnchorElement;
-        let url = linkEl?.href || '';
-        if (!url && card instanceof HTMLAnchorElement) {
-          url = card.href;
-        }
+          let price = 0;
+          for (const priceSelector of priceSelectors) {
+            const priceEl = $product.find(priceSelector).first();
+            if (priceEl.length > 0) {
+              const priceText = priceEl.text().trim() || priceEl.attr('data-price') || priceEl.attr('content') || '';
+              const priceMatch = priceText.replace(/\s/g, '').match(/[\d,.]+/);
+              if (priceMatch) {
+                price = parseFloat(priceMatch[0].replace(',', '.'));
+                if (price > 0) break;
+              }
+            }
+          }
 
-        if (name && price > 0) {
-          items.push({ name, price, url: url || window.location.href });
-        }
-      });
+          let url = '';
+          for (const linkSelector of linkSelectors) {
+            const linkEl = $product.find(linkSelector).first();
+            if (linkEl.length > 0) {
+              url = linkEl.attr('href') || '';
+              if (url) break;
+            }
+          }
+          // Если не нашли ссылку внутри, пробуем сам элемент
+          if (!url && $product.is('a')) {
+            url = $product.attr('href') || '';
+          }
 
-      return items;
-    });
+          if (name && price > 0) {
+            // Нормализуем URL
+            if (url && !url.startsWith('http')) {
+              url = `${baseUrl.origin}${url.startsWith('/') ? '' : '/'}${url}`;
+            }
+            results.push({ name, price, url: url || searchUrl });
+          }
+        });
+        
+        if (results.length > 0) break;
+      }
+    }
 
     return results;
   } catch (error) {
