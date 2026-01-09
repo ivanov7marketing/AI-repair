@@ -21,13 +21,43 @@ const PRICE_KEYWORDS = [
  */
 const EXCLUDE_SECTIONS = [
   'similar', 'recommend', 'related', 'also', 'like', 'viewed',
-  'похож', 'рекоменд', 'вместе', 'смотрел', 'понравит', 'купают'
+  'похож', 'рекоменд', 'вместе', 'смотрел', 'понравит', 'купают',
+  'search', 'carousel', 'slider', 'banner', 'promo'
 ];
+
+/**
+ * Классы элементов, которые нужно УДАЛИТЬ (цены других товаров)
+ */
+const EXCLUDE_CLASSES = [
+  'js-price-value-search', // Saturn: цены в результатах поиска
+  'search-result',
+  'product-card', // Карточки других товаров
+  'product-item',
+  'carousel-item',
+  'slider-item',
+];
+
+/**
+ * Удаляет элементы с исключенными классами (цены других товаров)
+ */
+function removeExcludedElements(html: string): string {
+  // Удаляем элементы с конкретными классами (цены в поиске и т.д.)
+  for (const className of EXCLUDE_CLASSES) {
+    // Удаляем span, div и другие элементы с этим классом
+    const pattern = new RegExp(`<(span|div|a)[^>]*class=["'][^"']*${className}[^"']*["'][^>]*>[\\s\\S]*?<\\/\\1>`, 'gi');
+    html = html.replace(pattern, '');
+  }
+  
+  return html;
+}
 
 /**
  * Удаляет секции с "похожими товарами" и рекомендациями
  */
 function removeExcludedSections(html: string): string {
+  // Сначала удаляем элементы с исключенными классами
+  html = removeExcludedElements(html);
+  
   // Удаляем секции по классам/id
   for (const keyword of EXCLUDE_SECTIONS) {
     // Удаляем div/section с классом или id содержащим ключевое слово

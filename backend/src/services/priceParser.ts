@@ -249,47 +249,64 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
 
     // Специфичные селекторы для Saturn
     if (isSaturn) {
-      // Saturn: ищем цену "с картой" (обычно меньше)
-      const cardPriceSelectors = [
-        '.price-card',
-        '[class*="price-card"]',
-        '[class*="card-price"]',
-        '.product-price-card'
-      ];
+      // Saturn: ИСКЛЮЧАЕМ элементы с классом search (цены других товаров)
+      // Ищем цену "с картой" в основном блоке товара
       
-      for (const selector of cardPriceSelectors) {
-        const element = $(selector).first();
-        if (element.length > 0) {
-          const text = element.text().trim();
-          // Извлекаем только число с возможными пробелами
-          const priceMatch = text.match(/(\d{1,3}(?:[\s\u00a0]\d{3})*)/);
-          if (priceMatch) {
-            const priceNum = parseFloat(priceMatch[1].replace(/[\s\u00a0]/g, ''));
-            if (priceNum > 100 && priceNum < 100000) {
-              priceText = priceMatch[1];
-              console.log(`[HTTP Saturn] Found card price: ${priceNum}`);
-              break;
-            }
-          }
+      // Ищем текст "С картой" рядом с ценой
+      const fullText = $.html();
+      const cardPriceMatch = fullText.match(/С\s*картой[^<]*?(\d{1,3}(?:[\s\u00a0]\d{3})*)\s*₽/i);
+      if (cardPriceMatch) {
+        const priceNum = parseFloat(cardPriceMatch[1].replace(/[\s\u00a0]/g, ''));
+        if (priceNum > 100 && priceNum < 100000) {
+          priceText = cardPriceMatch[1];
+          console.log(`[HTTP Saturn] Found "С картой" price: ${priceNum}`);
         }
       }
       
-      // Если не нашли цену с картой, ищем основную цену
+      // Если не нашли, ищем в блоках НЕ связанных с поиском
       if (!priceText) {
-        const priceElements = $('[class*="price"]').not('[class*="old"]').not('[class*="similar"]');
+        // Исключаем элементы с search в классе
+        const priceElements = $('[data-price]').not('[class*="search"]').not('[class*="Search"]');
+        
+        // Собираем все цены и берем самую большую (основная цена товара обычно больше скидочных)
+        const prices: number[] = [];
+        
         priceElements.each((_, el) => {
-          const text = $(el).text().trim();
-          // Ищем паттерн цены: 1-3 цифры, потом опционально пробел и еще 3 цифры
-          const priceMatch = text.match(/(\d{1,3}(?:[\s\u00a0]\d{3})*)\s*[₽р]/);
-          if (priceMatch) {
-            const priceNum = parseFloat(priceMatch[1].replace(/[\s\u00a0]/g, ''));
-            if (priceNum > 100 && priceNum < 100000) {
-              priceText = priceMatch[1];
-              console.log(`[HTTP Saturn] Found price: ${priceNum}`);
-              return false; // break
+          const dataPrice = $(el).attr('data-price');
+          if (dataPrice) {
+            const priceNum = parseFloat(dataPrice);
+            if (priceNum > 500 && priceNum < 100000) { // Основная цена обычно > 500₽
+              prices.push(priceNum);
             }
           }
         });
+        
+        if (prices.length > 0) {
+          // Берем максимальную цену (основная цена товара)
+          const maxPrice = Math.max(...prices);
+          priceText = String(maxPrice);
+          console.log(`[HTTP Saturn] Found prices without search: ${prices.join(', ')}. Selected max: ${maxPrice}`);
+        }
+      }
+      
+      // Последний fallback: ищем паттерн "X XXX ₽" с большой ценой
+      if (!priceText) {
+        const priceMatches = fullText.match(/(\d{1,2}\s?\d{3})\s*₽/g);
+        if (priceMatches) {
+          const prices = priceMatches
+            .map(m => {
+              const numMatch = m.match(/(\d{1,2}\s?\d{3})/);
+              return numMatch ? parseFloat(numMatch[1].replace(/\s/g, '')) : 0;
+            })
+            .filter(p => p > 1000 && p < 50000); // Цены стройматериалов обычно 1000-50000₽
+          
+          if (prices.length > 0) {
+            // Ищем цену около 2000-3000 (типичная цена для грунтовок)
+            const mainPrice = prices.find(p => p > 2000 && p < 5000) || prices[0];
+            priceText = String(mainPrice);
+            console.log(`[HTTP Saturn] Fallback prices: ${prices.join(', ')}. Selected: ${mainPrice}`);
+          }
+        }
       }
     }
     
