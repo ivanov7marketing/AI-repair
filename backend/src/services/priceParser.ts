@@ -2,15 +2,78 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { AI_CONFIG, isAIParsingEnabled } from '../config/aiConfig';
+import { extractPriceWithAI, AIExtractionResult } from './aiPriceExtractor';
+import { simplifyHTML } from './htmlSimplifier';
 
-// Используем stealth плагин для обхода защиты от ботов
+// Используем stealth плагин для обхода защиты от ботов (для fallback)
 puppeteer.use(StealthPlugin());
 
 export interface ParsedPrice {
   price: number;
   currency?: string;
   supplierName?: string;
+  confidence?: number;
+  source?: 'ai' | 'http' | 'puppeteer';
 }
+
+// ============================================================================
+// КЭШИРОВАНИЕ
+// ============================================================================
+
+interface CacheEntry {
+  price: ParsedPrice;
+  timestamp: number;
+}
+
+// In-memory кэш для цен
+const priceCache = new Map<string, CacheEntry>();
+
+/**
+ * Получить цену из кэша (если не истекла)
+ */
+function getCachedPrice(url: string): ParsedPrice | null {
+  const entry = priceCache.get(url);
+  if (!entry) return null;
+  
+  const now = Date.now();
+  if (now - entry.timestamp > AI_CONFIG.CACHE_DURATION_MS) {
+    // Кэш истек
+    priceCache.delete(url);
+    return null;
+  }
+  
+  return entry.price;
+}
+
+/**
+ * Сохранить цену в кэш
+ */
+function setCachedPrice(url: string, price: ParsedPrice): void {
+  priceCache.set(url, {
+    price,
+    timestamp: Date.now(),
+  });
+}
+
+/**
+ * Очистить истекшие записи кэша (вызывать периодически)
+ */
+export function clearExpiredCache(): void {
+  const now = Date.now();
+  for (const [url, entry] of priceCache.entries()) {
+    if (now - entry.timestamp > AI_CONFIG.CACHE_DURATION_MS) {
+      priceCache.delete(url);
+    }
+  }
+}
+
+// Периодическая очистка кэша (каждый час)
+setInterval(clearExpiredCache, 60 * 60 * 1000);
+
+// ============================================================================
+// ВАЛИДАЦИЯ И УТИЛИТЫ
+// ============================================================================
 
 // Разрешенные домены для парсинга
 const ALLOWED_DOMAINS = [
@@ -52,7 +115,74 @@ function normalizePrice(priceText: string): number | null {
 }
 
 /**
- * Попытка парсинга цены через HTTP запрос и cheerio
+ * Определение названия поставщика из URL
+ */
+function getSupplierNameFromUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname.includes('saturn')) {
+      return 'Сатурн';
+    } else if (urlObj.hostname.includes('lemanapro')) {
+      return 'Лемана Про';
+    } else if (urlObj.hostname.includes('sdvor')) {
+      return 'Стройдвор';
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+// ============================================================================
+// AI ПАРСИНГ (ОСНОВНОЙ МЕТОД)
+// ============================================================================
+
+/**
+ * Парсинг цены через AI
+ */
+async function parseWithAI(url: string): Promise<ParsedPrice | null> {
+  try {
+    // Сначала получаем HTML через HTTP
+    const response = await axios.get(url, {
+      timeout: 30000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
+      }
+    });
+
+    if (!response.data || typeof response.data !== 'string') {
+      console.warn('Empty or invalid HTML response');
+      return null;
+    }
+
+    // Извлекаем цену через AI
+    const aiResult = await extractPriceWithAI(response.data, url);
+    
+    if (aiResult && aiResult.price > 0 && aiResult.confidence >= AI_CONFIG.CONFIDENCE_THRESHOLD) {
+      return {
+        price: aiResult.price,
+        currency: aiResult.currency,
+        supplierName: getSupplierNameFromUrl(url),
+        confidence: aiResult.confidence,
+        source: 'ai',
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('AI parsing failed:', error);
+    return null;
+  }
+}
+
+// ============================================================================
+// HTTP ПАРСИНГ (FALLBACK)
+// ============================================================================
+
+/**
+ * Попытка парсинга цены через HTTP запрос и cheerio (fallback)
  */
 async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
   try {
@@ -71,28 +201,25 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
 
     // Специфичные селекторы для Saturn
     if (isSaturn) {
-      // Ищем цену "С картой" (приоритет) или "Без карты"
       const cardPrice = $('.price-card, [class*="price"][class*="card"], .product-price-card').first();
       if (cardPrice.length > 0) {
         priceText = cardPrice.text().trim();
       }
       
-      // Если не нашли, ищем в секции с ценой
       if (!priceText) {
         const priceSection = $('[class*="price"], [class*="cost"], [data-price]');
         priceSection.each((_, el) => {
           const text = $(el).text().trim();
-          // Ищем цену с пробелами (например "2 359 ₽")
           const priceMatch = text.match(/(\d+[\s.,]?\d*)\s*[₽руб]/);
           if (priceMatch && parseFloat(priceMatch[1].replace(/\s/g, '')) > 100) {
             priceText = priceMatch[1];
-            return false; // break
+            return false;
           }
         });
       }
     }
     
-    // Распространенные селекторы для цен (для всех сайтов)
+    // Распространенные селекторы для цен
     if (!priceText) {
       const priceSelectors = [
         '.price',
@@ -119,19 +246,18 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
           const content = element.attr('content');
           priceText = text || dataPrice || content || null;
           if (priceText) {
-            // Проверяем, что это похоже на цену (больше 10)
             const priceNum = normalizePrice(priceText);
             if (priceNum && priceNum > 10) {
               break;
             } else {
-              priceText = null; // Продолжаем поиск
+              priceText = null;
             }
           }
         }
       }
     }
 
-    // Если не нашли по селекторам, ищем по тексту "₽" или "руб" (только большие цены)
+    // Поиск по тексту "₽" или "руб"
     if (!priceText) {
       const priceRegex = /(\d{1,3}(?:\s?\d{3})*)\s*[₽руб]/g;
       const matches = response.data.matchAll(priceRegex);
@@ -154,21 +280,11 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
       return null;
     }
 
-    // Пытаемся определить название поставщика из URL
-    const urlObjSupplier = new URL(url);
-    let supplierName = '';
-    if (urlObjSupplier.hostname.includes('saturn')) {
-      supplierName = 'Сатурн';
-    } else if (urlObjSupplier.hostname.includes('lemanapro')) {
-      supplierName = 'Лемана Про';
-    } else if (urlObjSupplier.hostname.includes('sdvor')) {
-      supplierName = 'Стройдвор';
-    }
-
     return {
       price,
       currency: 'RUB',
-      supplierName
+      supplierName: getSupplierNameFromUrl(url),
+      source: 'http',
     };
   } catch (error) {
     console.error('HTTP parsing failed:', error);
@@ -176,13 +292,16 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
   }
 }
 
+// ============================================================================
+// PUPPETEER ПАРСИНГ (ПОСЛЕДНИЙ FALLBACK)
+// ============================================================================
+
 /**
- * Парсинг цены через Puppeteer для динамических сайтов
+ * Парсинг цены через Puppeteer для динамических сайтов (последний fallback)
  */
 async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
   let browser;
   try {
-    // Пробуем разные пути к Chromium
     const possiblePaths = [
       process.env.PUPPETEER_EXECUTABLE_PATH,
       '/usr/bin/chromium',
@@ -193,7 +312,6 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
     
     let lastError: Error | null = null;
     
-    // Пробуем запустить с разными путями
     for (const executablePath of possiblePaths) {
       try {
         browser = await puppeteer.launch({
@@ -206,14 +324,13 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
           ],
           executablePath: executablePath || undefined,
         });
-        break; // Успешно запустили
+        break;
       } catch (error: any) {
         lastError = error;
         continue;
       }
     }
     
-    // Если не удалось запустить ни с одним путем, пробуем без указания пути
     if (!browser) {
       try {
         browser = await puppeteer.launch({
@@ -233,17 +350,14 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
 
     const page = await browser.newPage();
     
-    // Устанавливаем реалистичные заголовки
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     await page.setViewport({ width: 1920, height: 1080 });
     
-    // Удаляем признаки автоматизации
     await page.evaluateOnNewDocument(() => {
-      // @ts-ignore - код выполняется в контексте браузера через Puppeteer
+      // @ts-ignore
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
     });
 
-    // Устанавливаем дополнительные заголовки
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
       'Accept-Encoding': 'gzip, deflate, br',
@@ -256,8 +370,6 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
     const isSaturn = urlObjPuppeteer.hostname.includes('saturn');
     
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-
-    // Ждем загрузки цены (особенно важно для динамических сайтов)
     await page.waitForTimeout(3000);
 
     let priceText: string | null = null;
@@ -265,10 +377,7 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
     // Специфичная логика для Saturn
     if (isSaturn) {
       try {
-        // Ищем цену через JavaScript в браузере
         priceText = await page.evaluate(() => {
-          // @ts-ignore - код выполняется в контексте браузера через Puppeteer
-          // Ищем элементы с ценой
           const priceSelectors = [
             '[class*="price"]',
             '[data-price]',
@@ -282,7 +391,6 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
             const elements = document.querySelectorAll(selector);
             for (const el of elements) {
               const text = el.textContent?.trim() || '';
-              // Ищем цену с пробелами (например "2 359 ₽")
               const match = text.match(/(\d{1,3}(?:\s?\d{3})*)\s*[₽руб]/);
               if (match) {
                 const priceNum = parseFloat(match[1].replace(/\s/g, ''));
@@ -293,7 +401,6 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
             }
           }
           
-          // Если не нашли, ищем в тексте страницы
           // @ts-ignore
           const bodyText = document.body.innerText;
           const priceRegex = /(\d{1,3}(?:\s?\d{3})*)\s*[₽руб]/g;
@@ -315,7 +422,7 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
       }
     }
 
-    // Общие селекторы для всех сайтов
+    // Общие селекторы
     if (!priceText) {
       const priceSelectors = [
         '.price',
@@ -345,7 +452,6 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
                      null;
             }, element);
             if (priceText) {
-              // Проверяем, что это похоже на цену
               const priceNum = normalizePrice(priceText);
               if (priceNum && priceNum > 10) {
                 break;
@@ -355,12 +461,12 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
             }
           }
         } catch (e) {
-          // Продолжаем поиск
+          // Continue
         }
       }
     }
 
-    // Если не нашли, ищем в тексте страницы (только большие цены)
+    // Поиск в тексте страницы
     if (!priceText) {
       const pageContent = await page.content();
       const priceRegex = /(\d{1,3}(?:\s?\d{3})*)\s*[₽руб]/g;
@@ -384,21 +490,11 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
       return null;
     }
 
-    // Определяем название поставщика
-    const urlObjFinal = new URL(url);
-    let supplierName = '';
-    if (urlObjFinal.hostname.includes('saturn')) {
-      supplierName = 'Сатурн';
-    } else if (urlObjFinal.hostname.includes('lemanapro')) {
-      supplierName = 'Лемана Про';
-    } else if (urlObjFinal.hostname.includes('sdvor')) {
-      supplierName = 'Стройдвор';
-    }
-
     return {
       price,
       currency: 'RUB',
-      supplierName
+      supplierName: getSupplierNameFromUrl(url),
+      source: 'puppeteer',
     };
   } catch (error) {
     console.error('Puppeteer parsing failed:', error);
@@ -410,8 +506,18 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
   }
 }
 
+// ============================================================================
+// ГЛАВНАЯ ФУНКЦИЯ
+// ============================================================================
+
 /**
- * Гибридный парсинг цены: сначала HTTP, затем Puppeteer при необходимости
+ * Гибридный парсинг цены: AI → HTTP → Puppeteer
+ * 
+ * Стратегия:
+ * 1. Проверяем кэш (12 часов TTL)
+ * 2. Пробуем AI парсинг (основной метод)
+ * 3. Если AI не сработал или confidence низкий - fallback на HTTP селекторы
+ * 4. Если HTTP не сработал - fallback на Puppeteer
  */
 export async function parsePrice(url: string): Promise<ParsedPrice> {
   // Валидация URL
@@ -419,30 +525,68 @@ export async function parsePrice(url: string): Promise<ParsedPrice> {
     throw new Error(`URL не разрешен для парсинга: ${url}`);
   }
 
+  // Проверяем кэш
+  const cached = getCachedPrice(url);
+  if (cached) {
+    console.log(`Cache hit for ${url}`);
+    return cached;
+  }
+
   const urlObj = new URL(url);
   const isSaturn = urlObj.hostname.includes('saturn');
   
-  // Для Saturn сразу используем Puppeteer, так как сайт динамический
+  // ========================================
+  // ЭТАП 1: AI парсинг (основной метод)
+  // ========================================
+  if (isAIParsingEnabled()) {
+    try {
+      const aiResult = await parseWithAI(url);
+      if (aiResult && aiResult.price > 0) {
+        console.log(`AI parsing success for ${url}: ${aiResult.price}₽ (confidence: ${aiResult.confidence})`);
+        setCachedPrice(url, aiResult);
+        return aiResult;
+      }
+    } catch (error) {
+      console.warn('AI parsing error, falling back to selectors:', error);
+    }
+  }
+
+  // ========================================
+  // ЭТАП 2: HTTP селекторы (fallback)
+  // ========================================
+  
+  // Для Saturn сначала пробуем Puppeteer (динамический сайт)
   if (isSaturn) {
     const puppeteerResult = await parseWithPuppeteer(url);
     if (puppeteerResult && puppeteerResult.price > 100) {
+      console.log(`Puppeteer parsing success for ${url}: ${puppeteerResult.price}₽`);
+      setCachedPrice(url, puppeteerResult);
       return puppeteerResult;
     }
-    // Если Puppeteer не сработал, пробуем HTTP как fallback
+    
+    // Fallback на HTTP
     const httpResult = await parseWithHttp(url);
     if (httpResult && httpResult.price > 100) {
+      console.log(`HTTP parsing success for ${url}: ${httpResult.price}₽`);
+      setCachedPrice(url, httpResult);
       return httpResult;
     }
   } else {
-    // Для других сайтов сначала пробуем HTTP (быстрее)
+    // Для других сайтов сначала HTTP (быстрее)
     const httpResult = await parseWithHttp(url);
     if (httpResult && httpResult.price > 10) {
+      console.log(`HTTP parsing success for ${url}: ${httpResult.price}₽`);
+      setCachedPrice(url, httpResult);
       return httpResult;
     }
 
-    // Если HTTP не сработал, используем Puppeteer
+    // ========================================
+    // ЭТАП 3: Puppeteer (последний fallback)
+    // ========================================
     const puppeteerResult = await parseWithPuppeteer(url);
     if (puppeteerResult && puppeteerResult.price > 10) {
+      console.log(`Puppeteer parsing success for ${url}: ${puppeteerResult.price}₽`);
+      setCachedPrice(url, puppeteerResult);
       return puppeteerResult;
     }
   }
@@ -450,3 +594,13 @@ export async function parsePrice(url: string): Promise<ParsedPrice> {
   throw new Error('Не удалось извлечь цену со страницы');
 }
 
+/**
+ * Парсинг цены с использованием только AI (для тестирования)
+ */
+export async function parsePriceWithAIOnly(url: string): Promise<ParsedPrice | null> {
+  if (!validateUrl(url)) {
+    throw new Error(`URL не разрешен для парсинга: ${url}`);
+  }
+  
+  return parseWithAI(url);
+}
