@@ -4,20 +4,12 @@
 [phases.setup]
 nixPkgs = [
   "nodejs_18",
-  "npm-9_x",
-  # Chromium dependencies
-  "chromium",
-  "nss",
-  "freetype",
-  "freetype-dev",
-  "harfbuzz",
-  "ca-certificates",
-  "ttf-freefont",
-  "font-noto-emoji"
+  "npm-9_x"
 ]
 
-# Additional apt packages for Chromium
+# Apt packages for Chromium dependencies
 aptPkgs = [
+  "chromium",
   "libnss3",
   "libatk1.0-0",
   "libatk-bridge2.0-0",
@@ -28,12 +20,14 @@ aptPkgs = [
   "libxdamage1",
   "libxrandr2",
   "libgbm1",
-  "libasound2",
+  "libasound2t64",
   "libpangocairo-1.0-0",
   "libxshmfence1",
   "libgtk-3-0",
   "libx11-xcb1",
-  "fonts-liberation"
+  "libglu1-mesa",
+  "fonts-liberation",
+  "ca-certificates"
 ]
 
 [phases.install]

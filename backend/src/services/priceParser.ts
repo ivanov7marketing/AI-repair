@@ -11,7 +11,7 @@ import * as fs from 'fs';
 puppeteer.use(StealthPlugin());
 
 /**
- * Поиск пути к Chromium на системе (или использование bundled версии от Puppeteer)
+ * Поиск пути к Chromium на системе
  */
 function findChromiumPath(): string | undefined {
   // Если указан путь в env - используем его
@@ -19,6 +19,19 @@ function findChromiumPath(): string | undefined {
     if (fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
       console.log(`[Puppeteer] Using env path: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
       return process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+  }
+  
+  // Стандартные пути для apt-установленного chromium
+  const possiblePaths = [
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+  ];
+  
+  for (const path of possiblePaths) {
+    if (fs.existsSync(path)) {
+      console.log(`[Puppeteer] Found system Chromium at: ${path}`);
+      return path;
     }
   }
   
