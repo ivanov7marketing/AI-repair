@@ -228,14 +228,14 @@ class ApiClient {
     return this.superadminRequest('/superadmin/default-prices');
   }
 
-  async createDefaultPrice(data: { name: string; unit: string; price: number; category: string; subcategory?: string; type: 'work' | 'rough' | 'finish'; sort_order?: number }) {
+  async createDefaultPrice(data: { name: string; unit: string; price: number; category: string; subcategory?: string; type: 'work' | 'rough' | 'finish'; sort_order?: number; supplier_url?: string; supplier_name?: string; auto_price_update?: boolean }) {
     return this.superadminRequest('/superadmin/default-prices', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updateDefaultPrice(id: string, data: Partial<{ name: string; unit: string; price: number; category: string; subcategory?: string; type: 'work' | 'rough' | 'finish'; sort_order?: number }>) {
+  async updateDefaultPrice(id: string, data: Partial<{ name: string; unit: string; price: number; category: string; subcategory?: string; type: 'work' | 'rough' | 'finish'; sort_order?: number; supplier_url?: string; supplier_name?: string; last_price_update?: string; auto_price_update?: boolean }>) {
     return this.superadminRequest(`/superadmin/default-prices/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -245,6 +245,35 @@ class ApiClient {
   async deleteDefaultPrice(id: string) {
     return this.superadminRequest(`/superadmin/default-prices/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  // Supplier price methods
+  async parseSupplierPrice(url: string) {
+    return this.superadminRequest('/superadmin/suppliers/parse-price', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    });
+  }
+
+  async bulkSearchPrices(supplierUrls: string[], materialType: 'rough' | 'finish') {
+    return this.superadminRequest('/superadmin/suppliers/bulk-search', {
+      method: 'POST',
+      body: JSON.stringify({ supplierUrls, materialType }),
+    });
+  }
+
+  async bulkUpdatePrices(updates: Array<{ id: string; price: number; supplierUrl?: string; supplierName?: string }>) {
+    return this.superadminRequest('/superadmin/suppliers/bulk-update', {
+      method: 'POST',
+      body: JSON.stringify({ updates }),
+    });
+  }
+
+  async searchMaterialPrice(materialName: string, supplierUrls: string[]) {
+    return this.superadminRequest('/superadmin/suppliers/search-material', {
+      method: 'POST',
+      body: JSON.stringify({ materialName, supplierUrls }),
     });
   }
 

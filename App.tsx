@@ -85,6 +85,10 @@ export interface PriceItem {
   category: string;
   subcategory?: string; // Для отделочных работ: стены, пол, потолок
   type: 'work' | 'rough' | 'finish';
+  supplierUrl?: string;
+  supplierName?: string;
+  lastPriceUpdate?: string;
+  autoPriceUpdate?: boolean;
 }
 
 // Подразделы для отделочных работ

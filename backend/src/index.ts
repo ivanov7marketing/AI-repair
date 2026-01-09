@@ -9,6 +9,7 @@ import projectRoutes from './routes/projects';
 import aiRoutes from './routes/ai';
 import priceRoutes from './routes/prices';
 import superadminRoutes from './routes/superadmin';
+import supplierRoutes from './routes/suppliers';
 
 dotenv.config();
 
@@ -64,6 +65,7 @@ app.use('/projects', projectRoutes);
 app.use('/ai', aiRoutes);
 app.use('/prices', priceRoutes);
 app.use('/superadmin', superadminRoutes);
+app.use('/superadmin/suppliers', supplierRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: express.NextFunction): void => {

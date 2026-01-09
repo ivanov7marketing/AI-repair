@@ -26,6 +26,9 @@ const createPriceItemSchema = z.object({
   subcategory: z.string().optional(),
   type: z.enum(['work', 'rough', 'finish']),
   sort_order: z.number().optional(),
+  supplier_url: z.string().url().optional().or(z.literal('')),
+  supplier_name: z.string().optional(),
+  auto_price_update: z.boolean().optional(),
 });
 
 const updatePriceItemSchema = z.object({
@@ -36,10 +39,14 @@ const updatePriceItemSchema = z.object({
   subcategory: z.string().optional(),
   type: z.enum(['work', 'rough', 'finish']).optional(),
   sort_order: z.number().optional(),
+  supplier_url: z.string().url().optional().or(z.literal('')),
+  supplier_name: z.string().optional(),
+  last_price_update: z.string().optional(),
+  auto_price_update: z.boolean().optional(),
 });
 
 // Middleware to check superadmin authentication
-const superadminAuthMiddleware = async (req: Request, res: Response, next: any) => {
+export const superadminAuthMiddleware = async (req: Request, res: Response, next: any) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
@@ -146,7 +153,9 @@ router.post('/change-password', superadminAuthMiddleware, async (req: Request, r
 router.get('/default-prices', superadminAuthMiddleware, async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, unit, price, category, subcategory, type, sort_order, created_at, updated_at
+      `SELECT id, name, unit, price, category, subcategory, type, sort_order, 
+              supplier_url, supplier_name, last_price_update, auto_price_update,
+              created_at, updated_at
        FROM default_price_items
        ORDER BY sort_order, category, subcategory, name`
     );
@@ -160,6 +169,10 @@ router.get('/default-prices', superadminAuthMiddleware, async (req: Request, res
       subcategory: row.subcategory || undefined,
       type: row.type,
       sortOrder: row.sort_order,
+      supplierUrl: row.supplier_url || undefined,
+      supplierName: row.supplier_name || undefined,
+      lastPriceUpdate: row.last_price_update || undefined,
+      autoPriceUpdate: row.auto_price_update || false,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     })));
@@ -184,9 +197,11 @@ router.post('/default-prices', superadminAuthMiddleware, async (req: Request, re
     const sortOrder = body.sort_order || (parseInt(maxSortResult.rows[0].max_sort) + 1);
 
     const result = await pool.query(
-      `INSERT INTO default_price_items (name, unit, price, category, subcategory, type, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, name, unit, price, category, subcategory, type, sort_order, created_at, updated_at`,
+      `INSERT INTO default_price_items (name, unit, price, category, subcategory, type, sort_order, supplier_url, supplier_name, auto_price_update)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id, name, unit, price, category, subcategory, type, sort_order, 
+                  supplier_url, supplier_name, last_price_update, auto_price_update,
+                  created_at, updated_at`,
       [
         body.name || '', 
         body.unit, 
@@ -194,7 +209,10 @@ router.post('/default-prices', superadminAuthMiddleware, async (req: Request, re
         body.category, 
         body.subcategory || null, 
         body.type, 
-        sortOrder
+        sortOrder,
+        body.supplier_url || null,
+        body.supplier_name || null,
+        body.auto_price_update || false
       ]
     );
 
@@ -208,6 +226,10 @@ router.post('/default-prices', superadminAuthMiddleware, async (req: Request, re
       subcategory: row.subcategory || undefined,
       type: row.type,
       sortOrder: row.sort_order,
+      supplierUrl: row.supplier_url || undefined,
+      supplierName: row.supplier_name || undefined,
+      lastPriceUpdate: row.last_price_update || undefined,
+      autoPriceUpdate: row.auto_price_update || false,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     });
@@ -259,6 +281,22 @@ router.patch('/default-prices/:id', superadminAuthMiddleware, async (req: Reques
       updates.push(`sort_order = $${paramIndex++}`);
       values.push(body.sort_order);
     }
+    if (body.supplier_url !== undefined) {
+      updates.push(`supplier_url = $${paramIndex++}`);
+      values.push(body.supplier_url || null);
+    }
+    if (body.supplier_name !== undefined) {
+      updates.push(`supplier_name = $${paramIndex++}`);
+      values.push(body.supplier_name || null);
+    }
+    if (body.last_price_update !== undefined) {
+      updates.push(`last_price_update = $${paramIndex++}`);
+      values.push(body.last_price_update ? new Date(body.last_price_update) : null);
+    }
+    if (body.auto_price_update !== undefined) {
+      updates.push(`auto_price_update = $${paramIndex++}`);
+      values.push(body.auto_price_update);
+    }
 
     if (updates.length === 0) {
       res.status(400).json({ error: 'No fields to update' });
@@ -271,7 +309,9 @@ router.patch('/default-prices/:id', superadminAuthMiddleware, async (req: Reques
       `UPDATE default_price_items 
        SET ${updates.join(', ')}
        WHERE id = $${paramIndex++}
-       RETURNING id, name, unit, price, category, subcategory, type, sort_order, created_at, updated_at`,
+       RETURNING id, name, unit, price, category, subcategory, type, sort_order, 
+                  supplier_url, supplier_name, last_price_update, auto_price_update,
+                  created_at, updated_at`,
       values
     );
 
@@ -290,6 +330,10 @@ router.patch('/default-prices/:id', superadminAuthMiddleware, async (req: Reques
       subcategory: row.subcategory || undefined,
       type: row.type,
       sortOrder: row.sort_order,
+      supplierUrl: row.supplier_url || undefined,
+      supplierName: row.supplier_name || undefined,
+      lastPriceUpdate: row.last_price_update || undefined,
+      autoPriceUpdate: row.auto_price_update || false,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     });
