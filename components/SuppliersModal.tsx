@@ -94,23 +94,36 @@ export const SuppliersModal: React.FC<SuppliersModalProps> = ({
     setProgress({ current: 0, total: materials.length });
 
     try {
+      console.log('Starting bulk search with suppliers:', suppliers);
+      console.log('Material type:', materialType);
+      
       const response = await api.bulkSearchPrices(suppliers, materialType);
       
+      console.log('Search response:', response);
+      
       if (response.success) {
-        setResults(response.results || []);
+        const searchResults = response.results || [];
+        setResults(searchResults);
+        
         // Автоматически выбираем лучшие цены
         const bestPrices = new Set(
-          response.results
-            .filter(r => r.bestPrice)
-            .map(r => r.materialId)
+          searchResults
+            .filter((r: any) => r.bestPrice)
+            .map((r: any) => r.materialId)
         );
         setSelectedUpdates(bestPrices);
+        
+        // Показываем информацию о результатах
+        const foundCount = searchResults.filter((r: any) => r.bestPrice).length;
+        if (foundCount === 0 && searchResults.length > 0) {
+          setError('Товары не найдены на указанных сайтах. Попробуйте уточнить названия материалов или добавить другие сайты поставщиков.');
+        }
       } else {
         setError(response.error || 'Ошибка при поиске цен');
       }
     } catch (err: any) {
       console.error('Search error:', err);
-      setError(err.message || 'Не удалось выполнить поиск цен');
+      setError(err.message || 'Не удалось выполнить поиск цен. Проверьте подключение к интернету и повторите попытку.');
     } finally {
       setIsSearching(false);
       setProgress({ current: 0, total: 0 });
@@ -256,12 +269,29 @@ export const SuppliersModal: React.FC<SuppliersModalProps> = ({
             </div>
           )}
 
+          {/* Results summary */}
+          {results.length > 0 && (
+            <div className="mb-4 p-4 bg-architect-50 dark:bg-architect-900 rounded-lg">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-architect-600 dark:text-architect-400">
+                  Проверено материалов: <span className="font-bold text-architect-900 dark:text-white">{results.length}</span>
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  Найдены цены: <span className="font-bold">{results.filter(r => r.bestPrice).length}</span>
+                </span>
+                <span className="text-amber-600 dark:text-amber-400">
+                  Не найдено: <span className="font-bold">{results.filter(r => !r.bestPrice).length}</span>
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Results table */}
           {results.length > 0 && (
             <div className="border border-architect-200 dark:border-architect-700 rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-[400px]">
                 <table className="w-full text-sm">
-                  <thead className="bg-architect-100 dark:bg-architect-900">
+                  <thead className="bg-architect-100 dark:bg-architect-900 sticky top-0">
                     <tr>
                       <th className="px-4 py-3 text-left w-12">
                         <input
@@ -285,41 +315,58 @@ export const SuppliersModal: React.FC<SuppliersModalProps> = ({
                   </thead>
                   <tbody>
                     {results.map((result) => {
-                      if (!result.bestPrice) return null;
                       const isSelected = selectedUpdates.has(result.materialId);
+                      const hasBestPrice = !!result.bestPrice;
+                      
                       return (
                         <tr
                           key={result.materialId}
                           className={`border-b border-architect-100 dark:border-architect-700 ${
                             isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                          }`}
+                          } ${!hasBestPrice ? 'opacity-50' : ''}`}
                         >
                           <td className="px-4 py-3">
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => toggleSelection(result.materialId)}
+                              onChange={() => hasBestPrice && toggleSelection(result.materialId)}
+                              disabled={!hasBestPrice}
                               className="rounded"
                             />
                           </td>
                           <td className="px-4 py-3 font-medium dark:text-white">
                             {result.materialName}
+                            {result.results && result.results.length > 1 && (
+                              <span className="ml-2 text-xs text-architect-400">
+                                ({result.results.length} вариантов)
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-architect-600 dark:text-architect-400">
-                            {result.bestPrice.supplier}
+                            {hasBestPrice ? result.bestPrice!.supplier : (
+                              <span className="text-amber-500 text-xs">Не найдено</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-right font-bold dark:text-white">
-                            {result.bestPrice.price.toLocaleString('ru-RU')} ₽
+                            {hasBestPrice ? (
+                              `${result.bestPrice!.price.toLocaleString('ru-RU')} ₽`
+                            ) : (
+                              <span className="text-architect-400">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3">
-                            <a
-                              href={result.bestPrice.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
-                            >
-                              Открыть <ExternalLink className="w-3 h-3" />
-                            </a>
+                            {hasBestPrice ? (
+                              <a
+                                href={result.bestPrice!.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
+                              >
+                                Открыть <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span className="text-architect-400 text-xs">—</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -333,7 +380,11 @@ export const SuppliersModal: React.FC<SuppliersModalProps> = ({
           {results.length === 0 && !isSearching && (
             <div className="text-center py-12 text-architect-400">
               <Search className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p className="text-sm">Нажмите "Найти цены" для поиска цен на всех поставщиков</p>
+              <p className="text-sm">Нажмите "Найти цены" для поиска цен у поставщиков</p>
+              <p className="text-xs mt-2 max-w-md mx-auto">
+                Поиск выполняется по названию материала на сайтах указанных поставщиков. 
+                Для лучших результатов используйте точные названия товаров.
+              </p>
             </div>
           )}
         </div>
