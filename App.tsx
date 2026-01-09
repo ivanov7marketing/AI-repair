@@ -2122,6 +2122,68 @@ const App: React.FC = () => {
     }
   };
 
+  // Обновить все цены для материалов где есть ссылки
+  const [updatingAllPrices, setUpdatingAllPrices] = useState(false);
+  
+  const handleUpdateAllPricesWithUrls = async (materialType: 'rough' | 'finish') => {
+    const itemsWithUrls = priceList.filter(p => p.type === materialType && p.supplierUrl);
+    
+    if (itemsWithUrls.length === 0) {
+      alert('Нет материалов со ссылками для обновления');
+      return;
+    }
+    
+    if (!confirm(`Обновить цены для ${itemsWithUrls.length} материалов со ссылками?`)) {
+      return;
+    }
+    
+    setUpdatingAllPrices(true);
+    let updated = 0;
+    let failed = 0;
+    
+    for (const item of itemsWithUrls) {
+      try {
+        setUpdatingPriceId(item.id);
+        const result = await api.parseSupplierPrice(item.supplierUrl!);
+        
+        if (result.price) {
+          const updateData: any = {
+            price: Number(result.price),
+            last_price_update: new Date().toISOString(),
+          };
+          if (result.supplierName) {
+            updateData.supplier_name = result.supplierName;
+          }
+          
+          await api.updatePriceItem(item.id, updateData);
+          
+          setPriceList(prev => prev.map(p => {
+            if (p.id === item.id) {
+              return {
+                ...p,
+                price: Number(result.price),
+                supplierName: result.supplierName || p.supplierName,
+                lastPriceUpdate: new Date().toISOString(),
+              };
+            }
+            return p;
+          }));
+          
+          updated++;
+        } else {
+          failed++;
+        }
+      } catch (error) {
+        console.error(`Failed to update price for ${item.name}:`, error);
+        failed++;
+      }
+    }
+    
+    setUpdatingPriceId(null);
+    setUpdatingAllPrices(false);
+    alert(`Обновлено: ${updated}, Ошибок: ${failed}`);
+  };
+
   // Автоматическое добавление позиции в справочник, если её нет
   const autoAddToPriceList = (
     name: string, 
@@ -3593,16 +3655,8 @@ const App: React.FC = () => {
                     {/* Блок черновых материалов */}
                     {activePriceTab === 'rough' && (
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex items-center gap-4 flex-wrap">
                                 <h3 className="text-xl font-bold dark:text-white flex items-center gap-2 shrink-0"><Package className="w-5 h-5 text-amber-500" /> Черновые материалы</h3>
-                                {hasPermission(PERMISSIONS.EDIT_PRICES) && (
-                                  <button
-                                    onClick={() => setShowSuppliersModal(true)}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm font-semibold"
-                                  >
-                                    <Search className="w-4 h-4" /> Поставщики
-                                  </button>
-                                )}
                                 {/* Поиск */}
                                 <div className="relative flex-1 max-w-md min-w-[200px]">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-architect-400" />
@@ -3637,6 +3691,17 @@ const App: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
+                                {/* Кнопка обновить все цены */}
+                                {hasPermission(PERMISSIONS.EDIT_PRICES) && priceList.filter(p => p.type === 'rough' && p.supplierUrl).length > 0 && (
+                                  <button
+                                    onClick={() => handleUpdateAllPricesWithUrls('rough')}
+                                    disabled={updatingAllPrices}
+                                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    <RefreshCw className={`w-4 h-4 ${updatingAllPrices ? 'animate-spin' : ''}`} /> 
+                                    {updatingAllPrices ? 'Обновление...' : 'Обновить все цены'}
+                                  </button>
+                                )}
                             </div>
                             <div className="bg-white dark:bg-architect-800 rounded-xl border border-architect-200 dark:border-architect-700 overflow-hidden">
                                 {priceList.filter(p => p.type === 'rough').length > 0 ? (
@@ -3778,7 +3843,7 @@ const App: React.FC = () => {
                     {/* Блок чистовых материалов */}
                     {activePriceTab === 'finish' && (
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex items-center gap-4 flex-wrap">
                                 <h3 className="text-xl font-bold dark:text-white flex items-center gap-2 shrink-0"><Sparkles className="w-5 h-5 text-blue-500" /> Чистовые материалы</h3>
                                 {/* Поиск */}
                                 <div className="relative flex-1 max-w-md min-w-[200px]">
@@ -3814,6 +3879,17 @@ const App: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
+                                {/* Кнопка обновить все цены */}
+                                {hasPermission(PERMISSIONS.EDIT_PRICES) && priceList.filter(p => p.type === 'finish' && p.supplierUrl).length > 0 && (
+                                  <button
+                                    onClick={() => handleUpdateAllPricesWithUrls('finish')}
+                                    disabled={updatingAllPrices}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    <RefreshCw className={`w-4 h-4 ${updatingAllPrices ? 'animate-spin' : ''}`} /> 
+                                    {updatingAllPrices ? 'Обновление...' : 'Обновить все цены'}
+                                  </button>
+                                )}
                             </div>
                             <div className="bg-white dark:bg-architect-800 rounded-xl border border-architect-200 dark:border-architect-700 overflow-hidden">
                                 {priceList.filter(p => p.type === 'finish').length > 0 ? (
