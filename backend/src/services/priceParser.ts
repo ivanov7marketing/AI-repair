@@ -342,11 +342,11 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
       // Ищем цену в формате "XXX ₽" или "X XXX ₽" или "XX XXX руб"
       // НЕ захватываем артикулы и другие числа
       const priceRegex = /(\d{1,3}(?:[\s\u00a0]\d{3})*)\s*[₽р]/gi;
-      const matches = Array.from(response.data.matchAll(priceRegex));
+      const matches = Array.from(response.data.matchAll(priceRegex)) as RegExpMatchArray[];
       
       // Фильтруем и сортируем цены
       const prices = matches
-        .map(m => ({
+        .map((m: RegExpMatchArray) => ({
           text: m[1],
           value: parseFloat(m[1].replace(/[\s\u00a0]/g, ''))
         }))
