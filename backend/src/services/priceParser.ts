@@ -232,8 +232,25 @@ async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
     }
 
     const page = await browser.newPage();
+    
+    // Устанавливаем реалистичные заголовки
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     await page.setViewport({ width: 1920, height: 1080 });
+    
+    // Удаляем признаки автоматизации
+    await page.evaluateOnNewDocument(() => {
+      // @ts-ignore - код выполняется в контексте браузера через Puppeteer
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    });
+
+    // Устанавливаем дополнительные заголовки
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+    });
     
     const urlObj = new URL(url);
     const isSaturn = urlObj.hostname.includes('saturn');
