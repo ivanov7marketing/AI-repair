@@ -2085,10 +2085,31 @@ const App: React.FC = () => {
     try {
       const result = await api.parseSupplierPrice(item.supplierUrl);
       if (result.price) {
-        await handleUpdatePriceItem(item.id, 'price', result.price);
+        // Обновляем цену СРАЗУ в базе данных (без debounce)
+        const updateData: any = {
+          price: Number(result.price),
+          last_price_update: new Date().toISOString(),
+        };
         if (result.supplierName) {
-          await handleUpdatePriceItem(item.id, 'supplierName', result.supplierName);
+          updateData.supplier_name = result.supplierName;
         }
+        
+        // Сохраняем в базу
+        await api.updatePriceItem(item.id, updateData);
+        
+        // Обновляем локальное состояние
+        setPriceList(prev => prev.map(p => {
+          if (p.id === item.id) {
+            return {
+              ...p,
+              price: Number(result.price),
+              supplierName: result.supplierName || p.supplierName,
+              lastPriceUpdate: new Date().toISOString(),
+            };
+          }
+          return p;
+        }));
+        
         alert(`Цена обновлена: ${result.price} ₽`);
       } else {
         alert('Не удалось найти цену на странице');
