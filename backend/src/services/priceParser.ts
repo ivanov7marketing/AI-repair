@@ -131,10 +131,11 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
 async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
   let browser;
   try {
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
+      ...(executablePath ? { executablePath } : {})
     });
 
     const page = await browser.newPage();
