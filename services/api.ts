@@ -250,21 +250,48 @@ class ApiClient {
 
   // Supplier price methods
   async parseSupplierPrice(url: string) {
-    return this.superadminRequest('/superadmin/suppliers/parse-price', {
+    // Проверяем, есть ли токен суперадмина
+    const superadminToken = localStorage.getItem('superadmin_token');
+    if (superadminToken) {
+      return this.superadminRequest('/superadmin/suppliers/parse-price', {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      });
+    }
+    // Используем обычный эндпоинт для пользователей
+    return this.request('/suppliers/user/parse-price', {
       method: 'POST',
       body: JSON.stringify({ url }),
     });
   }
 
   async bulkSearchPrices(supplierUrls: string[], materialType: 'rough' | 'finish') {
-    return this.superadminRequest('/superadmin/suppliers/bulk-search', {
+    // Проверяем, есть ли токен суперадмина
+    const superadminToken = localStorage.getItem('superadmin_token');
+    if (superadminToken) {
+      return this.superadminRequest('/superadmin/suppliers/bulk-search', {
+        method: 'POST',
+        body: JSON.stringify({ supplierUrls, materialType }),
+      });
+    }
+    // Используем обычный эндпоинт для пользователей
+    return this.request('/suppliers/user/bulk-search', {
       method: 'POST',
       body: JSON.stringify({ supplierUrls, materialType }),
     });
   }
 
   async bulkUpdatePrices(updates: Array<{ id: string; price: number; supplierUrl?: string; supplierName?: string }>) {
-    return this.superadminRequest('/superadmin/suppliers/bulk-update', {
+    // Проверяем, есть ли токен суперадмина
+    const superadminToken = localStorage.getItem('superadmin_token');
+    if (superadminToken) {
+      return this.superadminRequest('/superadmin/suppliers/bulk-update', {
+        method: 'POST',
+        body: JSON.stringify({ updates }),
+      });
+    }
+    // Используем обычный эндпоинт для пользователей
+    return this.request('/suppliers/user/bulk-update', {
       method: 'POST',
       body: JSON.stringify({ updates }),
     });

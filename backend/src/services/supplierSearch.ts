@@ -204,15 +204,48 @@ async function parseSearchResultsSimple(searchUrl: string): Promise<Array<{ name
  * Получаем HTML после рендеринга JavaScript, затем парсим через Cheerio
  */
 async function parseSearchResultsPuppeteer(searchUrl: string): Promise<Array<{ name: string; price: number; url: string }>> {
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  // Пробуем разные пути к Chromium
+  const possiblePaths = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+  ].filter(Boolean);
+  
   let browser;
+  let lastError: Error | null = null;
+  
+  // Пробуем запустить с разными путями
+  for (const executablePath of possiblePaths) {
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        executablePath: executablePath || undefined,
+      });
+      break; // Успешно запустили
+    } catch (error: any) {
+      lastError = error;
+      console.log(`Failed to launch with ${executablePath}, trying next...`);
+      continue;
+    }
+  }
+  
+  // Если не удалось запустить ни с одним путем, пробуем без указания пути
+  if (!browser) {
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      });
+    } catch (error: any) {
+      console.error('Failed to launch Puppeteer with all paths:', lastError || error);
+      return [];
+    }
+  }
   
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-      ...(executablePath ? { executablePath } : {})
-    });
 
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
@@ -342,9 +375,33 @@ async function parseSearchResultsPuppeteer(searchUrl: string): Promise<Array<{ n
     return [];
   } finally {
     if (browser) {
-      await browser.close();
+      try {
+        await browser.close();
+      } catch (closeError) {
+        console.error('Error closing browser:', closeError);
+      }
     }
   }
+}
+
+/**
+ * Проверка, является ли URL прямой ссылкой на товар (а не на поиск)
+ */
+function isProductUrl(url: string): boolean {
+  const productIndicators = [
+    '/product/',
+    '/goods/',
+    '/catalog/',
+    '/item/',
+    '/p/',
+    '/tovar/',
+    'product_id=',
+    'item_id=',
+    'goods_id=',
+  ];
+  
+  const urlLower = url.toLowerCase();
+  return productIndicators.some(indicator => urlLower.includes(indicator));
 }
 
 /**
@@ -355,16 +412,34 @@ async function searchOnSupplier(
   supplierUrl: string
 ): Promise<SupplierSearchResult[]> {
   const supplierName = getSupplierName(supplierUrl);
+  
+  // Если это прямая ссылка на товар, используем parsePrice
+  if (isProductUrl(supplierUrl)) {
+    try {
+      const { parsePrice } = await import('./priceParser');
+      const parsed = await parsePrice(supplierUrl);
+      
+      if (parsed.price > 0) {
+        return [{
+          supplier: supplierName,
+          url: supplierUrl,
+          price: parsed.price,
+          name: materialName
+        }];
+      }
+    } catch (error) {
+      // Если не удалось распарсить прямую ссылку, продолжаем с поиском
+      console.error(`Failed to parse direct URL ${supplierUrl}:`, error);
+    }
+  }
+  
   const searchUrl = getSearchUrl(supplierUrl, materialName);
   
-  console.log(`Searching "${materialName}" on ${supplierName}: ${searchUrl}`);
-
   // Сначала пробуем простой парсинг (быстрее)
   let results = await parseSearchResultsSimple(searchUrl);
   
   // Если не нашли, пробуем Puppeteer (для динамических страниц)
   if (results.length === 0) {
-    console.log(`Simple parsing failed, trying Puppeteer for ${supplierName}`);
     results = await parseSearchResultsPuppeteer(searchUrl);
   }
 
