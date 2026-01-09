@@ -5,7 +5,7 @@
     "buildCommand": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium npm install && npm run build"
   },
   "deploy": {
-    "startCommand": "npm run migrate && npm start",
+    "startCommand": "PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium npm run migrate && npm start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
