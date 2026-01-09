@@ -5,9 +5,61 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { AI_CONFIG, isAIParsingEnabled } from '../config/aiConfig';
 import { extractPriceWithAI, AIExtractionResult } from './aiPriceExtractor';
 import { simplifyHTML } from './htmlSimplifier';
+import * as fs from 'fs';
+import { execSync } from 'child_process';
 
 // Используем stealth плагин для обхода защиты от ботов (для fallback)
 puppeteer.use(StealthPlugin());
+
+/**
+ * Поиск пути к Chromium на системе
+ */
+function findChromiumPath(): string | undefined {
+  // Список возможных путей
+  const possiblePaths = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/snap/bin/chromium',
+  ].filter(Boolean) as string[];
+  
+  // Проверяем существующие пути
+  for (const path of possiblePaths) {
+    if (fs.existsSync(path)) {
+      console.log(`[Puppeteer] Found Chromium at: ${path}`);
+      return path;
+    }
+  }
+  
+  // Пробуем найти через which
+  try {
+    const whichResult = execSync('which chromium chromium-browser google-chrome 2>/dev/null || true', { encoding: 'utf-8' });
+    const foundPath = whichResult.trim().split('\n')[0];
+    if (foundPath && fs.existsSync(foundPath)) {
+      console.log(`[Puppeteer] Found Chromium via which: ${foundPath}`);
+      return foundPath;
+    }
+  } catch (e) {
+    // Ignore
+  }
+  
+  // Пробуем найти в nix store
+  try {
+    const nixResult = execSync('find /nix/store -name "chromium" -type f -executable 2>/dev/null | head -1 || true', { encoding: 'utf-8' });
+    const nixPath = nixResult.trim();
+    if (nixPath && fs.existsSync(nixPath)) {
+      console.log(`[Puppeteer] Found Chromium in nix store: ${nixPath}`);
+      return nixPath;
+    }
+  } catch (e) {
+    // Ignore  
+  }
+  
+  console.log('[Puppeteer] Chromium not found, will try default puppeteer behavior');
+  return undefined;
+}
 
 export interface ParsedPrice {
   price: number;
@@ -410,48 +462,37 @@ async function parseWithHttp(url: string): Promise<ParsedPrice | null> {
 async function parseWithPuppeteer(url: string): Promise<ParsedPrice | null> {
   let browser;
   try {
-    const possiblePaths = [
-      process.env.PUPPETEER_EXECUTABLE_PATH,
-      '/usr/bin/chromium',
-      '/usr/bin/chromium-browser',
-      '/usr/bin/google-chrome',
-      '/usr/bin/google-chrome-stable',
-    ].filter(Boolean);
+    // Ищем путь к Chromium
+    const chromiumPath = findChromiumPath();
     
-    let lastError: Error | null = null;
+    const launchOptions: any = {
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+      ],
+    };
     
-    for (const executablePath of possiblePaths) {
-      try {
-        browser = await puppeteer.launch({
-          headless: 'new',
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-blink-features=AutomationControlled',
-          ],
-          executablePath: executablePath || undefined,
-        });
-        break;
-      } catch (error: any) {
-        lastError = error;
-        continue;
-      }
+    if (chromiumPath) {
+      launchOptions.executablePath = chromiumPath;
     }
     
-    if (!browser) {
+    try {
+      browser = await puppeteer.launch(launchOptions);
+      console.log('[Puppeteer] Browser launched successfully');
+    } catch (error: any) {
+      console.error('[Puppeteer] Failed to launch with path, trying without:', error.message);
+      // Пробуем без указания пути
+      delete launchOptions.executablePath;
       try {
-        browser = await puppeteer.launch({
-          headless: 'new',
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-blink-features=AutomationControlled',
-          ],
-        });
-      } catch (error: any) {
-        console.error('Failed to launch Puppeteer:', lastError || error);
+        browser = await puppeteer.launch(launchOptions);
+        console.log('[Puppeteer] Browser launched with default path');
+      } catch (error2: any) {
+        console.error('[Puppeteer] Failed to launch browser:', error2.message);
         return null;
       }
     }
