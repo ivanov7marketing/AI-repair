@@ -22,6 +22,10 @@ const updatePriceItemSchema = z.object({
   category: z.string().min(1).optional(),
   subcategory: z.string().optional(),
   type: z.enum(['work', 'rough', 'finish']).optional(),
+  supplier_url: z.string().url().optional().nullable(),
+  supplier_name: z.string().optional().nullable(),
+  last_price_update: z.string().optional().nullable(),
+  auto_price_update: z.boolean().optional(),
 });
 
 // Default prices to initialize for new organizations
@@ -193,7 +197,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `SELECT id, name, unit, price, category, subcategory, type, created_at, updated_at
+      `SELECT id, name, unit, price, category, subcategory, type, supplier_url, supplier_name, last_price_update, auto_price_update, created_at, updated_at
        FROM price_items
        WHERE organization_id = $1 AND deleted_at IS NULL
        ORDER BY category, subcategory, name`,
@@ -260,7 +264,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       
       // Fetch the newly created prices
       const newResult = await pool.query(
-        `SELECT id, name, unit, price, category, subcategory, type, created_at, updated_at
+        `SELECT id, name, unit, price, category, subcategory, type, supplier_url, supplier_name, last_price_update, auto_price_update, created_at, updated_at
          FROM price_items
          WHERE organization_id = $1 AND deleted_at IS NULL
          ORDER BY category, subcategory, name`,
@@ -275,21 +279,29 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
         category: row.category,
         subcategory: row.subcategory || undefined,
         type: row.type,
+        supplierUrl: row.supplier_url || undefined,
+        supplierName: row.supplier_name || undefined,
+        lastPriceUpdate: row.last_price_update || undefined,
+        autoPriceUpdate: row.auto_price_update || false,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       })));
     } else {
-      res.json(result.rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        unit: row.unit,
-        price: parseFloat(row.price),
-        category: row.category,
-        subcategory: row.subcategory || undefined,
-        type: row.type,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      })));
+    res.json(result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      unit: row.unit,
+      price: parseFloat(row.price),
+      category: row.category,
+      subcategory: row.subcategory || undefined,
+      type: row.type,
+      supplierUrl: row.supplier_url || undefined,
+      supplierName: row.supplier_name || undefined,
+      lastPriceUpdate: row.last_price_update || undefined,
+      autoPriceUpdate: row.auto_price_update || false,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })));
     }
   } catch (error) {
     console.error('Get price items error:', error);
@@ -310,7 +322,7 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.EDIT_PRICES), asy
     const result = await pool.query(
       `INSERT INTO price_items (organization_id, name, unit, price, category, subcategory, type)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, name, unit, price, category, subcategory, type, created_at, updated_at`,
+       RETURNING id, name, unit, price, category, subcategory, type, supplier_url, supplier_name, last_price_update, auto_price_update, created_at, updated_at`,
       [
         req.user.organizationId, 
         body.name || '', 
@@ -331,6 +343,10 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.EDIT_PRICES), asy
       category: row.category,
       subcategory: row.subcategory || undefined,
       type: row.type,
+      supplierUrl: row.supplier_url || undefined,
+      supplierName: row.supplier_name || undefined,
+      lastPriceUpdate: row.last_price_update || undefined,
+      autoPriceUpdate: row.auto_price_update || false,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     });
@@ -395,6 +411,22 @@ router.patch('/:id', authMiddleware, requirePermission(PERMISSIONS.EDIT_PRICES),
       updates.push(`type = $${paramIndex++}`);
       values.push(body.type);
     }
+    if (body.supplier_url !== undefined) {
+      updates.push(`supplier_url = $${paramIndex++}`);
+      values.push(body.supplier_url || null);
+    }
+    if (body.supplier_name !== undefined) {
+      updates.push(`supplier_name = $${paramIndex++}`);
+      values.push(body.supplier_name || null);
+    }
+    if (body.last_price_update !== undefined) {
+      updates.push(`last_price_update = $${paramIndex++}`);
+      values.push(body.last_price_update ? new Date(body.last_price_update) : null);
+    }
+    if (body.auto_price_update !== undefined) {
+      updates.push(`auto_price_update = $${paramIndex++}`);
+      values.push(body.auto_price_update);
+    }
 
     if (updates.length === 0) {
       res.status(400).json({ error: 'No fields to update' });
@@ -407,7 +439,7 @@ router.patch('/:id', authMiddleware, requirePermission(PERMISSIONS.EDIT_PRICES),
       `UPDATE price_items 
        SET ${updates.join(', ')}
        WHERE id = $${paramIndex++} AND organization_id = $${paramIndex++} AND deleted_at IS NULL
-       RETURNING id, name, unit, price, category, subcategory, type, created_at, updated_at`,
+       RETURNING id, name, unit, price, category, subcategory, type, supplier_url, supplier_name, last_price_update, auto_price_update, created_at, updated_at`,
       values
     );
 

@@ -2037,7 +2037,18 @@ const App: React.FC = () => {
     priceUpdateTimeouts.current[id] = setTimeout(async () => {
       try {
         const updateData: any = {};
-        updateData[field] = field === 'price' ? Number(value) : value;
+        // Map frontend field names to backend field names
+        if (field === 'supplierUrl') {
+          updateData.supplier_url = value || null;
+        } else if (field === 'supplierName') {
+          updateData.supplier_name = value || null;
+        } else if (field === 'lastPriceUpdate') {
+          updateData.last_price_update = value ? new Date(value as string).toISOString() : null;
+        } else if (field === 'autoPriceUpdate') {
+          updateData.auto_price_update = value;
+        } else {
+          updateData[field] = field === 'price' ? Number(value) : value;
+        }
         await api.updatePriceItem(id, updateData);
         delete priceUpdateTimeouts.current[id];
       } catch (error) {

@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Settings, LogOut, Plus, Trash2, Edit2, Save, X, Lock, 
-  Hammer, Package, Sparkles, Search, ChevronDown, ChevronUp, Upload,
-  RefreshCw, ExternalLink
+  Hammer, Package, Sparkles, ChevronDown, ChevronUp, Upload
 } from 'lucide-react';
 import { api } from '../services/api';
 import { PriceItem } from '../App';
-import { SuppliersModal } from './SuppliersModal';
 
 interface SuperAdminPanelProps {
   onLogout: () => void;
@@ -54,9 +52,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
   });
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  // Suppliers modal
-  const [showSuppliersModal, setShowSuppliersModal] = useState(false);
-  const [updatingPriceId, setUpdatingPriceId] = useState<string | null>(null);
 
   useEffect(() => {
     loadPrices();
@@ -66,15 +61,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
     try {
       setLoading(true);
       const prices = await api.getDefaultPrices();
-      // Ensure all prices have supplier fields initialized
-      const pricesWithSuppliers = prices.map(p => ({
-        ...p,
-        supplierUrl: p.supplierUrl || undefined,
-        supplierName: p.supplierName || undefined,
-        lastPriceUpdate: p.lastPriceUpdate || undefined,
-        autoPriceUpdate: p.autoPriceUpdate || false,
-      }));
-      setPriceList(pricesWithSuppliers);
+      setPriceList(prices);
       
       // Auto-expand all sections
       const sections: Record<string, boolean> = {};
@@ -104,17 +91,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
       try {
         const updateData: any = {};
         // Map frontend field names to backend field names
-        if (field === 'supplierUrl') {
-          updateData.supplier_url = value || null;
-        } else if (field === 'supplierName') {
-          updateData.supplier_name = value || null;
-        } else if (field === 'lastPriceUpdate') {
-          updateData.last_price_update = value ? new Date(value as string).toISOString() : null;
-        } else if (field === 'autoPriceUpdate') {
-          updateData.auto_price_update = value;
-        } else {
-          updateData[field] = field === 'price' ? Number(value) : value;
-        }
+        updateData[field] = field === 'price' ? Number(value) : value;
         await api.updateDefaultPrice(id, updateData);
       } catch (error) {
         console.error('Failed to update price item:', error);
@@ -522,12 +499,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <h3 className="text-xl font-bold dark:text-white flex items-center gap-2 shrink-0"><Package className="w-5 h-5 text-amber-500" /> Справочник черновых материалов</h3>
-                  <button
-                    onClick={() => setShowSuppliersModal(true)}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm font-semibold"
-                  >
-                    <Search className="w-4 h-4" /> Поставщики
-                  </button>
                 </div>
                 <div className="border border-architect-100 dark:border-architect-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-architect-800">
                   <div className="p-4 border-t border-architect-50 dark:border-architect-700">
@@ -539,7 +510,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                             <th className="py-2">Наименование</th>
                             <th className="py-2 w-20">Ед.изм</th>
                             <th className="py-2 w-24">Цена</th>
-                            <th className="py-2">Ссылка</th>
                             <th className="py-2 w-8"></th>
                           </tr>
                         </thead>
@@ -575,41 +545,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                                   <span className="text-architect-400 text-[10px]">₽</span>
                                 </div>
                               </td>
-                              <td className="py-2">
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    type="url"
-                                    value={item.supplierUrl || ''}
-                                    onChange={(e) => handleUpdatePriceItem(item.id, 'supplierUrl', e.target.value)}
-                                    placeholder="https://..."
-                                    className="flex-1 bg-transparent outline-none text-[10px] text-architect-500 dark:text-architect-400"
-                                  />
-                                  {item.supplierUrl && (
-                                    <div className="flex items-center gap-1">
-                                      <a
-                                        href={item.supplierUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-0.5 text-blue-400 hover:text-blue-600 transition-colors"
-                                        title="Открыть ссылку"
-                                      >
-                                        <ExternalLink className="w-3 h-3" />
-                                      </a>
-                                      <button
-                                        onClick={() => handleUpdatePriceFromUrl(item)}
-                                        disabled={updatingPriceId === item.id}
-                                        className="p-0.5 text-emerald-400 opacity-0 group-hover:opacity-100 hover:text-emerald-600 transition-all disabled:opacity-50"
-                                        title="Обновить цену"
-                                      >
-                                        {updatingPriceId === item.id ? (
-                                          <RefreshCw className="w-3 h-3 animate-spin" />
-                                        ) : (
-                                          <RefreshCw className="w-3 h-3" />
-                                        )}
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
                               </td>
                               <td className="py-2">
                                 <button onClick={() => handleDeletePriceItem(item.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all">
@@ -645,12 +580,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <h3 className="text-xl font-bold dark:text-white flex items-center gap-2 shrink-0"><Sparkles className="w-5 h-5 text-blue-500" /> Справочник чистовых материалов</h3>
-                  <button
-                    onClick={() => setShowSuppliersModal(true)}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm font-semibold"
-                  >
-                    <Search className="w-4 h-4" /> Поставщики
-                  </button>
                 </div>
                 <div className="border border-architect-100 dark:border-architect-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-architect-800">
                   <div className="p-4 border-t border-architect-50 dark:border-architect-700">
@@ -662,7 +591,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                             <th className="py-2">Наименование</th>
                             <th className="py-2 w-20">Ед.изм</th>
                             <th className="py-2 w-24">Цена</th>
-                            <th className="py-2">Ссылка</th>
                             <th className="py-2 w-8"></th>
                           </tr>
                         </thead>
@@ -696,42 +624,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                                     className="w-full bg-transparent outline-none font-bold" 
                                   />
                                   <span className="text-architect-400 text-[10px]">₽</span>
-                                </div>
-                              </td>
-                              <td className="py-2">
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    type="url"
-                                    value={item.supplierUrl || ''}
-                                    onChange={(e) => handleUpdatePriceItem(item.id, 'supplierUrl', e.target.value)}
-                                    placeholder="https://..."
-                                    className="flex-1 bg-transparent outline-none text-[10px] text-architect-500 dark:text-architect-400"
-                                  />
-                                  {item.supplierUrl && (
-                                    <div className="flex items-center gap-1">
-                                      <a
-                                        href={item.supplierUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-0.5 text-blue-400 hover:text-blue-600 transition-colors"
-                                        title="Открыть ссылку"
-                                      >
-                                        <ExternalLink className="w-3 h-3" />
-                                      </a>
-                                      <button
-                                        onClick={() => handleUpdatePriceFromUrl(item)}
-                                        disabled={updatingPriceId === item.id}
-                                        className="p-0.5 text-emerald-400 opacity-0 group-hover:opacity-100 hover:text-emerald-600 transition-all disabled:opacity-50"
-                                        title="Обновить цену"
-                                      >
-                                        {updatingPriceId === item.id ? (
-                                          <RefreshCw className="w-3 h-3 animate-spin" />
-                                        ) : (
-                                          <RefreshCw className="w-3 h-3" />
-                                        )}
-                                      </button>
-                                    </div>
-                                  )}
                                 </div>
                               </td>
                               <td className="py-2">
@@ -833,14 +725,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
         </div>
       </div>
 
-      {/* Suppliers Modal */}
-      <SuppliersModal
-        isOpen={showSuppliersModal}
-        onClose={() => setShowSuppliersModal(false)}
-        materialType={activePriceTab === 'rough' ? 'rough' : 'finish'}
-        materials={priceList.filter(p => p.type === activePriceTab)}
-        onUpdate={loadPrices}
-      />
     </div>
   );
 };
