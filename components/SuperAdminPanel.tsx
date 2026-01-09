@@ -545,7 +545,6 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
                                   <span className="text-architect-400 text-[10px]">₽</span>
                                 </div>
                               </td>
-                              </td>
                               <td className="py-2">
                                 <button onClick={() => handleDeletePriceItem(item.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all">
                                   <Trash2 className="w-3 h-3" />
