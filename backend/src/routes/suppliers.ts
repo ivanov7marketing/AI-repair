@@ -60,7 +60,7 @@ router.post('/bulk-search', superadminAuthMiddleware, async (req: Request, res: 
     // Получаем все материалы указанного типа из default_price_items
     const materialsResult = await pool.query(
       `SELECT id, name FROM default_price_items 
-       WHERE type = $1 AND deleted_at IS NULL
+       WHERE type = $1
        ORDER BY name`,
       [body.materialType]
     );

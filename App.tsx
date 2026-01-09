@@ -7,13 +7,14 @@ import {
   ArrowUpToLine, Folder, Settings, CreditCard, LogOut, 
   ChevronRight, Search, Menu, CircleHelp, ImagePlus,
   ChevronDown, Calculator, DoorOpen, Layout, Hammer, Package, Sparkles,
-  Mic, MicOff, Upload, FileSpreadsheet
+  Mic, MicOff, Upload, FileSpreadsheet, RefreshCw, ExternalLink
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { PlanUploader } from './components/PlanUploader.tsx';
 import { ImageEditorModal } from './components/ImageEditorModal.tsx';
 import { UsersManagement } from './components/UsersManagement.tsx';
 import { SuperAdminPanel } from './components/SuperAdminPanel.tsx';
+import { SuppliersModal } from './components/SuppliersModal.tsx';
 import { analyzeFloorPlan, generateIsometricView, generateRoomInterior, fileToGenerativePart, identifyStyleFromImage, parseVoiceEstimation, VoiceEstimationItem } from './services/routeraiService.ts';
 import { AppState, AnalysisResult, Room, ImageSize, FurnitureItem, Project, EstimationItem, RoomEstimation, PERMISSIONS } from './types.ts';
 import { useAuth, usePermission } from './contexts/AuthContext.tsx';
@@ -337,6 +338,10 @@ const App: React.FC = () => {
   const [importCategory, setImportCategory] = useState<string>('');
   const [importSubcategory, setImportSubcategory] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Поставщики
+  const [showSuppliersModal, setShowSuppliersModal] = useState(false);
+  const [updatingPriceId, setUpdatingPriceId] = useState<string | null>(null);
 
   // Параметры для автозаполнения сметы
   const [propertyCondition, setPropertyCondition] = useState<PropertyCondition>('secondary');
@@ -2059,6 +2064,32 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdatePriceFromUrl = async (item: PriceItem) => {
+    if (!item.supplierUrl) {
+      alert('Сначала добавьте ссылку на товар');
+      return;
+    }
+
+    setUpdatingPriceId(item.id);
+    try {
+      const result = await api.parseSupplierPrice(item.supplierUrl);
+      if (result.price) {
+        await handleUpdatePriceItem(item.id, 'price', result.price);
+        if (result.supplierName) {
+          await handleUpdatePriceItem(item.id, 'supplierName', result.supplierName);
+        }
+        alert(`Цена обновлена: ${result.price} ₽`);
+      } else {
+        alert('Не удалось найти цену на странице');
+      }
+    } catch (error: any) {
+      console.error('Failed to update price from URL:', error);
+      alert(`Ошибка: ${error.message || 'Не удалось обновить цену'}`);
+    } finally {
+      setUpdatingPriceId(null);
+    }
+  };
+
   // Автоматическое добавление позиции в справочник, если её нет
   const autoAddToPriceList = (
     name: string, 
@@ -3532,6 +3563,14 @@ const App: React.FC = () => {
                         <div className="space-y-4">
                             <div className="flex items-center justify-between gap-4 flex-wrap">
                                 <h3 className="text-xl font-bold dark:text-white flex items-center gap-2 shrink-0"><Package className="w-5 h-5 text-amber-500" /> Черновые материалы</h3>
+                                {hasPermission(PERMISSIONS.EDIT_PRICES) && (
+                                  <button
+                                    onClick={() => setShowSuppliersModal(true)}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm font-semibold"
+                                  >
+                                    <Search className="w-4 h-4" /> Поставщики
+                                  </button>
+                                )}
                                 {/* Поиск */}
                                 <div className="relative flex-1 max-w-md min-w-[200px]">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-architect-400" />
@@ -3578,6 +3617,9 @@ const App: React.FC = () => {
                                                     <th className="py-3 px-4 w-32">Категория</th>
                                                     <th className="py-3 px-4 w-20">Ед.изм</th>
                                                     <th className="py-3 px-4 w-24">Цена</th>
+                                                    {hasPermission(PERMISSIONS.EDIT_PRICES) && (
+                                                      <th className="py-3 px-4">Ссылка</th>
+                                                    )}
                                                     <th className="py-3 px-4 w-8"></th>
                                                 </tr>
                                             </thead>
@@ -3625,6 +3667,44 @@ const App: React.FC = () => {
                                                                 <span className="text-architect-400">₽</span>
                                                             </div>
                                                         </td>
+                                                        {hasPermission(PERMISSIONS.EDIT_PRICES) && (
+                                                          <td className="py-3 px-4">
+                                                            <div className="flex items-center gap-1">
+                                                              <input
+                                                                type="url"
+                                                                value={item.supplierUrl || ''}
+                                                                onChange={(e) => handleUpdatePriceItem(item.id, 'supplierUrl', e.target.value)}
+                                                                placeholder="https://..."
+                                                                className="flex-1 bg-transparent outline-none text-[10px] text-architect-500 dark:text-architect-400"
+                                                              />
+                                                              {item.supplierUrl && (
+                                                                <div className="flex items-center gap-1">
+                                                                  <a
+                                                                    href={item.supplierUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="p-0.5 text-blue-400 hover:text-blue-600 transition-colors"
+                                                                    title="Открыть ссылку"
+                                                                  >
+                                                                    <ExternalLink className="w-3 h-3" />
+                                                                  </a>
+                                                                  <button
+                                                                    onClick={() => handleUpdatePriceFromUrl(item)}
+                                                                    disabled={updatingPriceId === item.id}
+                                                                    className="p-0.5 text-emerald-400 opacity-0 group-hover:opacity-100 hover:text-emerald-600 transition-all disabled:opacity-50"
+                                                                    title="Обновить цену"
+                                                                  >
+                                                                    {updatingPriceId === item.id ? (
+                                                                      <RefreshCw className="w-3 h-3 animate-spin" />
+                                                                    ) : (
+                                                                      <RefreshCw className="w-3 h-3" />
+                                                                    )}
+                                                                  </button>
+                                                                </div>
+                                                              )}
+                                                            </div>
+                                                          </td>
+                                                        )}
                                                         <td className="py-3 px-4">
                                                             <button onClick={() => handleDeletePriceItem(item.id)} className="p-1 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all">
                                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -3714,6 +3794,9 @@ const App: React.FC = () => {
                                                     <th className="py-3 px-4 w-32">Категория</th>
                                                     <th className="py-3 px-4 w-20">Ед.изм</th>
                                                     <th className="py-3 px-4 w-24">Цена</th>
+                                                    {hasPermission(PERMISSIONS.EDIT_PRICES) && (
+                                                      <th className="py-3 px-4">Ссылка</th>
+                                                    )}
                                                     <th className="py-3 px-4 w-8"></th>
                                                 </tr>
                                             </thead>
@@ -3761,6 +3844,44 @@ const App: React.FC = () => {
                                                                 <span className="text-architect-400">₽</span>
                                                             </div>
                                                         </td>
+                                                        {hasPermission(PERMISSIONS.EDIT_PRICES) && (
+                                                          <td className="py-3 px-4">
+                                                            <div className="flex items-center gap-1">
+                                                              <input
+                                                                type="url"
+                                                                value={item.supplierUrl || ''}
+                                                                onChange={(e) => handleUpdatePriceItem(item.id, 'supplierUrl', e.target.value)}
+                                                                placeholder="https://..."
+                                                                className="flex-1 bg-transparent outline-none text-[10px] text-architect-500 dark:text-architect-400"
+                                                              />
+                                                              {item.supplierUrl && (
+                                                                <div className="flex items-center gap-1">
+                                                                  <a
+                                                                    href={item.supplierUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="p-0.5 text-blue-400 hover:text-blue-600 transition-colors"
+                                                                    title="Открыть ссылку"
+                                                                  >
+                                                                    <ExternalLink className="w-3 h-3" />
+                                                                  </a>
+                                                                  <button
+                                                                    onClick={() => handleUpdatePriceFromUrl(item)}
+                                                                    disabled={updatingPriceId === item.id}
+                                                                    className="p-0.5 text-emerald-400 opacity-0 group-hover:opacity-100 hover:text-emerald-600 transition-all disabled:opacity-50"
+                                                                    title="Обновить цену"
+                                                                  >
+                                                                    {updatingPriceId === item.id ? (
+                                                                      <RefreshCw className="w-3 h-3 animate-spin" />
+                                                                    ) : (
+                                                                      <RefreshCw className="w-3 h-3" />
+                                                                    )}
+                                                                  </button>
+                                                                </div>
+                                                              )}
+                                                            </div>
+                                                          </td>
+                                                        )}
                                                         <td className="py-3 px-4">
                                                             <button onClick={() => handleDeletePriceItem(item.id)} className="p-1 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all">
                                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -3806,6 +3927,17 @@ const App: React.FC = () => {
                 </div>
             )}
         </section>
+
+        {/* Suppliers Modal */}
+        {hasPermission(PERMISSIONS.EDIT_PRICES) && (
+          <SuppliersModal
+            isOpen={showSuppliersModal}
+            onClose={() => setShowSuppliersModal(false)}
+            materialType={activePriceTab === 'rough' ? 'rough' : 'finish'}
+            materials={priceList.filter(p => p.type === activePriceTab)}
+            onUpdate={loadPriceItems}
+          />
+        )}
       </main>
 
       {editingImage && <ImageEditorModal imageUrl={editingImage} onClose={() => setEditingImage(null)} onSave={newUrl => { if (currentProject) { if (editingImage === currentProject.global3DImage) updateCurrentProject({ global3DImage: newUrl }); else if (selectedRoom) updateCurrentProject({ roomImages: { ...(currentProject.roomImages || {}), [selectedRoom.id]: newUrl } }); } setEditingImage(null); }} />}
