@@ -66,11 +66,19 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
     try {
       setLoading(true);
       const prices = await api.getDefaultPrices();
-      setPriceList(prices);
+      // Ensure all prices have supplier fields initialized
+      const pricesWithSuppliers = prices.map(p => ({
+        ...p,
+        supplierUrl: p.supplierUrl || undefined,
+        supplierName: p.supplierName || undefined,
+        lastPriceUpdate: p.lastPriceUpdate || undefined,
+        autoPriceUpdate: p.autoPriceUpdate || false,
+      }));
+      setPriceList(pricesWithSuppliers);
       
       // Auto-expand all sections
       const sections: Record<string, boolean> = {};
-      prices.forEach(p => {
+      pricesWithSuppliers.forEach(p => {
         const key = `${p.type}-${p.category}${p.subcategory ? `-${p.subcategory}` : ''}`;
         sections[key] = true;
       });
@@ -82,7 +90,7 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
     }
   };
 
-  const handleUpdatePriceItem = async (id: string, field: keyof PriceItem, value: string | number) => {
+  const handleUpdatePriceItem = async (id: string, field: keyof PriceItem, value: string | number | boolean) => {
     // Optimistically update UI
     setPriceList(prev => prev.map(item => {
       if (item.id === id) {
@@ -95,7 +103,18 @@ export const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ onLogout }) =>
     const timeoutId = setTimeout(async () => {
       try {
         const updateData: any = {};
-        updateData[field] = field === 'price' ? Number(value) : value;
+        // Map frontend field names to backend field names
+        if (field === 'supplierUrl') {
+          updateData.supplier_url = value || null;
+        } else if (field === 'supplierName') {
+          updateData.supplier_name = value || null;
+        } else if (field === 'lastPriceUpdate') {
+          updateData.last_price_update = value ? new Date(value as string).toISOString() : null;
+        } else if (field === 'autoPriceUpdate') {
+          updateData.auto_price_update = value;
+        } else {
+          updateData[field] = field === 'price' ? Number(value) : value;
+        }
         await api.updateDefaultPrice(id, updateData);
       } catch (error) {
         console.error('Failed to update price item:', error);
