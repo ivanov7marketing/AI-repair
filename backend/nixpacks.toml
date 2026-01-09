@@ -31,7 +31,7 @@ aptPkgs = [
 ]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm install"]
 
 [phases.build]
 cmds = ["npm run build"]
