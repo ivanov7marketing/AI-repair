@@ -3286,8 +3286,51 @@ const App: React.FC = () => {
                                                                                                             )}
                                                                                                         </td>
                                                                                                         <td className="py-0.5 text-left"><input type="text" value={mat.unit} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'unit', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none text-[10px] h-4 leading-tight text-left" /></td>
-                                                                                                        <td className="py-0.5 text-left"><input type="number" value={mat.quantity} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'quantity', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none font-bold text-[10px] h-4 leading-tight text-left" /></td>
-                                                                                                        <td className="py-0.5 text-left"><input type="number" value={mat.price} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'price', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none font-bold text-[10px] h-4 leading-tight text-left" /></td>
+                                                                                                        <td className="py-0.5 text-left">
+                                                                                                            <div className="flex items-center gap-1">
+                                                                                                                <input type="number" value={mat.quantity} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'quantity', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none font-bold text-[10px] h-4 leading-tight text-left" />
+                                                                                                                {/* Иконка ссылки на товар */}
+                                                                                                                <button 
+                                                                                                                    onClick={() => {
+                                                                                                                        const url = prompt('Введите ссылку на товар:', mat.supplierUrl || '');
+                                                                                                                        if (url !== null) {
+                                                                                                                            handleUpdateEstimationItem('works', item.id, 'supplierUrl', url, sub, mat.id);
+                                                                                                                        }
+                                                                                                                    }}
+                                                                                                                    className={`p-0.5 transition-all opacity-0 group-hover:opacity-100 ${mat.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
+                                                                                                                    title={mat.supplierUrl ? `Ссылка: ${mat.supplierUrl}` : 'Добавить ссылку на товар'}
+                                                                                                                >
+                                                                                                                    <ExternalLink className="w-3 h-3" />
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                        </td>
+                                                                                                        <td className="py-0.5 text-left">
+                                                                                                            <div className="flex items-center gap-1">
+                                                                                                                <input type="number" value={mat.price} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'price', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none font-bold text-[10px] h-4 leading-tight text-left" />
+                                                                                                                {/* Кнопка обновления цены */}
+                                                                                                                {mat.supplierUrl && (
+                                                                                                                    <button 
+                                                                                                                        onClick={async () => {
+                                                                                                                            try {
+                                                                                                                                const result = await api.parseSupplierPrice(mat.supplierUrl);
+                                                                                                                                if (result.price) {
+                                                                                                                                    handleUpdateEstimationItem('works', item.id, 'price', result.price, sub, mat.id);
+                                                                                                                                    alert(`Цена обновлена: ${result.price} ₽`);
+                                                                                                                                } else {
+                                                                                                                                    alert('Не удалось получить цену');
+                                                                                                                                }
+                                                                                                                            } catch (e: any) {
+                                                                                                                                alert(`Ошибка: ${e.message || 'Не удалось обновить цену'}`);
+                                                                                                                            }
+                                                                                                                        }}
+                                                                                                                        className="p-0.5 text-emerald-500 hover:text-emerald-600 transition-all opacity-0 group-hover:opacity-100"
+                                                                                                                        title="Обновить цену с сайта"
+                                                                                                                    >
+                                                                                                                        <RefreshCw className="w-3 h-3" />
+                                                                                                                    </button>
+                                                                                                                )}
+                                                                                                            </div>
+                                                                                                        </td>
                                                                                                         <td className="py-0.5 font-bold text-architect-500 text-left text-xs leading-tight">{(mat.total || 0).toLocaleString()}</td>
                                                                                                         <td className="py-0.5 text-left"><button onClick={() => handleDeleteEstimationItem('works', item.id, sub, mat.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all text-left"><Trash2 className="w-3 h-3" /></button></td>
                                                                                                     </tr>
