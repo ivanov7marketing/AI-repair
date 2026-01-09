@@ -475,7 +475,8 @@ export async function bulkSearchPrices(
           const supplierResults = await searchOnSupplier(material.name, supplierUrl);
           allResults.push(...supplierResults);
         } catch (error) {
-          console.error(`Error searching on ${supplierUrl}:`, error);
+          // Тихая ошибка для отдельных поставщиков (не логируем, чтобы не превысить лимит Railway)
+          continue;
         }
       }
 
@@ -494,7 +495,7 @@ export async function bulkSearchPrices(
       });
 
     } catch (error) {
-      console.error(`Error searching for ${material.name}:`, error);
+      // Тихая ошибка (не логируем)
       results.push({
         materialId: material.id,
         materialName: material.name,
@@ -503,14 +504,14 @@ export async function bulkSearchPrices(
       });
     }
 
-    // Вызываем callback прогресса
-    if (onProgress) {
+    // Вызываем callback прогресса (только каждые 5 материалов, чтобы не превысить лимит)
+    if (onProgress && (i % 5 === 0 || i === total - 1)) {
       onProgress(i + 1, total);
     }
 
     // Небольшая задержка между запросами
     if (i < total - 1) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 
