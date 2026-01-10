@@ -47,10 +47,19 @@ const FINISH_WORK_SECTIONS = [
   "Чистовые отделочные работы",
   "Чистовая сантехника",
   "Чистовая электрика",
-  "Завершающие работы"
+  "Установочные работы",
+  "Прочие работы",
+  "Подключение оборудования",
+  "Умный дом"
 ];
 
+// Секции только для общей сметы (не для смет комнат)
+const GLOBAL_ONLY_SECTIONS = ["Накладные расходы"];
+
 const WORK_SUBSECTIONS = [...ROUGH_WORK_SECTIONS, ...FINISH_WORK_SECTIONS];
+
+// Все секции включая только глобальные
+const ALL_WORK_SECTIONS = [...WORK_SUBSECTIONS, ...GLOBAL_ONLY_SECTIONS];
 
 // Подразделы для отделочных работ
 const FINISHING_SUBCATEGORIES = ['Пол', 'Стены', 'Потолок'];
@@ -1337,7 +1346,7 @@ const App: React.FC = () => {
       works.push({ category: 'Чистовая электрика', workId: 'w74', qtyField: 'fixed', qtyMultiplier: baseLights }); // Светильники
       
       // === ЗАВЕРШАЮЩИЕ РАБОТЫ ===
-      works.push({ category: 'Завершающие работы', workId: 'w60', qtyField: 'doors' }); // Порожки
+      works.push({ category: 'Установочные работы', workId: 'w60', qtyField: 'doors' }); // Порожки
       
       return works;
     };
@@ -1963,12 +1972,12 @@ const App: React.FC = () => {
           items: EstimationItem[];
       }> = {};
       
-      // Инициализируем все подгруппы
-      WORK_SUBSECTIONS.forEach(sub => {
+      // Инициализируем все подгруппы (включая глобальные)
+      ALL_WORK_SECTIONS.forEach(sub => {
           result[sub] = { work: 0, rough: 0, finish: 0, items: [] };
       });
       
-      // Суммируем данные со всех комнат
+      // Суммируем данные со всех комнат (только обычные секции, не глобальные)
       rooms.forEach(room => {
           if (!room.estimation?.works) return;
           
@@ -3069,9 +3078,10 @@ const App: React.FC = () => {
                                                         
                                                         {/* Разбивка по подгруппам работ */}
                                                         <div className="space-y-3 text-left">
-                                                            {WORK_SUBSECTIONS.map((sub, idx) => {
+                                                            {ALL_WORK_SECTIONS.map((sub, idx) => {
                                                                 const isExpanded = !!expandedGlobalEstimateSections[sub];
                                                                 const isRoughSection = ROUGH_WORK_SECTIONS.includes(sub);
+                                                                const isGlobalOnlySection = GLOBAL_ONLY_SECTIONS.includes(sub);
                                                                 const globalData = calculateGlobalEstimation();
                                                                 const sectionData = globalData[sub] || { work: 0, rough: 0, finish: 0 };
                                                                 const sectionTotal = sectionData.work + sectionData.rough + sectionData.finish;
@@ -3902,7 +3912,7 @@ const App: React.FC = () => {
                                 </div>
                             </div>
                             <div className="space-y-3">
-                                {WORK_SUBSECTIONS.map((sub, idx) => {
+                                {ALL_WORK_SECTIONS.map((sub, idx) => {
                                     const isExpanded = !!expandedPriceSections[`work-${sub}`];
                                     const isFinishingSection = sub === 'Черновые отделочные работы' || sub === 'Чистовые отделочные работы';
                                     // Для отделочных работ считаем только позиции с подкатегориями

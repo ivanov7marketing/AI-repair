@@ -143,6 +143,58 @@ const DEFAULT_PRICES = [
   { name: 'Установка TV-розетки', unit: 'шт', price: 400, category: 'Чистовая электрика', type: 'work' as const },
   { name: 'Установка интернет-розетки', unit: 'шт', price: 400, category: 'Чистовая электрика', type: 'work' as const },
   
+  // Установочные работы (10)
+  { name: 'Установка зеркала', unit: 'шт', price: 800, category: 'Установочные работы', type: 'work' as const },
+  { name: 'Установка полок', unit: 'шт', price: 500, category: 'Установочные работы', type: 'work' as const },
+  { name: 'Установка крючков/вешалок', unit: 'шт', price: 200, category: 'Установочные работы', type: 'work' as const },
+  { name: 'Установка жалюзи', unit: 'шт', price: 800, category: 'Установочные работы', type: 'work' as const },
+  { name: 'Установка рольштор', unit: 'шт', price: 600, category: 'Установочные работы', type: 'work' as const },
+  { name: 'Установка карниза', unit: 'шт', price: 700, category: 'Установочные работы', type: 'work' as const },
+  { name: 'Установка сушилки для белья', unit: 'шт', price: 800, category: 'Установочные работы', type: 'work' as const },
+  { name: 'Установка шторки в ванной', unit: 'шт', price: 500, category: 'Установочные работы', type: 'work' as const },
+  { name: 'Установка вентилятора вытяжного', unit: 'шт', price: 600, category: 'Установочные работы', type: 'work' as const },
+  { name: 'Установка держателей (полотенце, бумага)', unit: 'шт', price: 300, category: 'Установочные работы', type: 'work' as const },
+  
+  // Прочие работы (8)
+  { name: 'Монтаж окна ПВХ', unit: 'шт', price: 3500, category: 'Прочие работы', type: 'work' as const },
+  { name: 'Монтаж подоконника', unit: 'шт', price: 1000, category: 'Прочие работы', type: 'work' as const },
+  { name: 'Монтаж откосов', unit: 'п.м', price: 800, category: 'Прочие работы', type: 'work' as const },
+  { name: 'Монтаж межкомнатной двери', unit: 'шт', price: 3500, category: 'Прочие работы', type: 'work' as const },
+  { name: 'Монтаж входной двери', unit: 'шт', price: 5000, category: 'Прочие работы', type: 'work' as const },
+  { name: 'Монтаж вентиляции приточной', unit: 'шт', price: 8000, category: 'Прочие работы', type: 'work' as const },
+  { name: 'Монтаж вентиляции вытяжной', unit: 'шт', price: 5000, category: 'Прочие работы', type: 'work' as const },
+  { name: 'Монтаж воздуховода', unit: 'п.м', price: 1000, category: 'Прочие работы', type: 'work' as const },
+  
+  // Подключение оборудования (8)
+  { name: 'Установка и подключение стиральной машины', unit: 'шт', price: 2500, category: 'Подключение оборудования', type: 'work' as const },
+  { name: 'Установка и подключение сушильной машины', unit: 'шт', price: 2500, category: 'Подключение оборудования', type: 'work' as const },
+  { name: 'Установка и подключение кондиционера (внутр. блок)', unit: 'шт', price: 5000, category: 'Подключение оборудования', type: 'work' as const },
+  { name: 'Установка и подключение кондиционера (внешн. блок)', unit: 'шт', price: 8000, category: 'Подключение оборудования', type: 'work' as const },
+  { name: 'Установка и подключение бризера', unit: 'шт', price: 6000, category: 'Подключение оборудования', type: 'work' as const },
+  { name: 'Установка и подключение бойлера', unit: 'шт', price: 4000, category: 'Подключение оборудования', type: 'work' as const },
+  { name: 'Установка и подключение вытяжки', unit: 'шт', price: 2000, category: 'Подключение оборудования', type: 'work' as const },
+  { name: 'Установка и подключение варочной панели', unit: 'шт', price: 2500, category: 'Подключение оборудования', type: 'work' as const },
+  
+  // Умный дом (8)
+  { name: 'Монтаж датчика движения', unit: 'шт', price: 800, category: 'Умный дом', type: 'work' as const },
+  { name: 'Монтаж датчика протечки', unit: 'шт', price: 600, category: 'Умный дом', type: 'work' as const },
+  { name: 'Монтаж датчика открытия', unit: 'шт', price: 500, category: 'Умный дом', type: 'work' as const },
+  { name: 'Монтаж датчика дыма', unit: 'шт', price: 700, category: 'Умный дом', type: 'work' as const },
+  { name: 'Настройка хаба умного дома', unit: 'шт', price: 2000, category: 'Умный дом', type: 'work' as const },
+  { name: 'Подключение умного выключателя', unit: 'шт', price: 800, category: 'Умный дом', type: 'work' as const },
+  { name: 'Подключение умной розетки', unit: 'шт', price: 600, category: 'Умный дом', type: 'work' as const },
+  { name: 'Настройка сценариев автоматизации', unit: 'час', price: 1500, category: 'Умный дом', type: 'work' as const },
+  
+  // Накладные расходы (8) - только для общей сметы
+  { name: 'Вынос строительного мусора', unit: 'меш', price: 100, category: 'Накладные расходы', type: 'work' as const },
+  { name: 'Вывоз строительного мусора', unit: 'рейс', price: 5000, category: 'Накладные расходы', type: 'work' as const },
+  { name: 'Закупка черновых материалов', unit: 'час', price: 500, category: 'Накладные расходы', type: 'work' as const },
+  { name: 'Доставка черновых материалов', unit: 'рейс', price: 3000, category: 'Накладные расходы', type: 'work' as const },
+  { name: 'Закупка чистовых материалов', unit: 'час', price: 500, category: 'Накладные расходы', type: 'work' as const },
+  { name: 'Доставка чистовых материалов', unit: 'рейс', price: 3000, category: 'Накладные расходы', type: 'work' as const },
+  { name: 'Возврат материалов', unit: 'рейс', price: 1500, category: 'Накладные расходы', type: 'work' as const },
+  { name: 'Уборка помещения (финальная)', unit: 'м2', price: 150, category: 'Накладные расходы', type: 'work' as const },
+  
   // === ЧЕРНОВЫЕ МАТЕРИАЛЫ (20) ===
   { name: 'Грунтовка Ceresit CT 17', unit: 'л', price: 350, category: 'Черновые материалы', type: 'rough' as const },
   { name: 'Бетон-контакт Knauf', unit: 'кг', price: 200, category: 'Черновые материалы', type: 'rough' as const },
