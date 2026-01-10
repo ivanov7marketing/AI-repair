@@ -371,6 +371,12 @@ const App: React.FC = () => {
   // Поставщики
   const [showSuppliersModal, setShowSuppliersModal] = useState(false);
   const [updatingPriceId, setUpdatingPriceId] = useState<string | null>(null);
+  
+  // Модальное окно ссылки для общей сметы
+  const [showGlobalMaterialLinkModal, setShowGlobalMaterialLinkModal] = useState(false);
+  const [globalMaterialLinkItem, setGlobalMaterialLinkItem] = useState<{ name: string; unit: string; type: string; supplierUrl?: string } | null>(null);
+  const [globalMaterialLinkUrl, setGlobalMaterialLinkUrl] = useState('');
+  const [updatingGlobalMaterialId, setUpdatingGlobalMaterialId] = useState<string | null>(null);
 
   // Параметры для автозаполнения сметы
   const [propertyCondition, setPropertyCondition] = useState<PropertyCondition>('secondary');
@@ -2020,6 +2026,82 @@ const App: React.FC = () => {
       return result;
   };
 
+  // Обновление материала во всех комнатах (для общей сметы)
+  const handleUpdateGlobalMaterial = async (
+      materialName: string,
+      materialUnit: string,
+      materialType: string,
+      field: 'price' | 'supplierUrl',
+      value: string | number
+  ) => {
+      if (!currentProject?.analysis?.rooms) return;
+      
+      const updatedRooms = currentProject.analysis.rooms.map(room => {
+          if (!room.estimation?.works) return room;
+          
+          const updatedWorks = { ...room.estimation.works };
+          
+          // Проходим по всем секциям работ
+          Object.keys(updatedWorks).forEach(sectionKey => {
+              const section = updatedWorks[sectionKey];
+              if (!section?.items) return;
+              
+              section.items = section.items.map((work: EstimationItem) => {
+                  // Обновляем связанные материалы
+                  if (work.linkedMaterials) {
+                      work.linkedMaterials = work.linkedMaterials.map((mat: EstimationItem) => {
+                          if (mat.name === materialName && mat.unit === materialUnit && mat.type === materialType) {
+                              if (field === 'price') {
+                                  const newPrice = Number(value);
+                                  return { ...mat, price: newPrice, total: mat.quantity * newPrice };
+                              } else if (field === 'supplierUrl') {
+                                  return { ...mat, supplierUrl: value as string };
+                              }
+                          }
+                          return mat;
+                      });
+                  }
+                  return work;
+              });
+          });
+          
+          return { ...room, estimation: { ...room.estimation, works: updatedWorks } };
+      });
+      
+      // Обновляем проект с новыми данными комнат
+      const updatedProject = {
+          ...currentProject,
+          analysis: { ...currentProject.analysis, rooms: updatedRooms }
+      };
+      
+      handleUpdateProject(updatedProject);
+  };
+
+  // Обновить цену материала в общей смете (загрузить с сайта)
+  const handleRefreshGlobalMaterialPrice = async (
+      materialName: string,
+      materialUnit: string,
+      materialType: string,
+      supplierUrl: string
+  ) => {
+      if (!supplierUrl) {
+          alert('Сначала добавьте ссылку на товар');
+          return;
+      }
+      
+      try {
+          const result = await api.parseSupplierPrice(supplierUrl);
+          if (result.price) {
+              await handleUpdateGlobalMaterial(materialName, materialUnit, materialType, 'price', result.price);
+              alert(`Цена обновлена во всех комнатах: ${result.price} ₽`);
+          } else {
+              alert('Не удалось получить цену');
+          }
+      } catch (e: any) {
+          alert(`Ошибка: ${e.message || 'Не удалось обновить цену'}`);
+      }
+  };
+
   // Расчёт общих итогов по всем комнатам
   const calculateGlobalTotals = () => {
       const rooms = currentProject?.analysis?.rooms || [];
@@ -3042,14 +3124,48 @@ const App: React.FC = () => {
                                                                                                             </tr>
                                                                                                             {subcatItems.map((item: any) => {
                                                                                                                 itemCounter++;
+                                                                                                                const isMaterial = item.type !== 'work';
                                                                                                                 return (
                                                                                                                     <tr key={item.id} className={`border-b border-architect-50 dark:border-architect-900/50 ${item.type === 'work' ? '' : item.type === 'rough' ? 'bg-amber-50/30 dark:bg-amber-900/10' : 'bg-blue-50/30 dark:bg-blue-900/10'}`}>
                                                                                                                         <td className="py-1 text-architect-400 text-left">{itemCounter}</td>
                                                                                                                         <td className="py-1 text-left">
-                                                                                                                            <span className={`font-medium ${item.type === 'work' ? 'text-emerald-700 dark:text-emerald-400' : item.type === 'rough' ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}>
-                                                                                                                                {item.type !== 'work' && <span className="text-[10px] mr-1">└</span>}
-                                                                                                                                {item.name || '—'}
-                                                                                                                            </span>
+                                                                                                                            <div className="flex items-center justify-between">
+                                                                                                                                <span className={`font-medium ${item.type === 'work' ? 'text-emerald-700 dark:text-emerald-400' : item.type === 'rough' ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}>
+                                                                                                                                    {item.type !== 'work' && <span className="text-[10px] mr-1">└</span>}
+                                                                                                                                    {item.name || '—'}
+                                                                                                                                </span>
+                                                                                                                                {isMaterial && (
+                                                                                                                                    <div className="flex items-center gap-1 ml-2">
+                                                                                                                                        <button
+                                                                                                                                            onClick={(e) => {
+                                                                                                                                                e.stopPropagation();
+                                                                                                                                                setGlobalMaterialLinkItem({ name: item.name, unit: item.unit, type: item.type, supplierUrl: item.supplierUrl });
+                                                                                                                                                setGlobalMaterialLinkUrl(item.supplierUrl || '');
+                                                                                                                                                setShowGlobalMaterialLinkModal(true);
+                                                                                                                                            }}
+                                                                                                                                            className={`p-0.5 transition-all opacity-60 hover:opacity-100 ${item.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
+                                                                                                                                            title={item.supplierUrl ? `Ссылка: ${item.supplierUrl}` : 'Добавить ссылку'}
+                                                                                                                                        >
+                                                                                                                                            <ExternalLink className="w-3 h-3" />
+                                                                                                                                        </button>
+                                                                                                                                        {item.supplierUrl && (
+                                                                                                                                            <button
+                                                                                                                                                onClick={async (e) => {
+                                                                                                                                                    e.stopPropagation();
+                                                                                                                                                    setUpdatingGlobalMaterialId(item.id);
+                                                                                                                                                    await handleRefreshGlobalMaterialPrice(item.name, item.unit, item.type, item.supplierUrl);
+                                                                                                                                                    setUpdatingGlobalMaterialId(null);
+                                                                                                                                                }}
+                                                                                                                                                disabled={updatingGlobalMaterialId === item.id}
+                                                                                                                                                className="p-0.5 text-emerald-500 hover:text-emerald-600 transition-all opacity-60 hover:opacity-100 disabled:opacity-30"
+                                                                                                                                                title="Обновить цену во всех комнатах"
+                                                                                                                                            >
+                                                                                                                                                <RefreshCw className={`w-3 h-3 ${updatingGlobalMaterialId === item.id ? 'animate-spin' : ''}`} />
+                                                                                                                                            </button>
+                                                                                                                                        )}
+                                                                                                                                    </div>
+                                                                                                                                )}
+                                                                                                                            </div>
                                                                                                                         </td>
                                                                                                                         <td className="py-1 text-architect-500 text-left">{item.unit}</td>
                                                                                                                         <td className="py-1 font-bold text-right">{item.quantity.toLocaleString()}</td>
@@ -3064,21 +3180,57 @@ const App: React.FC = () => {
                                                                                             </>
                                                                                         ) : (
                                                                                             /* Обычный рендеринг для остальных секций */
-                                                                                            sectionData.items.map((item: any, i: number) => (
-                                                                                                <tr key={item.id} className={`border-b border-architect-50 dark:border-architect-900/50 ${item.type === 'work' ? '' : item.type === 'rough' ? 'bg-amber-50/30 dark:bg-amber-900/10' : 'bg-blue-50/30 dark:bg-blue-900/10'}`}>
-                                                                                                    <td className="py-1 text-architect-400 text-left">{i + 1}</td>
-                                                                                                    <td className="py-1 text-left">
-                                                                                                        <span className={`font-medium ${item.type === 'work' ? 'text-emerald-700 dark:text-emerald-400' : item.type === 'rough' ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}>
-                                                                                                            {item.type !== 'work' && <span className="text-[10px] mr-1">└</span>}
-                                                                                                            {item.name || '—'}
-                                                                                                        </span>
-                                                                                                    </td>
-                                                                                                    <td className="py-1 text-architect-500 text-left">{item.unit}</td>
-                                                                                                    <td className="py-1 font-bold text-right">{item.quantity.toLocaleString()}</td>
-                                                                                                    <td className="py-1 text-architect-600 dark:text-architect-400 text-right">{item.price.toLocaleString()}</td>
-                                                                                                    <td className="py-1 font-bold text-architect-900 dark:text-white text-right">{(item.total || 0).toLocaleString()}</td>
-                                                                                                </tr>
-                                                                                            ))
+                                                                                            sectionData.items.map((item: any, i: number) => {
+                                                                                                const isMaterial = item.type !== 'work';
+                                                                                                return (
+                                                                                                    <tr key={item.id} className={`border-b border-architect-50 dark:border-architect-900/50 ${item.type === 'work' ? '' : item.type === 'rough' ? 'bg-amber-50/30 dark:bg-amber-900/10' : 'bg-blue-50/30 dark:bg-blue-900/10'}`}>
+                                                                                                        <td className="py-1 text-architect-400 text-left">{i + 1}</td>
+                                                                                                        <td className="py-1 text-left">
+                                                                                                            <div className="flex items-center justify-between">
+                                                                                                                <span className={`font-medium ${item.type === 'work' ? 'text-emerald-700 dark:text-emerald-400' : item.type === 'rough' ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}>
+                                                                                                                    {item.type !== 'work' && <span className="text-[10px] mr-1">└</span>}
+                                                                                                                    {item.name || '—'}
+                                                                                                                </span>
+                                                                                                                {isMaterial && (
+                                                                                                                    <div className="flex items-center gap-1 ml-2">
+                                                                                                                        <button
+                                                                                                                            onClick={(e) => {
+                                                                                                                                e.stopPropagation();
+                                                                                                                                setGlobalMaterialLinkItem({ name: item.name, unit: item.unit, type: item.type, supplierUrl: item.supplierUrl });
+                                                                                                                                setGlobalMaterialLinkUrl(item.supplierUrl || '');
+                                                                                                                                setShowGlobalMaterialLinkModal(true);
+                                                                                                                            }}
+                                                                                                                            className={`p-0.5 transition-all opacity-60 hover:opacity-100 ${item.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
+                                                                                                                            title={item.supplierUrl ? `Ссылка: ${item.supplierUrl}` : 'Добавить ссылку'}
+                                                                                                                        >
+                                                                                                                            <ExternalLink className="w-3 h-3" />
+                                                                                                                        </button>
+                                                                                                                        {item.supplierUrl && (
+                                                                                                                            <button
+                                                                                                                                onClick={async (e) => {
+                                                                                                                                    e.stopPropagation();
+                                                                                                                                    setUpdatingGlobalMaterialId(item.id);
+                                                                                                                                    await handleRefreshGlobalMaterialPrice(item.name, item.unit, item.type, item.supplierUrl);
+                                                                                                                                    setUpdatingGlobalMaterialId(null);
+                                                                                                                                }}
+                                                                                                                                disabled={updatingGlobalMaterialId === item.id}
+                                                                                                                                className="p-0.5 text-emerald-500 hover:text-emerald-600 transition-all opacity-60 hover:opacity-100 disabled:opacity-30"
+                                                                                                                                title="Обновить цену во всех комнатах"
+                                                                                                                            >
+                                                                                                                                <RefreshCw className={`w-3 h-3 ${updatingGlobalMaterialId === item.id ? 'animate-spin' : ''}`} />
+                                                                                                                            </button>
+                                                                                                                        )}
+                                                                                                                    </div>
+                                                                                                                )}
+                                                                                                            </div>
+                                                                                                        </td>
+                                                                                                        <td className="py-1 text-architect-500 text-left">{item.unit}</td>
+                                                                                                        <td className="py-1 font-bold text-right">{item.quantity.toLocaleString()}</td>
+                                                                                                        <td className="py-1 text-architect-600 dark:text-architect-400 text-right">{item.price.toLocaleString()}</td>
+                                                                                                        <td className="py-1 font-bold text-architect-900 dark:text-white text-right">{(item.total || 0).toLocaleString()}</td>
+                                                                                                    </tr>
+                                                                                                );
+                                                                                            })
                                                                                         )}
                                                                                     </tbody>
                                                                                 </table>
@@ -4565,6 +4717,73 @@ const App: React.FC = () => {
                 className="flex-1 px-4 py-3 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all"
               >
                 Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно для ссылки материала в общей смете */}
+      {showGlobalMaterialLinkModal && globalMaterialLinkItem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 fade-in duration-200">
+            <div className="px-6 py-5 border-b border-architect-100 dark:border-architect-700">
+              <h3 className="font-bold text-lg dark:text-white">Ссылка на материал</h3>
+              <p className="text-sm text-architect-500">{globalMaterialLinkItem.name}</p>
+              <p className="text-xs text-architect-400 mt-1">Изменение применится ко всем комнатам</p>
+            </div>
+            <div className="px-6 py-5">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={globalMaterialLinkUrl}
+                  onChange={(e) => setGlobalMaterialLinkUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="flex-1 px-4 py-3 border border-architect-200 dark:border-architect-600 rounded-xl bg-white dark:bg-architect-900 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  autoFocus
+                />
+                {globalMaterialLinkUrl && (
+                  <a
+                    href={globalMaterialLinkUrl.startsWith('http') ? globalMaterialLinkUrl : `https://${globalMaterialLinkUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/50 dark:hover:bg-blue-800/50 text-blue-600 rounded-xl transition-colors"
+                    title="Открыть ссылку в новой вкладке"
+                  >
+                    <ExternalLink className="w-5 h-5" />
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-architect-50 dark:bg-architect-900/50 border-t border-architect-100 dark:border-architect-700 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowGlobalMaterialLinkModal(false);
+                  setGlobalMaterialLinkItem(null);
+                  setGlobalMaterialLinkUrl('');
+                }}
+                className="flex-1 px-4 py-3 text-sm font-bold text-architect-600 hover:bg-architect-100 dark:hover:bg-architect-700 rounded-xl transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={async () => {
+                  if (globalMaterialLinkItem) {
+                    await handleUpdateGlobalMaterial(
+                      globalMaterialLinkItem.name,
+                      globalMaterialLinkItem.unit,
+                      globalMaterialLinkItem.type,
+                      'supplierUrl',
+                      globalMaterialLinkUrl
+                    );
+                  }
+                  setShowGlobalMaterialLinkModal(false);
+                  setGlobalMaterialLinkItem(null);
+                  setGlobalMaterialLinkUrl('');
+                }}
+                className="flex-1 px-4 py-3 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all"
+              >
+                Сохранить во всех комнатах
               </button>
             </div>
           </div>
