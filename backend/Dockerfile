@@ -50,5 +50,5 @@ RUN npm run build
 EXPOSE 3000
 
 # Start command - run migrations then start server
-CMD ["sh", "-c", "npm run migrate && npm start"]
+CMD ["sh", "-c", "echo 'Running migrations...' && npm run migrate && echo 'Migrations done, starting server...' && npm start"]
 
