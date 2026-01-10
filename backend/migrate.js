@@ -59,10 +59,13 @@ async function migrate() {
     // Initialize superadmin and default prices after migrations
     console.log('Initializing superadmin and default prices...');
     try {
-      const { exec } = require('child_process');
-      const { promisify } = require('util');
-      const execAsync = promisify(exec);
-      await execAsync('node scripts/init-superadmin.js');
+      const { execSync } = require('child_process');
+      // Use execSync with stdio: 'inherit' to see output in real-time
+      execSync('node scripts/init-superadmin.js', { 
+        stdio: 'inherit',
+        timeout: 30000 // 30 second timeout
+      });
+      console.log('Superadmin initialization completed');
     } catch (error) {
       console.warn('Failed to initialize superadmin (may already exist):', error.message);
     }

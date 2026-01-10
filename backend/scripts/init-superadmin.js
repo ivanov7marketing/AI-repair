@@ -216,6 +216,7 @@ async function initSuperadmin() {
     process.exit(1);
   } finally {
     await client.end();
+    process.exit(0); // Explicitly exit to prevent hanging
   }
 }
 
