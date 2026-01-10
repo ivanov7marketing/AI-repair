@@ -1164,6 +1164,10 @@ const App: React.FC = () => {
             if (found.subcategory) {
                 item.subcategory = found.subcategory;
             }
+            // Копируем ссылку на товар из справочника
+            if (found.supplierUrl) {
+                item.supplierUrl = found.supplierUrl;
+            }
             return item;
         };
 
