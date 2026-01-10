@@ -2074,7 +2074,17 @@ const App: React.FC = () => {
           analysis: { ...currentProject.analysis, rooms: updatedRooms }
       };
       
-      handleUpdateProject(updatedProject);
+      // Обновляем локальное состояние
+      setCurrentProject(updatedProject);
+      
+      // Сохраняем в бэкенд
+      try {
+          await api.updateProject(updatedProject.id, {
+              analysisData: updatedProject.analysis,
+          });
+      } catch (error) {
+          console.error('Failed to save global material update:', error);
+      }
   };
 
   // Обновить цену материала в общей смете (загрузить с сайта)
