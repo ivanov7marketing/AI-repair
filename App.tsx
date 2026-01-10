@@ -339,6 +339,13 @@ const App: React.FC = () => {
   const [expandedEstimateSections, setExpandedEstimateSections] = useState<Record<string, boolean>>({});
   const [expandedGlobalEstimateSections, setExpandedGlobalEstimateSections] = useState<Record<string, boolean>>({});
   const [expandedEstimationSections, setExpandedEstimationSections] = useState<Record<string, boolean>>({});
+  
+  // Модальное окно для ввода ссылки на товар
+  const [urlModalData, setUrlModalData] = useState<{
+    isOpen: boolean;
+    currentUrl: string;
+    onSave: (url: string) => void;
+  }>({ isOpen: false, currentUrl: '', onSave: () => {} });
   const [isGlobalEstimateExpanded, setIsGlobalEstimateExpanded] = useState(false);
   const [isWorksExpanded, setIsWorksExpanded] = useState(true);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
@@ -3348,12 +3355,13 @@ const App: React.FC = () => {
                                                                                                                                     />
                                                                                                                                     <div className="flex items-center gap-0.5 ml-auto shrink-0">
                                                                                                                                         <button 
-                                                                                                                                            onClick={() => {
-                                                                                                                                                const url = prompt('Введите ссылку на товар:', mat.supplierUrl || '');
-                                                                                                                                                if (url !== null) {
-                                                                                                                                                    handleUpdateEstimationItem('works', item.id, 'supplierUrl', url, sub, mat.id);
-                                                                                                                                                }
-                                                                                                                                            }}
+                                                                                                                                                        onClick={() => {
+                                                                                                                                                            setUrlModalData({
+                                                                                                                                                                isOpen: true,
+                                                                                                                                                                currentUrl: mat.supplierUrl || '',
+                                                                                                                                                                onSave: (url) => handleUpdateEstimationItem('works', item.id, 'supplierUrl', url, sub, mat.id)
+                                                                                                                                                            });
+                                                                                                                                                        }}
                                                                                                                                             className={`p-0.5 transition-all opacity-60 hover:opacity-100 ${mat.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
                                                                                                                                             title={mat.supplierUrl ? `Ссылка: ${mat.supplierUrl}` : 'Добавить ссылку на товар'}
                                                                                                                                         >
@@ -3489,12 +3497,13 @@ const App: React.FC = () => {
                                                                                                                         />
                                                                                                                         <div className="flex items-center gap-0.5 ml-auto shrink-0">
                                                                                                                             <button 
-                                                                                                                                onClick={() => {
-                                                                                                                                    const url = prompt('Введите ссылку на товар:', mat.supplierUrl || '');
-                                                                                                                                    if (url !== null) {
-                                                                                                                                        handleUpdateEstimationItem('works', item.id, 'supplierUrl', url, sub, mat.id);
-                                                                                                                                    }
-                                                                                                                                }}
+                                                                                                                                                        onClick={() => {
+                                                                                                                                                            setUrlModalData({
+                                                                                                                                                                isOpen: true,
+                                                                                                                                                                currentUrl: mat.supplierUrl || '',
+                                                                                                                                                                onSave: (url) => handleUpdateEstimationItem('works', item.id, 'supplierUrl', url, sub, mat.id)
+                                                                                                                                                            });
+                                                                                                                                                        }}
                                                                                                                                 className={`p-0.5 transition-all opacity-60 hover:opacity-100 ${mat.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
                                                                                                                                 title={mat.supplierUrl ? `Ссылка: ${mat.supplierUrl}` : 'Добавить ссылку на товар'}
                                                                                                                             >
@@ -4458,6 +4467,58 @@ const App: React.FC = () => {
                   <Upload className="w-4 h-4" /> Выбрать файл
                 </span>
               </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно для ввода ссылки на товар */}
+      {urlModalData.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 fade-in duration-200">
+            <div className="px-6 py-5 border-b border-architect-100 dark:border-architect-700">
+              <h3 className="font-bold text-lg dark:text-white">Ссылка на товар</h3>
+              <p className="text-sm text-architect-500">Введите или вставьте ссылку на товар</p>
+            </div>
+            <div className="px-6 py-5">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={urlModalData.currentUrl}
+                  onChange={(e) => setUrlModalData(prev => ({ ...prev, currentUrl: e.target.value }))}
+                  placeholder="https://..."
+                  className="flex-1 px-4 py-3 border border-architect-200 dark:border-architect-600 rounded-xl bg-white dark:bg-architect-900 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  autoFocus
+                />
+                {urlModalData.currentUrl && (
+                  <a
+                    href={urlModalData.currentUrl.startsWith('http') ? urlModalData.currentUrl : `https://${urlModalData.currentUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/50 dark:hover:bg-blue-800/50 text-blue-600 rounded-xl transition-colors"
+                    title="Открыть ссылку в новой вкладке"
+                  >
+                    <ExternalLink className="w-5 h-5" />
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-architect-50 dark:bg-architect-900/50 border-t border-architect-100 dark:border-architect-700 flex gap-3">
+              <button
+                onClick={() => setUrlModalData({ isOpen: false, currentUrl: '', onSave: () => {} })}
+                className="flex-1 px-4 py-3 text-sm font-bold text-architect-600 hover:bg-architect-100 dark:hover:bg-architect-700 rounded-xl transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => {
+                  urlModalData.onSave(urlModalData.currentUrl);
+                  setUrlModalData({ isOpen: false, currentUrl: '', onSave: () => {} });
+                }}
+                className="flex-1 px-4 py-3 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all"
+              >
+                Сохранить
+              </button>
             </div>
           </div>
         </div>
