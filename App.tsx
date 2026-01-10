@@ -3256,172 +3256,169 @@ const App: React.FC = () => {
                                                                         </button>
                                                                         {isExpanded && (
                                                                             <div className="px-3 py-2 border-t border-architect-50 dark:border-architect-700 text-left" style={{ overflow: 'visible', position: 'relative', zIndex: 1 }}>
-                                                                                {/* Для отделочных работ показываем подразделы */}
+                                                                                {/* Для отделочных работ показываем подразделы без сворачивания */}
                                                                                 {SECTIONS_WITH_SUBCATEGORIES.includes(sub) ? (
-                                                                                    <div className="space-y-4">
-                                                                                        {FINISHING_SUBCATEGORIES.map((subcat) => {
-                                                                                            // Фильтруем по subcategory или определяем по названию для старых позиций
-                                                                                            const subcatItems = items.filter((item: any) => {
-                                                                                                if (item.subcategory) {
-                                                                                                    return item.subcategory === subcat;
-                                                                                                }
-                                                                                                // Для позиций без subcategory определяем по названию
-                                                                                                return inferSubcategoryFromName(item.name || '') === subcat;
-                                                                                            });
-                                                                                            const isSubcatExpanded = !!expandedEstimateSections[`${sub}-${subcat}`];
-                                                                                            return (
-                                                                                                <div key={subcat} className="border border-architect-100 dark:border-architect-700 rounded-lg overflow-hidden">
-                                                                                                    <button
-                                                                                                        onClick={() => setExpandedEstimateSections(prev => ({ ...prev, [`${sub}-${subcat}`]: !isSubcatExpanded }))}
-                                                                                                        className="w-full flex items-center justify-between px-3 py-2 bg-architect-50/80 dark:bg-architect-900/50 hover:bg-architect-100 dark:hover:bg-architect-800 transition-colors text-left"
-                                                                                                    >
-                                                                                                        <div className="flex items-center gap-2">
-                                                                                                            <ChevronDown className={`w-3 h-3 transition-transform ${isSubcatExpanded ? 'rotate-180' : ''}`} />
-                                                                                                            <span className="text-xs font-bold text-architect-600 dark:text-architect-300">{subcat}</span>
-                                                                                                            <span className="text-[10px] text-architect-400">({subcatItems.length})</span>
-                                                                                                        </div>
-                                                                                                    </button>
-                                                                                                    {isSubcatExpanded && (
-                                                                                                        <div className="px-2 py-2 bg-white dark:bg-architect-800">
-                                                                                                            {subcatItems.length > 0 ? (
-                                                                                                                <table className="w-full text-left text-xs" style={{ overflow: 'visible' }}>
-                                                                                                                    <thead>
-                                                                                                                        <tr className="border-b border-architect-100 dark:border-architect-700 text-architect-400 uppercase tracking-tighter text-left text-[10px]">
-                                                                                                                            <th className="py-0.5 w-6 text-left">№</th>
-                                                                                                                            <th className="py-0.5 text-left">Наименование</th>
-                                                                                                                            <th className="py-0.5 w-14 text-left">Ед.изм</th>
-                                                                                                                            <th className="py-0.5 w-14 text-left">Кол-во</th>
-                                                                                                                            <th className="py-0.5 w-16 text-left">Цена</th>
-                                                                                                                            <th className="py-0.5 w-20 text-left">Стоимость</th>
-                                                                                                                            <th className="py-0.5 w-6 text-left"></th>
-                                                                                                                        </tr>
-                                                                                                                    </thead>
-                                                                                                                    <tbody>
-                                                                                                                        {subcatItems.map((item: any, i: number) => (
-                                                                                                                            <React.Fragment key={item.id}>
-                                                                                                                                <tr className="border-b border-architect-50 dark:border-architect-900/50 group text-left">
-                                                                                                                                    <td className="py-0.5 text-architect-400 text-left text-xs leading-tight">{i + 1}</td>
-                                                                                                                                    <td className="py-0.5 text-left" style={{ position: 'relative', overflow: 'visible' }}>
-                                                                                                                                        <div className="flex items-center gap-2 text-left">
-                                                                                                                                            <input 
-                                                                                                                                              type="text" 
-                                                                                                                                              value={item.name} 
-                                                                                                                                              data-search-input
-                                                                                                                                              onFocus={() => setActiveSearchId(item.id)}
-                                                                                                                                              onChange={(e) => handleUpdateEstimationItem('works', item.id, 'name', e.target.value, sub)} 
-                                                                                                                                              className="flex-1 bg-transparent outline-none focus:text-purple-500 font-bold text-left text-xs h-5 leading-tight" 
-                                                                                                                                              placeholder="Работа..." 
-                                                                                                                                            />
-                                                                                                                                            <button onClick={() => handleAddMaterialToWork(item.id, sub)} className={`text-[9px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-all ${isRoughSection ? 'text-amber-600 bg-amber-50 hover:text-amber-700' : 'text-blue-600 bg-blue-50 hover:text-blue-700'}`}>+ {isRoughSection ? 'черн.' : 'чист.'}</button>
-                                                                                                                                        </div>
-                                                                                                                                        {activeSearchId === item.id && (
-                                                                                                                                            <div data-search-dropdown className="absolute top-full left-0 z-[9999] w-full bg-white dark:bg-architect-700 shadow-2xl border-2 border-purple-300 dark:border-purple-600 rounded-lg max-h-48 overflow-y-auto text-left" style={{ position: 'absolute' }}>
-                                                                                                                                                {priceList
-                                                                                                                                                    .filter(p => p.type === 'work' && p.category === sub && p.subcategory === subcat)
-                                                                                                                                                    .filter(p => !item.name || p.name.toLowerCase().includes(item.name.toLowerCase()))
-                                                                                                                                                    .map(p => (
-                                                                                                                                                    <div key={p.id} onClick={() => handleSelectFromDictionary(item.id, p.name, sub)} className="px-3 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/30 cursor-pointer text-[11px] font-medium text-left">{p.name} — {p.price} р/{p.unit}</div>
-                                                                                                                                                ))}
-                                                                                                                                                {priceList.filter(p => p.type === 'work' && p.category === sub && p.subcategory === subcat).filter(p => !item.name || p.name.toLowerCase().includes(item.name.toLowerCase())).length === 0 && (
-                                                                                                                                                    <div className="px-3 py-2 text-[11px] text-architect-400 text-center">Нет позиций в справочнике</div>
-                                                                                                                                                )}
-                                                                                                                                            </div>
+                                                                                    <table className="w-full text-left text-xs" style={{ overflow: 'visible' }}>
+                                                                                        <thead>
+                                                                                            <tr className="border-b border-architect-100 dark:border-architect-700 text-architect-400 uppercase tracking-tighter text-left text-[10px]">
+                                                                                                <th className="py-0.5 w-6 text-left">№</th>
+                                                                                                <th className="py-0.5 text-left">Наименование</th>
+                                                                                                <th className="py-0.5 w-14 text-left">Ед.изм</th>
+                                                                                                <th className="py-0.5 w-14 text-left">Кол-во</th>
+                                                                                                <th className="py-0.5 w-16 text-left">Цена</th>
+                                                                                                <th className="py-0.5 w-20 text-left">Стоимость</th>
+                                                                                                <th className="py-0.5 w-6 text-left"></th>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody>
+                                                                                            {FINISHING_SUBCATEGORIES.map((subcat) => {
+                                                                                                // Фильтруем по subcategory или определяем по названию для старых позиций
+                                                                                                const subcatItems = items.filter((item: any) => {
+                                                                                                    if (item.subcategory) {
+                                                                                                        return item.subcategory === subcat;
+                                                                                                    }
+                                                                                                    return inferSubcategoryFromName(item.name || '') === subcat;
+                                                                                                });
+                                                                                                let itemCounter = 0;
+                                                                                                return (
+                                                                                                    <React.Fragment key={subcat}>
+                                                                                                        {/* Заголовок подкатегории */}
+                                                                                                        <tr className="bg-architect-100/50 dark:bg-architect-900/50">
+                                                                                                            <td colSpan={7} className="py-2 px-2">
+                                                                                                                <div className="flex items-center justify-between">
+                                                                                                                    <span className="text-xs font-bold text-architect-600 dark:text-architect-300">{subcat}</span>
+                                                                                                                    <span className="text-[10px] text-architect-400">({subcatItems.length})</span>
+                                                                                                                </div>
+                                                                                                            </td>
+                                                                                                        </tr>
+                                                                                                        {/* Позиции подкатегории */}
+                                                                                                        {subcatItems.map((item: any) => {
+                                                                                                            itemCounter++;
+                                                                                                            return (
+                                                                                                                <React.Fragment key={item.id}>
+                                                                                                                    <tr className="border-b border-architect-50 dark:border-architect-900/50 group text-left">
+                                                                                                                        <td className="py-0.5 text-architect-400 text-left text-xs leading-tight">{itemCounter}</td>
+                                                                                                                        <td className="py-0.5 text-left" style={{ position: 'relative', overflow: 'visible' }}>
+                                                                                                                            <div className="flex items-center gap-2 text-left">
+                                                                                                                                <input 
+                                                                                                                                  type="text" 
+                                                                                                                                  value={item.name} 
+                                                                                                                                  data-search-input
+                                                                                                                                  onFocus={() => setActiveSearchId(item.id)}
+                                                                                                                                  onChange={(e) => handleUpdateEstimationItem('works', item.id, 'name', e.target.value, sub)} 
+                                                                                                                                  className="flex-1 bg-transparent outline-none focus:text-purple-500 font-bold text-left text-xs h-5 leading-tight" 
+                                                                                                                                  placeholder="Работа..." 
+                                                                                                                                />
+                                                                                                                                <button onClick={() => handleAddMaterialToWork(item.id, sub)} className={`text-[9px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-all ${isRoughSection ? 'text-amber-600 bg-amber-50 hover:text-amber-700' : 'text-blue-600 bg-blue-50 hover:text-blue-700'}`}>+ {isRoughSection ? 'черн.' : 'чист.'}</button>
+                                                                                                                            </div>
+                                                                                                                            {activeSearchId === item.id && (
+                                                                                                                                <div data-search-dropdown className="absolute top-full left-0 z-[9999] w-full bg-white dark:bg-architect-700 shadow-2xl border-2 border-purple-300 dark:border-purple-600 rounded-lg max-h-48 overflow-y-auto text-left" style={{ position: 'absolute' }}>
+                                                                                                                                    {priceList
+                                                                                                                                        .filter(p => p.type === 'work' && p.category === sub && p.subcategory === subcat)
+                                                                                                                                        .filter(p => !item.name || p.name.toLowerCase().includes(item.name.toLowerCase()))
+                                                                                                                                        .map(p => (
+                                                                                                                                        <div key={p.id} onClick={() => handleSelectFromDictionary(item.id, p.name, sub)} className="px-3 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/30 cursor-pointer text-[11px] font-medium text-left">{p.name} — {p.price} р/{p.unit}</div>
+                                                                                                                                    ))}
+                                                                                                                                    {priceList.filter(p => p.type === 'work' && p.category === sub && p.subcategory === subcat).filter(p => !item.name || p.name.toLowerCase().includes(item.name.toLowerCase())).length === 0 && (
+                                                                                                                                        <div className="px-3 py-2 text-[11px] text-architect-400 text-center">Нет позиций в справочнике</div>
+                                                                                                                                    )}
+                                                                                                                                </div>
+                                                                                                                            )}
+                                                                                                                        </td>
+                                                                                                                        <td className="py-0.5 text-left"><input type="text" value={item.unit} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'unit', e.target.value, sub)} className="w-full bg-transparent outline-none text-left text-xs h-5 leading-tight" /></td>
+                                                                                                                        <td className="py-0.5 text-left"><input type="number" value={item.quantity} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'quantity', e.target.value, sub)} className="w-full bg-transparent outline-none font-bold text-left text-xs h-5 leading-tight" /></td>
+                                                                                                                        <td className="py-0.5 text-left"><input type="number" value={item.price} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'price', e.target.value, sub)} className="w-full bg-transparent outline-none font-bold text-left text-xs h-5 leading-tight" /></td>
+                                                                                                                        <td className="py-0.5 font-bold text-architect-900 dark:text-white text-left text-xs leading-tight">{(item.total || 0).toLocaleString()}</td>
+                                                                                                                        <td className="py-0.5 text-left"><button onClick={() => handleDeleteEstimationItem('works', item.id, sub)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all text-left"><Trash2 className="w-3 h-3" /></button></td>
+                                                                                                                    </tr>
+                                                                                                                    {(item.linkedMaterials || []).map((mat: any) => (
+                                                                                                                        <tr key={mat.id} className="border-b border-architect-50 dark:border-architect-900/30 group bg-architect-50/30 dark:bg-architect-900/10 text-left">
+                                                                                                                            <td className="py-0.5 text-left"></td>
+                                                                                                                            <td className="py-0.5 pl-[16px] relative text-left">
+                                                                                                                                <div className="flex items-center text-left">
+                                                                                                                                    <span className="text-[10px] font-bold text-architect-300 mr-1">└</span>
+                                                                                                                                    <input 
+                                                                                                                                        type="text" 
+                                                                                                                                        value={mat.name} 
+                                                                                                                                        data-search-input
+                                                                                                                                        onFocus={() => setActiveSearchId(mat.id)}
+                                                                                                                                        onChange={(e) => handleUpdateEstimationItem('works', item.id, 'name', e.target.value, sub, mat.id)} 
+                                                                                                                                        className={`flex-1 bg-transparent outline-none text-[10px] font-medium h-4 leading-tight ${mat.type === 'rough' ? 'text-amber-600' : 'text-blue-600'} text-left`} 
+                                                                                                                                        placeholder={`${isRoughSection ? 'Черновой' : 'Чистовой'} материал...`} 
+                                                                                                                                    />
+                                                                                                                                    <div className="flex items-center gap-0.5 ml-auto shrink-0">
+                                                                                                                                        <button 
+                                                                                                                                            onClick={() => {
+                                                                                                                                                const url = prompt('Введите ссылку на товар:', mat.supplierUrl || '');
+                                                                                                                                                if (url !== null) {
+                                                                                                                                                    handleUpdateEstimationItem('works', item.id, 'supplierUrl', url, sub, mat.id);
+                                                                                                                                                }
+                                                                                                                                            }}
+                                                                                                                                            className={`p-0.5 transition-all opacity-60 hover:opacity-100 ${mat.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
+                                                                                                                                            title={mat.supplierUrl ? `Ссылка: ${mat.supplierUrl}` : 'Добавить ссылку на товар'}
+                                                                                                                                        >
+                                                                                                                                            <ExternalLink className="w-3 h-3" />
+                                                                                                                                        </button>
+                                                                                                                                        {mat.supplierUrl && (
+                                                                                                                                            <button 
+                                                                                                                                                onClick={async () => {
+                                                                                                                                                    try {
+                                                                                                                                                        const result = await api.parseSupplierPrice(mat.supplierUrl);
+                                                                                                                                                        if (result.price) {
+                                                                                                                                                            handleUpdateEstimationItem('works', item.id, 'price', result.price, sub, mat.id);
+                                                                                                                                                            alert(`Цена обновлена: ${result.price} ₽`);
+                                                                                                                                                        } else {
+                                                                                                                                                            alert('Не удалось получить цену');
+                                                                                                                                                        }
+                                                                                                                                                    } catch (e: any) {
+                                                                                                                                                        alert(`Ошибка: ${e.message || 'Не удалось обновить цену'}`);
+                                                                                                                                                    }
+                                                                                                                                                }}
+                                                                                                                                                className="p-0.5 text-emerald-500 hover:text-emerald-600 transition-all opacity-60 hover:opacity-100"
+                                                                                                                                                title="Обновить цену с сайта"
+                                                                                                                                            >
+                                                                                                                                                <RefreshCw className="w-3 h-3" />
+                                                                                                                                            </button>
                                                                                                                                         )}
-                                                                                                                                    </td>
-                                                                                                                                    <td className="py-0.5 text-left"><input type="text" value={item.unit} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'unit', e.target.value, sub)} className="w-full bg-transparent outline-none text-left text-xs h-5 leading-tight" /></td>
-                                                                                                                                    <td className="py-0.5 text-left"><input type="number" value={item.quantity} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'quantity', e.target.value, sub)} className="w-full bg-transparent outline-none font-bold text-left text-xs h-5 leading-tight" /></td>
-                                                                                                                                    <td className="py-0.5 text-left"><input type="number" value={item.price} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'price', e.target.value, sub)} className="w-full bg-transparent outline-none font-bold text-left text-xs h-5 leading-tight" /></td>
-                                                                                                                                    <td className="py-0.5 font-bold text-architect-900 dark:text-white text-left text-xs leading-tight">{(item.total || 0).toLocaleString()}</td>
-                                                                                                                                    <td className="py-0.5 text-left"><button onClick={() => handleDeleteEstimationItem('works', item.id, sub)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all text-left"><Trash2 className="w-3 h-3" /></button></td>
-                                                                                                                                </tr>
-                                                                                                                                {(item.linkedMaterials || []).map((mat: any) => (
-                                                                                                                                    <tr key={mat.id} className="border-b border-architect-50 dark:border-architect-900/30 group bg-architect-50/30 dark:bg-architect-900/10 text-left">
-                                                                                                                                        <td className="py-0.5 text-left"></td>
-                                                                                                                                        <td className="py-0.5 pl-[16px] relative text-left">
-                                                                                                                                            <div className="flex items-center text-left">
-                                                                                                                                                <span className="text-[10px] font-bold text-architect-300 mr-1">└</span>
-                                                                                                                                                <input 
-                                                                                                                                                    type="text" 
-                                                                                                                                                    value={mat.name} 
-                                                                                                                                                    data-search-input
-                                                                                                                                                    onFocus={() => setActiveSearchId(mat.id)}
-                                                                                                                                                    onChange={(e) => handleUpdateEstimationItem('works', item.id, 'name', e.target.value, sub, mat.id)} 
-                                                                                                                                                    className={`flex-1 bg-transparent outline-none text-[10px] font-medium h-4 leading-tight ${mat.type === 'rough' ? 'text-amber-600' : 'text-blue-600'} text-left`} 
-                                                                                                                                                    placeholder={`${isRoughSection ? 'Черновой' : 'Чистовой'} материал...`} 
-                                                                                                                                                />
-                                                                                                                                                <div className="flex items-center gap-0.5 ml-auto shrink-0">
-                                                                                                                                                    <button 
-                                                                                                                                                        onClick={() => {
-                                                                                                                                                            const url = prompt('Введите ссылку на товар:', mat.supplierUrl || '');
-                                                                                                                                                            if (url !== null) {
-                                                                                                                                                                handleUpdateEstimationItem('works', item.id, 'supplierUrl', url, sub, mat.id);
-                                                                                                                                                            }
-                                                                                                                                                        }}
-                                                                                                                                                        className={`p-0.5 transition-all opacity-60 hover:opacity-100 ${mat.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
-                                                                                                                                                        title={mat.supplierUrl ? `Ссылка: ${mat.supplierUrl}` : 'Добавить ссылку на товар'}
-                                                                                                                                                    >
-                                                                                                                                                        <ExternalLink className="w-3 h-3" />
-                                                                                                                                                    </button>
-                                                                                                                                                    {mat.supplierUrl && (
-                                                                                                                                                        <button 
-                                                                                                                                                            onClick={async () => {
-                                                                                                                                                                try {
-                                                                                                                                                                    const result = await api.parseSupplierPrice(mat.supplierUrl);
-                                                                                                                                                                    if (result.price) {
-                                                                                                                                                                        handleUpdateEstimationItem('works', item.id, 'price', result.price, sub, mat.id);
-                                                                                                                                                                        alert(`Цена обновлена: ${result.price} ₽`);
-                                                                                                                                                                    } else {
-                                                                                                                                                                        alert('Не удалось получить цену');
-                                                                                                                                                                    }
-                                                                                                                                                                } catch (e: any) {
-                                                                                                                                                                    alert(`Ошибка: ${e.message || 'Не удалось обновить цену'}`);
-                                                                                                                                                                }
-                                                                                                                                                            }}
-                                                                                                                                                            className="p-0.5 text-emerald-500 hover:text-emerald-600 transition-all opacity-60 hover:opacity-100"
-                                                                                                                                                            title="Обновить цену с сайта"
-                                                                                                                                                        >
-                                                                                                                                                            <RefreshCw className="w-3 h-3" />
-                                                                                                                                                        </button>
-                                                                                                                                                    )}
-                                                                                                                                                </div>
-                                                                                                                                            </div>
-                                                                                                                                            {activeSearchId === mat.id && (
-                                                                                                                                                <div data-search-dropdown className="absolute top-full left-0 z-50 w-full bg-white dark:bg-architect-700 shadow-xl border border-architect-200 dark:border-architect-600 rounded-lg overflow-hidden max-h-48 overflow-y-auto text-left">
-                                                                                                                                                    {priceList
-                                                                                                                                                        .filter(p => p.type === (isRoughSection ? 'rough' : 'finish'))
-                                                                                                                                                        .filter(p => !mat.name || p.name.toLowerCase().includes(mat.name.toLowerCase()))
-                                                                                                                                                        .map(p => (
-                                                                                                                                                        <div key={p.id} onClick={() => handleSelectFromDictionary(mat.id, p.name, sub, item.id)} className={`px-3 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/30 cursor-pointer text-[11px] ${p.type === 'rough' ? 'text-amber-700' : 'text-blue-700'} text-left`}>{p.name} — {p.price} р/{p.unit}</div>
-                                                                                                                                                    ))}
-                                                                                                                                                    {priceList.filter(p => p.type === (isRoughSection ? 'rough' : 'finish')).filter(p => !mat.name || p.name.toLowerCase().includes(mat.name.toLowerCase())).length === 0 && (
-                                                                                                                                                        <div className="px-3 py-2 text-[11px] text-architect-400 text-center">Нет позиций в справочнике</div>
-                                                                                                                                                    )}
-                                                                                                                                                </div>
-                                                                                                                                            )}
-                                                                                                                                        </td>
-                                                                                                                                        <td className="py-0.5 text-left"><input type="text" value={mat.unit} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'unit', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none text-[10px] h-4 leading-tight text-left" /></td>
-                                                                                                                                        <td className="py-0.5 text-left"><input type="number" value={mat.quantity} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'quantity', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none font-bold text-[10px] h-4 leading-tight text-left" /></td>
-                                                                                                                                        <td className="py-0.5 text-left"><input type="number" value={mat.price} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'price', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none font-bold text-[10px] h-4 leading-tight text-left" /></td>
-                                                                                                                                        <td className="py-0.5 font-bold text-architect-500 text-left text-xs leading-tight">{(mat.total || 0).toLocaleString()}</td>
-                                                                                                                                        <td className="py-0.5 text-left"><button onClick={() => handleDeleteEstimationItem('works', item.id, sub, mat.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all text-left"><Trash2 className="w-3 h-3" /></button></td>
-                                                                                                                                    </tr>
-                                                                                                                                ))}
-                                                                                                                            </React.Fragment>
-                                                                                                                        ))}
-                                                                                                                    </tbody>
-                                                                                                                </table>
-                                                                                                            ) : (
-                                                                                                                <p className="text-[10px] text-architect-400 py-2 text-center">Нет работ</p>
-                                                                                                            )}
-                                                                                                            <button onClick={() => handleAddEstimationItemWithSubcategory('works', sub, subcat)} className="mt-2 flex items-center gap-1 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors text-left">
-                                                                                                                <Plus className="w-3 h-3" /> Добавить работу
-                                                                                                            </button>
-                                                                                                        </div>
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            );
-                                                                                        })}
-                                                                                    </div>
+                                                                                                                                    </div>
+                                                                                                                                </div>
+                                                                                                                                {activeSearchId === mat.id && (
+                                                                                                                                    <div data-search-dropdown className="absolute top-full left-0 z-50 w-full bg-white dark:bg-architect-700 shadow-xl border border-architect-200 dark:border-architect-600 rounded-lg overflow-hidden max-h-48 overflow-y-auto text-left">
+                                                                                                                                        {priceList
+                                                                                                                                            .filter(p => p.type === (isRoughSection ? 'rough' : 'finish'))
+                                                                                                                                            .filter(p => !mat.name || p.name.toLowerCase().includes(mat.name.toLowerCase()))
+                                                                                                                                            .map(p => (
+                                                                                                                                            <div key={p.id} onClick={() => handleSelectFromDictionary(mat.id, p.name, sub, item.id)} className={`px-3 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/30 cursor-pointer text-[11px] ${p.type === 'rough' ? 'text-amber-700' : 'text-blue-700'} text-left`}>{p.name} — {p.price} р/{p.unit}</div>
+                                                                                                                                        ))}
+                                                                                                                                        {priceList.filter(p => p.type === (isRoughSection ? 'rough' : 'finish')).filter(p => !mat.name || p.name.toLowerCase().includes(mat.name.toLowerCase())).length === 0 && (
+                                                                                                                                            <div className="px-3 py-2 text-[11px] text-architect-400 text-center">Нет позиций в справочнике</div>
+                                                                                                                                        )}
+                                                                                                                                    </div>
+                                                                                                                                )}
+                                                                                                                            </td>
+                                                                                                                            <td className="py-0.5 text-left"><input type="text" value={mat.unit} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'unit', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none text-[10px] h-4 leading-tight text-left" /></td>
+                                                                                                                            <td className="py-0.5 text-left"><input type="number" value={mat.quantity} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'quantity', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none font-bold text-[10px] h-4 leading-tight text-left" /></td>
+                                                                                                                            <td className="py-0.5 text-left"><input type="number" value={mat.price} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'price', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none font-bold text-[10px] h-4 leading-tight text-left" /></td>
+                                                                                                                            <td className="py-0.5 font-bold text-architect-500 text-left text-xs leading-tight">{(mat.total || 0).toLocaleString()}</td>
+                                                                                                                            <td className="py-0.5 text-left"><button onClick={() => handleDeleteEstimationItem('works', item.id, sub, mat.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all text-left"><Trash2 className="w-3 h-3" /></button></td>
+                                                                                                                        </tr>
+                                                                                                                    ))}
+                                                                                                                </React.Fragment>
+                                                                                                            );
+                                                                                                        })}
+                                                                                                        {/* Кнопка добавления работы в подкатегорию */}
+                                                                                                        <tr>
+                                                                                                            <td colSpan={7} className="py-1 px-2">
+                                                                                                                <button onClick={() => handleAddEstimationItemWithSubcategory('works', sub, subcat)} className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors text-left">
+                                                                                                                    <Plus className="w-3 h-3" /> Добавить
+                                                                                                                </button>
+                                                                                                            </td>
+                                                                                                        </tr>
+                                                                                                    </React.Fragment>
+                                                                                                );
+                                                                                            })}
+                                                                                        </tbody>
+                                                                                    </table>
                                                                                 ) : (
                                                                                     /* Обычный рендеринг для остальных секций */
                                                                                     <>
