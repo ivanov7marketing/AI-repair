@@ -317,6 +317,7 @@ const App: React.FC = () => {
   const [isDetectingStyle, setIsDetectingStyle] = useState(false);
   const [expandedEstimateSections, setExpandedEstimateSections] = useState<Record<string, boolean>>({});
   const [expandedGlobalEstimateSections, setExpandedGlobalEstimateSections] = useState<Record<string, boolean>>({});
+  const [expandedEstimationSections, setExpandedEstimationSections] = useState<Record<string, boolean>>({});
   const [isGlobalEstimateExpanded, setIsGlobalEstimateExpanded] = useState(false);
   const [isWorksExpanded, setIsWorksExpanded] = useState(true);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
@@ -3297,7 +3298,7 @@ const App: React.FC = () => {
                                                                                                                             handleUpdateEstimationItem('works', item.id, 'supplierUrl', url, sub, mat.id);
                                                                                                                         }
                                                                                                                     }}
-                                                                                                                    className={`p-0.5 transition-all opacity-0 group-hover:opacity-100 ${mat.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
+                                                                                                                    className={`p-0.5 transition-all opacity-60 hover:opacity-100 ${mat.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
                                                                                                                     title={mat.supplierUrl ? `Ссылка: ${mat.supplierUrl}` : 'Добавить ссылку на товар'}
                                                                                                                 >
                                                                                                                     <ExternalLink className="w-3 h-3" />
@@ -3307,7 +3308,7 @@ const App: React.FC = () => {
                                                                                                         <td className="py-0.5 text-left">
                                                                                                             <div className="flex items-center gap-1">
                                                                                                                 <input type="number" value={mat.price} onChange={(e) => handleUpdateEstimationItem('works', item.id, 'price', e.target.value, sub, mat.id)} className="w-full bg-transparent outline-none font-bold text-[10px] h-4 leading-tight text-left" />
-                                                                                                                {/* Кнопка обновления цены */}
+                                                                                                                                                {/* Кнопка обновления цены */}
                                                                                                                 {mat.supplierUrl && (
                                                                                                                     <button 
                                                                                                                         onClick={async () => {
@@ -3323,7 +3324,7 @@ const App: React.FC = () => {
                                                                                                                                 alert(`Ошибка: ${e.message || 'Не удалось обновить цену'}`);
                                                                                                                             }
                                                                                                                         }}
-                                                                                                                        className="p-0.5 text-emerald-500 hover:text-emerald-600 transition-all opacity-0 group-hover:opacity-100"
+                                                                                                                        className="p-0.5 text-emerald-500 hover:text-emerald-600 transition-all opacity-60 hover:opacity-100"
                                                                                                                         title="Обновить цену с сайта"
                                                                                                                     >
                                                                                                                         <RefreshCw className="w-3 h-3" />
@@ -3350,6 +3351,210 @@ const App: React.FC = () => {
                                                         </div>
                                                       </div>
                                                     )}
+                                                </div>
+
+                                                {/* Черновые материалы */}
+                                                <div className="mt-6 space-y-3">
+                                                    <div className="border border-amber-200 dark:border-amber-700 rounded-xl overflow-hidden shadow-sm bg-amber-50/30 dark:bg-amber-900/10">
+                                                        <button 
+                                                            onClick={() => setExpandedEstimationSections(prev => ({ ...prev, 'rough-materials': !prev['rough-materials'] }))} 
+                                                            className="w-full flex items-center justify-between px-4 py-4 bg-amber-50/50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-800/30 transition-colors text-left"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <ChevronDown className={`w-4 h-4 transition-transform ${expandedEstimationSections['rough-materials'] ? 'rotate-180' : ''}`} />
+                                                                <span className="text-sm font-bold text-amber-700 dark:text-amber-300">Черновые материалы</span>
+                                                                <span className="text-xs text-amber-600 dark:text-amber-400">({initEstimationIfMissing(selectedRoom).roughMaterials?.items?.length || 0})</span>
+                                                            </div>
+                                                        </button>
+                                                        {expandedEstimationSections['rough-materials'] && (
+                                                            <div className="px-3 py-2 border-t border-amber-100 dark:border-amber-700 text-left">
+                                                                {initEstimationIfMissing(selectedRoom).roughMaterials?.items && initEstimationIfMissing(selectedRoom).roughMaterials.items.length > 0 ? (
+                                                                    <table className="w-full text-left text-xs">
+                                                                        <thead>
+                                                                            <tr className="border-b border-amber-100 dark:border-amber-700 text-amber-400 uppercase tracking-tighter text-left text-[10px]">
+                                                                                <th className="py-0.5 w-6 text-left">№</th>
+                                                                                <th className="py-0.5 text-left">Наименование</th>
+                                                                                <th className="py-0.5 w-14 text-left">Ед.изм</th>
+                                                                                <th className="py-0.5 w-14 text-left">Кол-во</th>
+                                                                                <th className="py-0.5 w-16 text-left">Цена</th>
+                                                                                <th className="py-0.5 w-20 text-left">Стоимость</th>
+                                                                                <th className="py-0.5 w-6 text-left"></th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {initEstimationIfMissing(selectedRoom).roughMaterials.items.map((mat: any, i: number) => (
+                                                                                <tr key={mat.id} className="border-b border-amber-50 dark:border-amber-900/30 group bg-amber-50/30 dark:bg-amber-900/10 text-left">
+                                                                                    <td className="py-0.5 text-amber-400 text-left text-xs leading-tight">{i + 1}</td>
+                                                                                    <td className="py-0.5 text-left">
+                                                                                        <input 
+                                                                                            type="text" 
+                                                                                            value={mat.name || ''} 
+                                                                                            onChange={(e) => handleUpdateEstimationItem('rough', mat.id, 'name', e.target.value)} 
+                                                                                            className="w-full bg-transparent outline-none text-amber-600 font-medium text-xs h-5 leading-tight text-left" 
+                                                                                            placeholder="Материал..." 
+                                                                                        />
+                                                                                    </td>
+                                                                                    <td className="py-0.5 text-left"><input type="text" value={mat.unit || ''} onChange={(e) => handleUpdateEstimationItem('rough', mat.id, 'unit', e.target.value)} className="w-full bg-transparent outline-none text-xs h-5 leading-tight text-left" /></td>
+                                                                                    <td className="py-0.5 text-left">
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            <input type="number" value={mat.quantity || 0} onChange={(e) => handleUpdateEstimationItem('rough', mat.id, 'quantity', e.target.value)} className="w-full bg-transparent outline-none font-bold text-xs h-5 leading-tight text-left" />
+                                                                                            <button 
+                                                                                                onClick={() => {
+                                                                                                    const url = prompt('Введите ссылку на товар:', mat.supplierUrl || '');
+                                                                                                    if (url !== null) {
+                                                                                                        handleUpdateEstimationItem('rough', mat.id, 'supplierUrl', url);
+                                                                                                    }
+                                                                                                }}
+                                                                                                className={`p-0.5 transition-all opacity-60 hover:opacity-100 ${mat.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
+                                                                                                title={mat.supplierUrl ? `Ссылка: ${mat.supplierUrl}` : 'Добавить ссылку на товар'}
+                                                                                            >
+                                                                                                <ExternalLink className="w-3 h-3" />
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td className="py-0.5 text-left">
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            <input type="number" value={mat.price || 0} onChange={(e) => handleUpdateEstimationItem('rough', mat.id, 'price', e.target.value)} className="w-full bg-transparent outline-none font-bold text-xs h-5 leading-tight text-left" />
+                                                                                            {mat.supplierUrl && (
+                                                                                                <button 
+                                                                                                    onClick={async () => {
+                                                                                                        try {
+                                                                                                            const result = await api.parseSupplierPrice(mat.supplierUrl);
+                                                                                                            if (result.price) {
+                                                                                                                handleUpdateEstimationItem('rough', mat.id, 'price', result.price);
+                                                                                                                alert(`Цена обновлена: ${result.price} ₽`);
+                                                                                                            } else {
+                                                                                                                alert('Не удалось получить цену');
+                                                                                                            }
+                                                                                                        } catch (e: any) {
+                                                                                                            alert(`Ошибка: ${e.message || 'Не удалось обновить цену'}`);
+                                                                                                        }
+                                                                                                    }}
+                                                                                                    className="p-0.5 text-emerald-500 hover:text-emerald-600 transition-all opacity-60 hover:opacity-100"
+                                                                                                    title="Обновить цену с сайта"
+                                                                                                >
+                                                                                                    <RefreshCw className="w-3 h-3" />
+                                                                                                </button>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td className="py-0.5 font-bold text-amber-600 text-left text-xs leading-tight">{(mat.total || 0).toLocaleString()}</td>
+                                                                                    <td className="py-0.5 text-left"><button onClick={() => handleDeleteEstimationItem('rough', mat.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all text-left"><Trash2 className="w-3 h-3" /></button></td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                ) : (
+                                                                    <div className="py-8 text-center text-architect-400 text-xs">Нет материалов</div>
+                                                                )}
+                                                                <button onClick={() => { handleAddEstimationItem('rough'); setExpandedEstimationSections(prev => ({ ...prev, 'rough-materials': true })); }} className="mt-2 flex items-center gap-1.5 text-xs font-bold text-amber-600 hover:text-amber-700 transition-colors text-left">
+                                                                    <Plus className="w-3.5 h-3.5" /> Добавить черновой материал
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Чистовые материалы */}
+                                                <div className="mt-6 space-y-3">
+                                                    <div className="border border-blue-200 dark:border-blue-700 rounded-xl overflow-hidden shadow-sm bg-blue-50/30 dark:bg-blue-900/10">
+                                                        <button 
+                                                            onClick={() => setExpandedEstimationSections(prev => ({ ...prev, 'finish-materials': !prev['finish-materials'] }))} 
+                                                            className="w-full flex items-center justify-between px-4 py-4 bg-blue-50/50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors text-left"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <ChevronDown className={`w-4 h-4 transition-transform ${expandedEstimationSections['finish-materials'] ? 'rotate-180' : ''}`} />
+                                                                <span className="text-sm font-bold text-blue-700 dark:text-blue-300">Чистовые материалы</span>
+                                                                <span className="text-xs text-blue-600 dark:text-blue-400">({initEstimationIfMissing(selectedRoom).finishMaterials?.items?.length || 0})</span>
+                                                            </div>
+                                                        </button>
+                                                        {expandedEstimationSections['finish-materials'] && (
+                                                            <div className="px-3 py-2 border-t border-blue-100 dark:border-blue-700 text-left">
+                                                                {initEstimationIfMissing(selectedRoom).finishMaterials?.items && initEstimationIfMissing(selectedRoom).finishMaterials.items.length > 0 ? (
+                                                                    <table className="w-full text-left text-xs">
+                                                                        <thead>
+                                                                            <tr className="border-b border-blue-100 dark:border-blue-700 text-blue-400 uppercase tracking-tighter text-left text-[10px]">
+                                                                                <th className="py-0.5 w-6 text-left">№</th>
+                                                                                <th className="py-0.5 text-left">Наименование</th>
+                                                                                <th className="py-0.5 w-14 text-left">Ед.изм</th>
+                                                                                <th className="py-0.5 w-14 text-left">Кол-во</th>
+                                                                                <th className="py-0.5 w-16 text-left">Цена</th>
+                                                                                <th className="py-0.5 w-20 text-left">Стоимость</th>
+                                                                                <th className="py-0.5 w-6 text-left"></th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {initEstimationIfMissing(selectedRoom).finishMaterials.items.map((mat: any, i: number) => (
+                                                                                <tr key={mat.id} className="border-b border-blue-50 dark:border-blue-900/30 group bg-blue-50/30 dark:bg-blue-900/10 text-left">
+                                                                                    <td className="py-0.5 text-blue-400 text-left text-xs leading-tight">{i + 1}</td>
+                                                                                    <td className="py-0.5 text-left">
+                                                                                        <input 
+                                                                                            type="text" 
+                                                                                            value={mat.name || ''} 
+                                                                                            onChange={(e) => handleUpdateEstimationItem('finish', mat.id, 'name', e.target.value)} 
+                                                                                            className="w-full bg-transparent outline-none text-blue-600 font-medium text-xs h-5 leading-tight text-left" 
+                                                                                            placeholder="Материал..." 
+                                                                                        />
+                                                                                    </td>
+                                                                                    <td className="py-0.5 text-left"><input type="text" value={mat.unit || ''} onChange={(e) => handleUpdateEstimationItem('finish', mat.id, 'unit', e.target.value)} className="w-full bg-transparent outline-none text-xs h-5 leading-tight text-left" /></td>
+                                                                                    <td className="py-0.5 text-left">
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            <input type="number" value={mat.quantity || 0} onChange={(e) => handleUpdateEstimationItem('finish', mat.id, 'quantity', e.target.value)} className="w-full bg-transparent outline-none font-bold text-xs h-5 leading-tight text-left" />
+                                                                                            <button 
+                                                                                                onClick={() => {
+                                                                                                    const url = prompt('Введите ссылку на товар:', mat.supplierUrl || '');
+                                                                                                    if (url !== null) {
+                                                                                                        handleUpdateEstimationItem('finish', mat.id, 'supplierUrl', url);
+                                                                                                    }
+                                                                                                }}
+                                                                                                className={`p-0.5 transition-all opacity-60 hover:opacity-100 ${mat.supplierUrl ? 'text-blue-500 hover:text-blue-600' : 'text-architect-300 hover:text-architect-500'}`}
+                                                                                                title={mat.supplierUrl ? `Ссылка: ${mat.supplierUrl}` : 'Добавить ссылку на товар'}
+                                                                                            >
+                                                                                                <ExternalLink className="w-3 h-3" />
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td className="py-0.5 text-left">
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            <input type="number" value={mat.price || 0} onChange={(e) => handleUpdateEstimationItem('finish', mat.id, 'price', e.target.value)} className="w-full bg-transparent outline-none font-bold text-xs h-5 leading-tight text-left" />
+                                                                                            {mat.supplierUrl && (
+                                                                                                <button 
+                                                                                                    onClick={async () => {
+                                                                                                        try {
+                                                                                                            const result = await api.parseSupplierPrice(mat.supplierUrl);
+                                                                                                            if (result.price) {
+                                                                                                                handleUpdateEstimationItem('finish', mat.id, 'price', result.price);
+                                                                                                                alert(`Цена обновлена: ${result.price} ₽`);
+                                                                                                            } else {
+                                                                                                                alert('Не удалось получить цену');
+                                                                                                            }
+                                                                                                        } catch (e: any) {
+                                                                                                            alert(`Ошибка: ${e.message || 'Не удалось обновить цену'}`);
+                                                                                                        }
+                                                                                                    }}
+                                                                                                    className="p-0.5 text-emerald-500 hover:text-emerald-600 transition-all opacity-60 hover:opacity-100"
+                                                                                                    title="Обновить цену с сайта"
+                                                                                                >
+                                                                                                    <RefreshCw className="w-3 h-3" />
+                                                                                                </button>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td className="py-0.5 font-bold text-blue-600 text-left text-xs leading-tight">{(mat.total || 0).toLocaleString()}</td>
+                                                                                    <td className="py-0.5 text-left"><button onClick={() => handleDeleteEstimationItem('finish', mat.id)} className="p-0.5 text-red-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all text-left"><Trash2 className="w-3 h-3" /></button></td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                ) : (
+                                                                    <div className="py-8 text-center text-architect-400 text-xs">Нет материалов</div>
+                                                                )}
+                                                                <button onClick={() => { handleAddEstimationItem('finish'); setExpandedEstimationSections(prev => ({ ...prev, 'finish-materials': true })); }} className="mt-2 flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors text-left">
+                                                                    <Plus className="w-3.5 h-3.5" /> Добавить чистовой материал
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-architect-100 dark:border-architect-700 text-left">

@@ -14,6 +14,7 @@ export interface EstimationItem {
   total: number;
   type?: 'work' | 'rough' | 'finish';
   linkedMaterials?: EstimationItem[];
+  supplierUrl?: string;
 }
 
 export interface EstimationSection {
