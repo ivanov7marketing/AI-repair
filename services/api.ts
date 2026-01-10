@@ -7,6 +7,20 @@ if (import.meta.env.DEV) {
   console.log('API URL:', API_URL);
 }
 
+// Helper function to get full image URL
+export const getImageUrl = (imagePath: string | null | undefined): string | undefined => {
+  if (!imagePath) return undefined;
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
+    return imagePath;
+  }
+  // If it's a server path, prepend API URL
+  if (imagePath.startsWith('/uploads/images/')) {
+    return `${API_URL}${imagePath}`;
+  }
+  return imagePath;
+};
+
 class ApiClient {
   private getToken(): string | null {
     return localStorage.getItem('auth_token');
@@ -143,6 +157,48 @@ class ApiClient {
   async deleteProject(id: string) {
     return this.request(`/projects/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  // Upload image file
+  async uploadProjectImage(projectId: string, file: File, imageType: 'planPreview' | 'global3dImage' | 'roomImage' | 'propertyPhoto', roomId?: string): Promise<{ url: string }> {
+    const token = this.getToken();
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('imageType', imageType);
+    if (roomId) {
+      formData.append('roomId', roomId);
+    }
+
+    const response = await fetch(`${API_URL}/projects/${projectId}/upload-image`, {
+      method: 'POST',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // Upload base64 image (for generated images)
+  async uploadBase64Image(projectId: string, imageData: string, imageType: 'planPreview' | 'global3dImage' | 'roomImage' | 'propertyPhoto', roomId?: string): Promise<{ url: string }> {
+    return this.request(`/projects/${projectId}/upload-base64-image`, {
+      method: 'POST',
+      body: JSON.stringify({ imageData, imageType, roomId }),
+    });
+  }
+
+  // Delete image
+  async deleteProjectImage(projectId: string, imageType: 'planPreview' | 'global3dImage' | 'roomImage' | 'propertyPhoto', roomId?: string, photoIndex?: number): Promise<void> {
+    return this.request(`/projects/${projectId}/image`, {
+      method: 'DELETE',
+      body: JSON.stringify({ imageType, roomId, photoIndex }),
     });
   }
 

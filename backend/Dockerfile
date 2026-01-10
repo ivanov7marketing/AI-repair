@@ -46,6 +46,9 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
+# Create uploads directory for Railway Volume
+RUN mkdir -p /app/uploads/images
+
 # Expose port (Railway uses $PORT)
 EXPOSE 3000
 

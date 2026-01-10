@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { pool } from '../db';
 import { authMiddleware, requirePermission } from '../middleware/auth';
 import { PERMISSIONS } from '../config/permissions';
+import { upload, getUploadsDir } from '../config/upload';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 
@@ -278,6 +281,333 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Update project error:', error);
     res.status(500).json({ error: 'Failed to update project' });
+  }
+});
+
+// Helper function to check project access
+const checkProjectAccess = async (projectId: string, userId: string, organizationId: string, canViewAll: boolean) => {
+  let accessCheck: any;
+  if (canViewAll) {
+    accessCheck = await pool.query(
+      'SELECT id FROM projects WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL',
+      [projectId, organizationId]
+    );
+  } else {
+    accessCheck = await pool.query(
+      `SELECT p.id FROM projects p
+       INNER JOIN project_assignments pa ON p.id = pa.project_id
+       WHERE p.id = $1 AND p.organization_id = $2 AND pa.user_id = $3 AND p.deleted_at IS NULL`,
+      [projectId, organizationId, userId]
+    );
+  }
+  return accessCheck.rows.length > 0;
+};
+
+// Helper function to delete old image file
+const deleteImageFile = (imageUrl: string | null | undefined) => {
+  if (!imageUrl) return;
+  
+  try {
+    // Если это URL файла на сервере (начинается с /uploads/images)
+    if (imageUrl.startsWith('/uploads/images/')) {
+      const filename = path.basename(imageUrl);
+      const filePath = path.join(getUploadsDir(), filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+  } catch (error) {
+    console.error('Error deleting image file:', error);
+  }
+};
+
+// Upload image file
+router.post('/:id/upload-image', authMiddleware, upload.single('image'), async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const projectId = req.params.id;
+    const imageType = req.body.imageType as 'planPreview' | 'global3dImage' | 'roomImage' | 'propertyPhoto';
+    const roomId = req.body.roomId as string | undefined;
+
+    if (!req.file) {
+      res.status(400).json({ error: 'No file uploaded' });
+      return;
+    }
+
+    // Check access
+    const canViewAll = req.user.role === 'admin' || req.user.role === 'manager';
+    const hasAccess = await checkProjectAccess(projectId, req.user.id, req.user.organizationId, canViewAll);
+    
+    if (!hasAccess) {
+      // Delete uploaded file if access denied
+      fs.unlinkSync(req.file.path);
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    // Get current project to delete old image
+    const projectResult = await pool.query(
+      'SELECT plan_preview, global_3d_image, room_images FROM projects WHERE id = $1',
+      [projectId]
+    );
+    
+    if (projectResult.rows.length === 0) {
+      fs.unlinkSync(req.file.path);
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    const project = projectResult.rows[0];
+    const imageUrl = `/uploads/images/${req.file.filename}`;
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    // Delete old image and update database
+    if (imageType === 'planPreview') {
+      deleteImageFile(project.plan_preview);
+      updates.push(`plan_preview = $${paramIndex++}`);
+      values.push(imageUrl);
+    } else if (imageType === 'global3dImage') {
+      deleteImageFile(project.global_3d_image);
+      updates.push(`global_3d_image = $${paramIndex++}`);
+      values.push(imageUrl);
+    } else if (imageType === 'roomImage' && roomId) {
+      const roomImages = project.room_images || {};
+      deleteImageFile(roomImages[roomId]);
+      roomImages[roomId] = imageUrl;
+      updates.push(`room_images = $${paramIndex++}`);
+      values.push(JSON.stringify(roomImages));
+    } else if (imageType === 'propertyPhoto') {
+      // Property photos are stored in analysis_data
+      const analysisData = project.analysis_data || {};
+      const propertyPhotos = analysisData.propertyPhotos || [];
+      propertyPhotos.push(imageUrl);
+      analysisData.propertyPhotos = propertyPhotos;
+      updates.push(`analysis_data = $${paramIndex++}`);
+      values.push(JSON.stringify(analysisData));
+    } else {
+      fs.unlinkSync(req.file.path);
+      res.status(400).json({ error: 'Invalid image type or missing roomId' });
+      return;
+    }
+
+    values.push(projectId, req.user.organizationId);
+
+    await pool.query(
+      `UPDATE projects 
+       SET ${updates.join(', ')}
+       WHERE id = $${paramIndex++} AND organization_id = $${paramIndex++} AND deleted_at IS NULL`,
+      values
+    );
+
+    res.json({ url: imageUrl });
+  } catch (error) {
+    console.error('Upload image error:', error);
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (e) {
+        console.error('Error deleting uploaded file:', e);
+      }
+    }
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+// Upload base64 image (for generated images)
+router.post('/:id/upload-base64-image', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const projectId = req.params.id;
+    const { imageData, imageType, roomId } = req.body;
+
+    if (!imageData || !imageType) {
+      res.status(400).json({ error: 'Missing imageData or imageType' });
+      return;
+    }
+
+    // Check access
+    const canViewAll = req.user.role === 'admin' || req.user.role === 'manager';
+    const hasAccess = await checkProjectAccess(projectId, req.user.id, req.user.organizationId, canViewAll);
+    
+    if (!hasAccess) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    // Parse base64 data
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    // Determine file extension from mime type
+    const mimeMatch = imageData.match(/^data:image\/(\w+);base64,/);
+    const ext = mimeMatch ? mimeMatch[1] : 'png';
+    const filename = `image-${Date.now()}-${Math.round(Math.random() * 1E9)}.${ext}`;
+    const filePath = path.join(getUploadsDir(), filename);
+
+    // Save file
+    fs.writeFileSync(filePath, buffer);
+    const imageUrl = `/uploads/images/${filename}`;
+
+    // Get current project to delete old image
+    const projectResult = await pool.query(
+      'SELECT plan_preview, global_3d_image, room_images, analysis_data FROM projects WHERE id = $1',
+      [projectId]
+    );
+    
+    if (projectResult.rows.length === 0) {
+      fs.unlinkSync(filePath);
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    const project = projectResult.rows[0];
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    // Delete old image and update database
+    if (imageType === 'planPreview') {
+      deleteImageFile(project.plan_preview);
+      updates.push(`plan_preview = $${paramIndex++}`);
+      values.push(imageUrl);
+    } else if (imageType === 'global3dImage') {
+      deleteImageFile(project.global_3d_image);
+      updates.push(`global_3d_image = $${paramIndex++}`);
+      values.push(imageUrl);
+    } else if (imageType === 'roomImage' && roomId) {
+      const roomImages = project.room_images || {};
+      deleteImageFile(roomImages[roomId]);
+      roomImages[roomId] = imageUrl;
+      updates.push(`room_images = $${paramIndex++}`);
+      values.push(JSON.stringify(roomImages));
+    } else if (imageType === 'propertyPhoto') {
+      const analysisData = project.analysis_data || {};
+      const propertyPhotos = analysisData.propertyPhotos || [];
+      propertyPhotos.push(imageUrl);
+      analysisData.propertyPhotos = propertyPhotos;
+      updates.push(`analysis_data = $${paramIndex++}`);
+      values.push(JSON.stringify(analysisData));
+    } else {
+      fs.unlinkSync(filePath);
+      res.status(400).json({ error: 'Invalid image type or missing roomId' });
+      return;
+    }
+
+    values.push(projectId, req.user.organizationId);
+
+    await pool.query(
+      `UPDATE projects 
+       SET ${updates.join(', ')}
+       WHERE id = $${paramIndex++} AND organization_id = $${paramIndex++} AND deleted_at IS NULL`,
+      values
+    );
+
+    res.json({ url: imageUrl });
+  } catch (error) {
+    console.error('Upload base64 image error:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+// Delete image
+router.delete('/:id/image', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const projectId = req.params.id;
+    const { imageType, roomId, photoIndex } = req.body;
+
+    if (!imageType) {
+      res.status(400).json({ error: 'Missing imageType' });
+      return;
+    }
+
+    // Check access
+    const canViewAll = req.user.role === 'admin' || req.user.role === 'manager';
+    const hasAccess = await checkProjectAccess(projectId, req.user.id, req.user.organizationId, canViewAll);
+    
+    if (!hasAccess) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    // Get current project
+    const projectResult = await pool.query(
+      'SELECT plan_preview, global_3d_image, room_images, analysis_data FROM projects WHERE id = $1',
+      [projectId]
+    );
+    
+    if (projectResult.rows.length === 0) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    const project = projectResult.rows[0];
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    // Delete image file and update database
+    if (imageType === 'planPreview') {
+      deleteImageFile(project.plan_preview);
+      updates.push(`plan_preview = $${paramIndex++}`);
+      values.push(null);
+    } else if (imageType === 'global3dImage') {
+      deleteImageFile(project.global_3d_image);
+      updates.push(`global_3d_image = $${paramIndex++}`);
+      values.push(null);
+    } else if (imageType === 'roomImage' && roomId) {
+      const roomImages = project.room_images || {};
+      deleteImageFile(roomImages[roomId]);
+      delete roomImages[roomId];
+      updates.push(`room_images = $${paramIndex++}`);
+      values.push(JSON.stringify(roomImages));
+    } else if (imageType === 'propertyPhoto' && typeof photoIndex === 'number') {
+      const analysisData = project.analysis_data || {};
+      const propertyPhotos = analysisData.propertyPhotos || [];
+      if (propertyPhotos[photoIndex]) {
+        deleteImageFile(propertyPhotos[photoIndex]);
+        propertyPhotos.splice(photoIndex, 1);
+        analysisData.propertyPhotos = propertyPhotos;
+        updates.push(`analysis_data = $${paramIndex++}`);
+        values.push(JSON.stringify(analysisData));
+      }
+    } else {
+      res.status(400).json({ error: 'Invalid image type or missing parameters' });
+      return;
+    }
+
+    if (updates.length === 0) {
+      res.status(400).json({ error: 'No image to delete' });
+      return;
+    }
+
+    values.push(projectId, req.user.organizationId);
+
+    await pool.query(
+      `UPDATE projects 
+       SET ${updates.join(', ')}
+       WHERE id = $${paramIndex++} AND organization_id = $${paramIndex++} AND deleted_at IS NULL`,
+      values
+    );
+
+    res.json({ message: 'Image deleted successfully' });
+  } catch (error) {
+    console.error('Delete image error:', error);
+    res.status(500).json({ error: 'Failed to delete image' });
   }
 });
 

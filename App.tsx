@@ -18,7 +18,7 @@ import { SuppliersModal } from './components/SuppliersModal.tsx';
 import { analyzeFloorPlan, generateIsometricView, generateRoomInterior, fileToGenerativePart, identifyStyleFromImage, parseVoiceEstimation, VoiceEstimationItem } from './services/routeraiService.ts';
 import { AppState, AnalysisResult, Room, ImageSize, FurnitureItem, Project, EstimationItem, RoomEstimation, PERMISSIONS } from './types.ts';
 import { useAuth, usePermission } from './contexts/AuthContext.tsx';
-import { api } from './services/api.ts';
+import { api, getImageUrl } from './services/api.ts';
 
 const PREDEFINED_STYLES = [
   'Современный', 'Скандинавский', 'Лофт', 'Минимализм', 'Неоклассика', 'Джапанди', 'Ар-деко', 'Хай-тек'
@@ -638,7 +638,9 @@ const App: React.FC = () => {
       const projectName = file.name.split('.')[0] || 'Новый проект';
       const backendProject = await api.createProject({ name: projectName });
       
-      const planPreview = URL.createObjectURL(file);
+      // Upload plan image to server
+      const uploadResult = await api.uploadProjectImage(backendProject.id, file, 'planPreview');
+      const planPreview = uploadResult.url;
       
       const newProject: Project = {
         id: backendProject.id,
@@ -648,9 +650,6 @@ const App: React.FC = () => {
         planPreview: planPreview,
         roomImages: {},
       };
-      
-      // Update backend with plan preview
-      await api.updateProject(newProject.id, { planPreview });
       
       setCurrentProject(newProject);
       setProjects(prev => [newProject, ...prev]);
@@ -817,16 +816,35 @@ const App: React.FC = () => {
     updateAnalysis({ rooms: (currentProject?.analysis?.rooms || []).filter(r => r.id !== roomId) });
   };
 
-  const handleUploadPropertyPhoto = (file: File) => {
+  const handleUploadPropertyPhoto = async (file: File) => {
+    if (!currentProject) return;
     const photos = currentProject?.analysis?.propertyPhotos || [];
     if (photos.length >= 6) return alert("Максимум 6 фото.");
-    const reader = new FileReader();
-    reader.onloadend = () => updateAnalysis({ propertyPhotos: [...photos, reader.result as string] });
-    reader.readAsDataURL(file);
+    
+    try {
+      const uploadResult = await api.uploadProjectImage(currentProject.id, file, 'propertyPhoto');
+      updateAnalysis({ propertyPhotos: [...photos, uploadResult.url] });
+    } catch (error) {
+      console.error('Failed to upload property photo:', error);
+      alert('Ошибка при загрузке фотографии');
+    }
   };
 
-  const handleRemovePropertyPhoto = (index: number) => {
-    updateAnalysis({ propertyPhotos: (currentProject?.analysis?.propertyPhotos || []).filter((_, i) => i !== index) });
+  const handleRemovePropertyPhoto = async (index: number) => {
+    if (!currentProject) return;
+    const photos = currentProject?.analysis?.propertyPhotos || [];
+    const photoToRemove = photos[index];
+    
+    // Delete from server if it's a server URL
+    if (photoToRemove && photoToRemove.startsWith('/uploads/images/')) {
+      try {
+        await api.deleteProjectImage(currentProject.id, 'propertyPhoto', undefined, index);
+      } catch (error) {
+        console.error('Failed to delete property photo from server:', error);
+      }
+    }
+    
+    updateAnalysis({ propertyPhotos: photos.filter((_, i) => i !== index) });
   };
 
   const handleUploadRoomPhoto = (file: File) => {
@@ -872,16 +890,15 @@ const App: React.FC = () => {
     try {
       const part = await fileToGenerativePart(currentProject.planFile);
       const url = await generateIsometricView(part, currentProject.analysis.architecturalStyle, imageSize, currentProject.analysis.styleReferenceImage);
-      const updatedProject = { ...currentProject, global3DImage: url };
-      updateCurrentProject({ global3DImage: url });
       
-      // Save to backend immediately
+      // Upload generated image to server
       try {
-        await api.updateProject(updatedProject.id, {
-          global3dImage: url,
-        });
+        const uploadResult = await api.uploadBase64Image(currentProject.id, url, 'global3dImage');
+        updateCurrentProject({ global3DImage: uploadResult.url });
       } catch (error) {
         console.error('Failed to save global 3D image:', error);
+        // Fallback to base64 if upload fails
+        updateCurrentProject({ global3DImage: url });
       }
     } catch (error: any) {
       console.error("Error generating 3D view:", error);
@@ -898,17 +915,17 @@ const App: React.FC = () => {
     try {
       const part = await fileToGenerativePart(currentProject.planFile);
       const url = await generateRoomInterior(selectedRoom, currentProject.analysis.architecturalStyle, part, imageSize, currentProject.analysis.styleReferenceImage);
-      const updatedRoomImages = { ...(currentProject.roomImages || {}), [selectedRoom.id]: url };
-      const updatedProject = { ...currentProject, roomImages: updatedRoomImages };
-      updateCurrentProject({ roomImages: updatedRoomImages });
       
-      // Save to backend immediately
+      // Upload generated image to server
       try {
-        await api.updateProject(updatedProject.id, {
-          roomImages: updatedRoomImages,
-        });
+        const uploadResult = await api.uploadBase64Image(currentProject.id, url, 'roomImage', selectedRoom.id);
+        const updatedRoomImages = { ...(currentProject.roomImages || {}), [selectedRoom.id]: uploadResult.url };
+        updateCurrentProject({ roomImages: updatedRoomImages });
       } catch (error) {
         console.error('Failed to save room image:', error);
+        // Fallback to base64 if upload fails
+        const updatedRoomImages = { ...(currentProject.roomImages || {}), [selectedRoom.id]: url };
+        updateCurrentProject({ roomImages: updatedRoomImages });
       }
     } finally {
       setIsGeneratingRoom(false);
@@ -2966,7 +2983,7 @@ const App: React.FC = () => {
                                 {projects.map(project => (
                                     <div key={project.id} onClick={() => selectProject(project)} className="group bg-white dark:bg-architect-800 rounded-2xl border border-architect-200 dark:border-architect-700 overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left">
                                         <div className="aspect-[16/10] bg-architect-100 dark:bg-architect-900 relative flex items-center justify-center overflow-hidden">
-                                            {project.planPreview ? <img src={project.planPreview} alt="Preview" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /> : <ImageIcon className="w-12 h-12 text-architect-200" />}
+                                            {project.planPreview ? <img src={getImageUrl(project.planPreview) || project.planPreview} alt="Preview" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /> : <ImageIcon className="w-12 h-12 text-architect-200" />}
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                                               <span className="text-white text-sm font-medium flex items-center gap-1">Открыть <ChevronRight className="w-4 h-4" /></span>
                                             </div>
@@ -3001,7 +3018,7 @@ const App: React.FC = () => {
                             <aside className="w-full lg:w-80 space-y-6 shrink-0 text-left">
                                 <div className="hidden lg:block rounded-xl border border-architect-200 dark:border-architect-700 p-2 bg-white dark:bg-architect-800 shadow-sm overflow-hidden text-left">
                                     <span className="block text-xs font-bold text-architect-500 uppercase tracking-widest mb-2 px-2">Исходный план</span>
-                                    {currentProject.planPreview && <img src={currentProject.planPreview} alt="Original Plan" className="w-full rounded-lg" />}
+                                    {currentProject.planPreview && <img src={getImageUrl(currentProject.planPreview) || currentProject.planPreview} alt="Original Plan" className="w-full rounded-lg" />}
                                 </div>
                                 
                                 <div className="space-y-3 text-left">
@@ -3102,7 +3119,7 @@ const App: React.FC = () => {
                                                     <label className="block text-xs font-bold text-architect-500 uppercase mb-2">Фотографии объекта ({(currentProject.analysis?.propertyPhotos || []).length}/6)</label>
                                                     <div className="grid grid-cols-3 gap-3 text-left">
                                                         {(currentProject.analysis?.propertyPhotos || []).map((photo, i) => (
-                                                            <div key={i} className="relative aspect-square rounded-xl overflow-hidden group border border-architect-200"><img src={photo} alt="Prop" className="w-full h-full object-cover" /><button onClick={() => handleRemovePropertyPhoto(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button></div>
+                                                            <div key={i} className="relative aspect-square rounded-xl overflow-hidden group border border-architect-200"><img src={getImageUrl(photo) || photo} alt="Prop" className="w-full h-full object-cover" /><button onClick={() => handleRemovePropertyPhoto(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button></div>
                                                         ))}
                                                         {(currentProject.analysis?.propertyPhotos?.length || 0) < 6 && (
                                                           <div className="relative aspect-square rounded-xl border-2 border-dashed border-architect-200 flex flex-col items-center justify-center text-architect-400 bg-architect-50 dark:bg-architect-900 cursor-pointer"><Camera className="w-5 h-5" /><input type="file" accept="image/*" className="absolute inset-0 opacity-0" onChange={e => e.target.files?.[0] && handleUploadPropertyPhoto(e.target.files[0])} /></div>
@@ -3140,7 +3157,7 @@ const App: React.FC = () => {
                                               </div>
                                             </div>
                                             <div className="bg-white dark:bg-architect-800 rounded-[32px] border border-architect-200 dark:border-architect-700 p-2 min-h-[400px] flex items-center justify-center relative overflow-hidden text-left">
-                                                {isGeneratingGlobal ? <GenerationLoader planUrl={currentProject.planPreview || null} label="Создаем 3D модель..." /> : currentProject.global3DImage ? <img src={currentProject.global3DImage} alt="Global 3D" className="w-full h-auto rounded-[24px]" /> : <div className="text-architect-300 flex flex-col items-center"><ImageIcon className="w-20 h-20 mb-2 opacity-20" /><p className="text-xs font-bold uppercase tracking-widest opacity-40">Макет еще не создан</p></div>}
+                                                {isGeneratingGlobal ? <GenerationLoader planUrl={currentProject.planPreview || null} label="Создаем 3D модель..." /> : currentProject.global3DImage ? <img src={getImageUrl(currentProject.global3DImage) || currentProject.global3DImage} alt="Global 3D" className="w-full h-auto rounded-[24px]" /> : <div className="text-architect-300 flex flex-col items-center"><ImageIcon className="w-20 h-20 mb-2 opacity-20" /><p className="text-xs font-bold uppercase tracking-widest opacity-40">Макет еще не создан</p></div>}
                                             </div>
                                         </div>
                                         
@@ -4117,7 +4134,7 @@ const App: React.FC = () => {
                                         </div>
 
                                         <div className="bg-white dark:bg-architect-800 rounded-[40px] border border-architect-200 dark:border-architect-700 p-2 min-h-[500px] flex items-center justify-center relative overflow-hidden text-left">
-                                            {isGeneratingRoom ? <GenerationLoader planUrl={currentProject.planPreview || null} label={`Отрисовываем ${selectedRoom.name}...`} /> : currentProject.roomImages?.[selectedRoom.id] ? <img src={currentProject.roomImages[selectedRoom.id]} alt="Room interior" className="w-full h-auto rounded-[32px]" /> : <div className="text-architect-200 flex flex-col items-center"><ImageIcon className="w-20 h-20 mb-2 opacity-10" /><p className="text-xs font-bold uppercase tracking-widest opacity-30">Интерьер еще не создан</p></div>}
+                                            {isGeneratingRoom ? <GenerationLoader planUrl={currentProject.planPreview || null} label={`Отрисовываем ${selectedRoom.name}...`} /> : currentProject.roomImages?.[selectedRoom.id] ? <img src={getImageUrl(currentProject.roomImages[selectedRoom.id]) || currentProject.roomImages[selectedRoom.id]} alt="Room interior" className="w-full h-auto rounded-[32px]" /> : <div className="text-architect-200 flex flex-col items-center"><ImageIcon className="w-20 h-20 mb-2 opacity-10" /><p className="text-xs font-bold uppercase tracking-widest opacity-30">Интерьер еще не создан</p></div>}
                                         </div>
                                     </div>
                                 )}

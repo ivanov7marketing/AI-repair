@@ -17,7 +17,9 @@ if (typeof globalThis.File === 'undefined') {
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import { checkDatabaseConnection } from './db';
+import { getUploadsDir } from './config/upload';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import permissionRoutes from './routes/permissions';
@@ -56,6 +58,10 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// Serve static files from uploads directory
+const imagesDir = getUploadsDir();
+app.use('/uploads/images', express.static(imagesDir));
 
 // Request logging middleware
 app.use((req: Request, res: Response, next) => {
