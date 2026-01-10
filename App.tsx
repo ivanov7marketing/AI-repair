@@ -53,7 +53,22 @@ const FINISH_WORK_SECTIONS = [
 const WORK_SUBSECTIONS = [...ROUGH_WORK_SECTIONS, ...FINISH_WORK_SECTIONS];
 
 // Подразделы для отделочных работ
-const FINISHING_SUBCATEGORIES = ['Пол', 'Стены', 'Потолок', 'Общее'];
+const FINISHING_SUBCATEGORIES = ['Пол', 'Стены', 'Потолок'];
+
+// Функция для определения подкатегории по названию работы
+const inferSubcategoryFromName = (name: string): string => {
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes('пол') || lowerName.includes('стяжк') || lowerName.includes('наливн') || lowerName.includes('ламинат') || lowerName.includes('плитк') || lowerName.includes('паркет') || lowerName.includes('линолеум')) {
+    return 'Пол';
+  }
+  if (lowerName.includes('стен') || lowerName.includes('штукатур') || lowerName.includes('шпакл') || lowerName.includes('обо') || lowerName.includes('краск') || lowerName.includes('покраск') || lowerName.includes('грунт')) {
+    return 'Стены';
+  }
+  if (lowerName.includes('потол') || lowerName.includes('натяжн')) {
+    return 'Потолок';
+  }
+  return 'Стены'; // По умолчанию - стены
+};
 
 // Секции с подразделами
 const SECTIONS_WITH_SUBCATEGORIES = ['Черновые отделочные работы', 'Чистовые отделочные работы'];
@@ -1138,6 +1153,10 @@ const App: React.FC = () => {
             item.price = found.price;
             item.type = found.type;
             item.total = item.quantity * found.price;
+            // Копируем подкатегорию из справочника (для отделочных работ)
+            if (found.subcategory) {
+                item.subcategory = found.subcategory;
+            }
             return item;
         };
 
@@ -3241,12 +3260,14 @@ const App: React.FC = () => {
                                                                                 {SECTIONS_WITH_SUBCATEGORIES.includes(sub) ? (
                                                                                     <div className="space-y-4">
                                                                                         {FINISHING_SUBCATEGORIES.map((subcat) => {
-                                                                                            // Для "Общее" показываем позиции без subcategory или с subcategory === 'Общее'
-                                                                                            const subcatItems = items.filter((item: any) => 
-                                                                                                subcat === 'Общее' 
-                                                                                                    ? (!item.subcategory || item.subcategory === 'Общее')
-                                                                                                    : item.subcategory === subcat
-                                                                                            );
+                                                                                            // Фильтруем по subcategory или определяем по названию для старых позиций
+                                                                                            const subcatItems = items.filter((item: any) => {
+                                                                                                if (item.subcategory) {
+                                                                                                    return item.subcategory === subcat;
+                                                                                                }
+                                                                                                // Для позиций без subcategory определяем по названию
+                                                                                                return inferSubcategoryFromName(item.name || '') === subcat;
+                                                                                            });
                                                                                             const isSubcatExpanded = !!expandedEstimateSections[`${sub}-${subcat}`];
                                                                                             return (
                                                                                                 <div key={subcat} className="border border-architect-100 dark:border-architect-700 rounded-lg overflow-hidden">
