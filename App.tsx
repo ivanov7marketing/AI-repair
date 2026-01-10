@@ -49,12 +49,11 @@ const FINISH_WORK_SECTIONS = [
   "Чистовая электрика",
   "Установочные работы",
   "Прочие работы",
-  "Подключение оборудования",
-  "Умный дом"
+  "Подключение оборудования"
 ];
 
 // Секции только для общей сметы (не для смет комнат)
-const GLOBAL_ONLY_SECTIONS = ["Накладные расходы"];
+const GLOBAL_ONLY_SECTIONS = ["Умный дом", "Накладные расходы"];
 
 const WORK_SUBSECTIONS = [...ROUGH_WORK_SECTIONS, ...FINISH_WORK_SECTIONS];
 
@@ -2032,6 +2031,20 @@ const App: React.FC = () => {
           });
       });
       
+      // Добавляем данные глобальных секций (хранятся на уровне проекта)
+      const globalWorks = currentProject?.analysis?.globalWorks || {};
+      GLOBAL_ONLY_SECTIONS.forEach(sub => {
+          const section = globalWorks[sub];
+          if (section?.items) {
+              section.items.forEach((item: EstimationItem) => {
+                  result[sub].items.push({ ...item });
+                  if (item.type === 'work') {
+                      result[sub].work += Number(item.total) || 0;
+                  }
+              });
+          }
+      });
+      
       return result;
   };
 
@@ -2093,6 +2106,117 @@ const App: React.FC = () => {
           });
       } catch (error) {
           console.error('Failed to save global material update:', error);
+      }
+  };
+
+  // Добавить позицию в глобальную секцию (Умный дом, Накладные расходы)
+  const handleAddGlobalSectionItem = async (sectionName: string) => {
+      if (!currentProject?.analysis) return;
+      
+      const globalWorks = currentProject.analysis.globalWorks || {};
+      const section = globalWorks[sectionName] || { items: [] };
+      
+      const newItem: EstimationItem = {
+          id: `global-${Date.now()}`,
+          name: '',
+          unit: 'шт',
+          quantity: 1,
+          price: 0,
+          total: 0,
+          type: 'work'
+      };
+      
+      section.items = [...section.items, newItem];
+      
+      const updatedProject = {
+          ...currentProject,
+          analysis: {
+              ...currentProject.analysis,
+              globalWorks: { ...globalWorks, [sectionName]: section }
+          }
+      };
+      
+      setCurrentProject(updatedProject);
+      
+      try {
+          await api.updateProject(updatedProject.id, {
+              analysisData: updatedProject.analysis,
+          });
+      } catch (error) {
+          console.error('Failed to save global section item:', error);
+      }
+  };
+
+  // Обновить позицию в глобальной секции
+  const handleUpdateGlobalSectionItem = async (
+      sectionName: string,
+      itemId: string,
+      field: string,
+      value: any
+  ) => {
+      if (!currentProject?.analysis) return;
+      
+      const globalWorks = currentProject.analysis.globalWorks || {};
+      const section = globalWorks[sectionName] || { items: [] };
+      
+      section.items = section.items.map((item: EstimationItem) => {
+          if (item.id === itemId) {
+              const updated = { ...item, [field]: value };
+              if (field === 'quantity' || field === 'price') {
+                  updated.total = Number(updated.quantity) * Number(updated.price);
+              }
+              return updated;
+          }
+          return item;
+      });
+      
+      const updatedProject = {
+          ...currentProject,
+          analysis: {
+              ...currentProject.analysis,
+              globalWorks: { ...globalWorks, [sectionName]: section }
+          }
+      };
+      
+      setCurrentProject(updatedProject);
+      
+      // Debounce save
+      setTimeout(async () => {
+          try {
+              await api.updateProject(updatedProject.id, {
+                  analysisData: updatedProject.analysis,
+              });
+          } catch (error) {
+              console.error('Failed to save global section item update:', error);
+          }
+      }, 500);
+  };
+
+  // Удалить позицию из глобальной секции
+  const handleDeleteGlobalSectionItem = async (sectionName: string, itemId: string) => {
+      if (!currentProject?.analysis) return;
+      
+      const globalWorks = currentProject.analysis.globalWorks || {};
+      const section = globalWorks[sectionName] || { items: [] };
+      
+      section.items = section.items.filter((item: EstimationItem) => item.id !== itemId);
+      
+      const updatedProject = {
+          ...currentProject,
+          analysis: {
+              ...currentProject.analysis,
+              globalWorks: { ...globalWorks, [sectionName]: section }
+          }
+      };
+      
+      setCurrentProject(updatedProject);
+      
+      try {
+          await api.updateProject(updatedProject.id, {
+              analysisData: updatedProject.analysis,
+          });
+      } catch (error) {
+          console.error('Failed to delete global section item:', error);
       }
   };
 
@@ -3083,11 +3207,11 @@ const App: React.FC = () => {
                                                                 const isRoughSection = ROUGH_WORK_SECTIONS.includes(sub);
                                                                 const isGlobalOnlySection = GLOBAL_ONLY_SECTIONS.includes(sub);
                                                                 const globalData = calculateGlobalEstimation();
-                                                                const sectionData = globalData[sub] || { work: 0, rough: 0, finish: 0 };
+                                                                const sectionData = globalData[sub] || { work: 0, rough: 0, finish: 0, items: [] };
                                                                 const sectionTotal = sectionData.work + sectionData.rough + sectionData.finish;
                                                                 
-                                                                // Пропускаем пустые секции
-                                                                if (sectionTotal === 0) return null;
+                                                                // Пропускаем пустые секции (кроме глобальных - их показываем всегда для редактирования)
+                                                                if (sectionTotal === 0 && !isGlobalOnlySection) return null;
                                                                 
                                                                 return (
                                                                     <div key={idx} className="border border-architect-100 dark:border-architect-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-architect-800 text-left">
@@ -3198,6 +3322,65 @@ const App: React.FC = () => {
                                                                                                     );
                                                                                                 })}
                                                                                             </>
+                                                                                        ) : isGlobalOnlySection ? (
+                                                                                            /* Редактируемый рендеринг для глобальных секций (Умный дом, Накладные расходы) */
+                                                                                            <>
+                                                                                                {sectionData.items.map((item: any, i: number) => (
+                                                                                                    <tr key={item.id} className="border-b border-architect-50 dark:border-architect-900/50">
+                                                                                                        <td className="py-1 text-architect-400 text-left">{i + 1}</td>
+                                                                                                        <td className="py-1 text-left">
+                                                                                                            <div className="flex items-center gap-2">
+                                                                                                                <input
+                                                                                                                    type="text"
+                                                                                                                    value={item.name || ''}
+                                                                                                                    onChange={(e) => handleUpdateGlobalSectionItem(sub, item.id, 'name', e.target.value)}
+                                                                                                                    placeholder="Название позиции"
+                                                                                                                    className="flex-1 bg-transparent outline-none text-xs text-emerald-700 dark:text-emerald-400 font-medium"
+                                                                                                                />
+                                                                                                                <button
+                                                                                                                    onClick={() => handleDeleteGlobalSectionItem(sub, item.id)}
+                                                                                                                    className="p-0.5 text-red-400 hover:text-red-600 transition-colors opacity-60 hover:opacity-100"
+                                                                                                                    title="Удалить"
+                                                                                                                >
+                                                                                                                    <X className="w-3 h-3" />
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                        </td>
+                                                                                                        <td className="py-1 text-left">
+                                                                                                            <input
+                                                                                                                type="text"
+                                                                                                                value={item.unit || 'шт'}
+                                                                                                                onChange={(e) => handleUpdateGlobalSectionItem(sub, item.id, 'unit', e.target.value)}
+                                                                                                                className="w-full bg-transparent outline-none text-xs text-architect-500"
+                                                                                                            />
+                                                                                                        </td>
+                                                                                                        <td className="py-1 text-right">
+                                                                                                            <input
+                                                                                                                type="number"
+                                                                                                                value={item.quantity || 0}
+                                                                                                                onChange={(e) => handleUpdateGlobalSectionItem(sub, item.id, 'quantity', Number(e.target.value))}
+                                                                                                                className="w-full bg-transparent outline-none text-xs font-bold text-right"
+                                                                                                            />
+                                                                                                        </td>
+                                                                                                        <td className="py-1 text-right">
+                                                                                                            <input
+                                                                                                                type="number"
+                                                                                                                value={item.price || 0}
+                                                                                                                onChange={(e) => handleUpdateGlobalSectionItem(sub, item.id, 'price', Number(e.target.value))}
+                                                                                                                className="w-full bg-transparent outline-none text-xs text-architect-600 dark:text-architect-400 text-right"
+                                                                                                            />
+                                                                                                        </td>
+                                                                                                        <td className="py-1 font-bold text-architect-900 dark:text-white text-right">{(item.total || 0).toLocaleString()}</td>
+                                                                                                    </tr>
+                                                                                                ))}
+                                                                                                {sectionData.items.length === 0 && (
+                                                                                                    <tr>
+                                                                                                        <td colSpan={6} className="py-4 text-center text-architect-400 text-xs">
+                                                                                                            Нет позиций. Нажмите "Добавить" чтобы создать.
+                                                                                                        </td>
+                                                                                                    </tr>
+                                                                                                )}
+                                                                                            </>
                                                                                         ) : (
                                                                                             /* Обычный рендеринг для остальных секций */
                                                                                             sectionData.items.map((item: any, i: number) => {
@@ -3255,29 +3438,47 @@ const App: React.FC = () => {
                                                                                     </tbody>
                                                                                 </table>
                                                                                 
+                                                                                {/* Кнопка добавления для глобальных секций */}
+                                                                                {isGlobalOnlySection && (
+                                                                                    <button
+                                                                                        onClick={() => handleAddGlobalSectionItem(sub)}
+                                                                                        className="w-full py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border border-dashed border-emerald-300 dark:border-emerald-700 rounded-lg transition-colors flex items-center justify-center gap-2 mb-3"
+                                                                                    >
+                                                                                        <Plus className="w-3 h-3" /> Добавить позицию
+                                                                                    </button>
+                                                                                )}
+                                                                                
                                                                                 {/* Итоги по разделу */}
-                                                                                <div className="grid grid-cols-3 gap-3 text-center mt-3 pt-3 border-t border-architect-100 dark:border-architect-700">
-                                                                                    <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                                                                                        <div className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Работы</div>
-                                                                                        <div className="text-base font-bold text-emerald-700 dark:text-emerald-400">{sectionData.work.toLocaleString()} ₽</div>
-                                                                                    </div>
-                                                                                    {isRoughSection ? (
-                                                                                        <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                                                                                            <div className="text-[10px] font-bold text-amber-600 uppercase mb-1">Черновые материалы</div>
-                                                                                            <div className="text-base font-bold text-amber-700 dark:text-amber-400">{sectionData.rough.toLocaleString()} ₽</div>
-                                                                                        </div>
-                                                                                    ) : (
-                                                                                        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                                                                            <div className="text-[10px] font-bold text-blue-600 uppercase mb-1">Чистовые материалы</div>
-                                                                                            <div className="text-base font-bold text-blue-700 dark:text-blue-400">{sectionData.finish.toLocaleString()} ₽</div>
-                                                                                        </div>
+                                                                                <div className={`grid ${isGlobalOnlySection ? 'grid-cols-1' : 'grid-cols-3'} gap-3 text-center mt-3 pt-3 border-t border-architect-100 dark:border-architect-700`}>
+                                                                                    {!isGlobalOnlySection && (
+                                                                                        <>
+                                                                                            <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                                                                                                <div className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Работы</div>
+                                                                                                <div className="text-base font-bold text-emerald-700 dark:text-emerald-400">{sectionData.work.toLocaleString()} ₽</div>
+                                                                                            </div>
+                                                                                            {isRoughSection ? (
+                                                                                                <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                                                                                                    <div className="text-[10px] font-bold text-amber-600 uppercase mb-1">Черновые материалы</div>
+                                                                                                    <div className="text-base font-bold text-amber-700 dark:text-amber-400">{sectionData.rough.toLocaleString()} ₽</div>
+                                                                                                </div>
+                                                                                            ) : (
+                                                                                                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                                                                                    <div className="text-[10px] font-bold text-blue-600 uppercase mb-1">Чистовые материалы</div>
+                                                                                                    <div className="text-base font-bold text-blue-700 dark:text-blue-400">{sectionData.finish.toLocaleString()} ₽</div>
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </>
                                                                                     )}
                                                                                     <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                                                                                         <div className="text-[10px] font-bold text-purple-600 uppercase mb-1">Итого по разделу</div>
                                                                                         <div className="text-base font-bold text-purple-700 dark:text-purple-400">{sectionTotal.toLocaleString()} ₽</div>
                                                                                     </div>
                                                                                 </div>
-                                                                                <p className="text-[10px] text-architect-400 mt-2 text-center">Данные суммированы со всех помещений проекта. Одинаковые позиции объединены.</p>
+                                                                                <p className="text-[10px] text-architect-400 mt-2 text-center">
+                                                                                    {isGlobalOnlySection 
+                                                                                        ? 'Эти работы относятся ко всему объекту, а не к конкретным комнатам.' 
+                                                                                        : 'Данные суммированы со всех помещений проекта. Одинаковые позиции объединены.'}
+                                                                                </p>
                                                                             </div>
                                                                         )}
                                                                     </div>
