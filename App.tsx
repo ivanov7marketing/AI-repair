@@ -385,6 +385,9 @@ const App: React.FC = () => {
   const [globalMaterialLinkItem, setGlobalMaterialLinkItem] = useState<{ name: string; unit: string; type: string; supplierUrl?: string } | null>(null);
   const [globalMaterialLinkUrl, setGlobalMaterialLinkUrl] = useState('');
   const [updatingGlobalMaterialId, setUpdatingGlobalMaterialId] = useState<string | null>(null);
+  
+  // Поиск в глобальных секциях
+  const [globalSectionActiveSearchId, setGlobalSectionActiveSearchId] = useState<string | null>(null);
 
   // Параметры для автозаполнения сметы
   const [propertyCondition, setPropertyCondition] = useState<PropertyCondition>('secondary');
@@ -2220,6 +2223,51 @@ const App: React.FC = () => {
       }
   };
 
+  // Выбор позиции из справочника для глобальной секции
+  const handleSelectFromDictionaryForGlobalSection = async (
+      sectionName: string,
+      itemId: string,
+      priceName: string
+  ) => {
+      const found = priceList.find(p => p.name === priceName && p.category === sectionName);
+      if (!found || !currentProject?.analysis) return;
+      
+      const globalWorks = currentProject.analysis.globalWorks || {};
+      const section = globalWorks[sectionName] || { items: [] };
+      
+      section.items = section.items.map((item: EstimationItem) => {
+          if (item.id === itemId) {
+              return {
+                  ...item,
+                  name: found.name,
+                  unit: found.unit,
+                  price: found.price,
+                  total: Number(item.quantity || 1) * found.price
+              };
+          }
+          return item;
+      });
+      
+      const updatedProject = {
+          ...currentProject,
+          analysis: {
+              ...currentProject.analysis,
+              globalWorks: { ...globalWorks, [sectionName]: section }
+          }
+      };
+      
+      setCurrentProject(updatedProject);
+      setGlobalSectionActiveSearchId(null);
+      
+      try {
+          await api.updateProject(updatedProject.id, {
+              analysisData: updatedProject.analysis,
+          });
+      } catch (error) {
+          console.error('Failed to select from dictionary for global section:', error);
+      }
+  };
+
   // Обновить цену материала в общей смете (загрузить с сайта)
   const handleRefreshGlobalMaterialPrice = async (
       materialName: string,
@@ -3245,6 +3293,7 @@ const App: React.FC = () => {
                                                                                             <th className="py-1 w-16 text-right">Кол-во</th>
                                                                                             <th className="py-1 w-24 text-right">Цена</th>
                                                                                             <th className="py-1 w-24 text-right">Стоимость</th>
+                                                                                            {isGlobalOnlySection && <th className="py-1 w-8"></th>}
                                                                                         </tr>
                                                                                     </thead>
                                                                                     <tbody>
@@ -3326,25 +3375,46 @@ const App: React.FC = () => {
                                                                                             /* Редактируемый рендеринг для глобальных секций (Умный дом, Накладные расходы) */
                                                                                             <>
                                                                                                 {sectionData.items.map((item: any, i: number) => (
-                                                                                                    <tr key={item.id} className="border-b border-architect-50 dark:border-architect-900/50">
+                                                                                                    <tr key={item.id} className="border-b border-architect-50 dark:border-architect-900/50 group/row hover:bg-architect-50/50 dark:hover:bg-architect-900/30">
                                                                                                         <td className="py-1 text-architect-400 text-left">{i + 1}</td>
-                                                                                                        <td className="py-1 text-left">
-                                                                                                            <div className="flex items-center gap-2">
-                                                                                                                <input
-                                                                                                                    type="text"
-                                                                                                                    value={item.name || ''}
-                                                                                                                    onChange={(e) => handleUpdateGlobalSectionItem(sub, item.id, 'name', e.target.value)}
-                                                                                                                    placeholder="Название позиции"
-                                                                                                                    className="flex-1 bg-transparent outline-none text-xs text-emerald-700 dark:text-emerald-400 font-medium"
-                                                                                                                />
-                                                                                                                <button
-                                                                                                                    onClick={() => handleDeleteGlobalSectionItem(sub, item.id)}
-                                                                                                                    className="p-0.5 text-red-400 hover:text-red-600 transition-colors opacity-60 hover:opacity-100"
-                                                                                                                    title="Удалить"
-                                                                                                                >
-                                                                                                                    <X className="w-3 h-3" />
-                                                                                                                </button>
-                                                                                                            </div>
+                                                                                                        <td className="py-1 text-left relative">
+                                                                                                            <input
+                                                                                                                type="text"
+                                                                                                                value={item.name || ''}
+                                                                                                                onChange={(e) => {
+                                                                                                                    handleUpdateGlobalSectionItem(sub, item.id, 'name', e.target.value);
+                                                                                                                    if (e.target.value.length >= 2) {
+                                                                                                                        setGlobalSectionActiveSearchId(item.id);
+                                                                                                                    } else {
+                                                                                                                        setGlobalSectionActiveSearchId(null);
+                                                                                                                    }
+                                                                                                                }}
+                                                                                                                onFocus={() => item.name && item.name.length >= 2 && setGlobalSectionActiveSearchId(item.id)}
+                                                                                                                placeholder="Введите название для поиска..."
+                                                                                                                className="w-full bg-transparent outline-none text-xs text-emerald-700 dark:text-emerald-400 font-medium"
+                                                                                                            />
+                                                                                                            {/* Выпадающий список из справочника */}
+                                                                                                            {globalSectionActiveSearchId === item.id && (
+                                                                                                                <div className="absolute left-0 top-full z-50 w-80 max-h-48 overflow-y-auto bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-600 rounded-lg shadow-xl">
+                                                                                                                    {priceList
+                                                                                                                        .filter(p => p.category === sub && p.name.toLowerCase().includes((item.name || '').toLowerCase()))
+                                                                                                                        .slice(0, 10)
+                                                                                                                        .map(p => (
+                                                                                                                            <button
+                                                                                                                                key={p.id}
+                                                                                                                                onClick={() => handleSelectFromDictionaryForGlobalSection(sub, item.id, p.name)}
+                                                                                                                                className="w-full px-3 py-2 text-left text-xs hover:bg-emerald-50 dark:hover:bg-emerald-900/30 flex justify-between items-center"
+                                                                                                                            >
+                                                                                                                                <span className="font-medium text-architect-700 dark:text-architect-300">{p.name}</span>
+                                                                                                                                <span className="text-architect-400">{p.price}₽/{p.unit}</span>
+                                                                                                                            </button>
+                                                                                                                        ))
+                                                                                                                    }
+                                                                                                                    {priceList.filter(p => p.category === sub && p.name.toLowerCase().includes((item.name || '').toLowerCase())).length === 0 && (
+                                                                                                                        <div className="px-3 py-2 text-xs text-architect-400">Нет позиций в справочнике</div>
+                                                                                                                    )}
+                                                                                                                </div>
+                                                                                                            )}
                                                                                                         </td>
                                                                                                         <td className="py-1 text-left">
                                                                                                             <input
@@ -3371,11 +3441,20 @@ const App: React.FC = () => {
                                                                                                             />
                                                                                                         </td>
                                                                                                         <td className="py-1 font-bold text-architect-900 dark:text-white text-right">{(item.total || 0).toLocaleString()}</td>
+                                                                                                        <td className="py-1 w-8 text-center">
+                                                                                                            <button
+                                                                                                                onClick={() => handleDeleteGlobalSectionItem(sub, item.id)}
+                                                                                                                className="p-1 text-red-400 hover:text-red-600 transition-colors opacity-0 group-hover/row:opacity-100"
+                                                                                                                title="Удалить"
+                                                                                                            >
+                                                                                                                <Trash2 className="w-3 h-3" />
+                                                                                                            </button>
+                                                                                                        </td>
                                                                                                     </tr>
                                                                                                 ))}
                                                                                                 {sectionData.items.length === 0 && (
                                                                                                     <tr>
-                                                                                                        <td colSpan={6} className="py-4 text-center text-architect-400 text-xs">
+                                                                                                        <td colSpan={7} className="py-4 text-center text-architect-400 text-xs">
                                                                                                             Нет позиций. Нажмите "Добавить" чтобы создать.
                                                                                                         </td>
                                                                                                     </tr>
