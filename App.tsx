@@ -3022,21 +3022,64 @@ const App: React.FC = () => {
                                                                                         </tr>
                                                                                     </thead>
                                                                                     <tbody>
-                                                                                        {sectionData.items.map((item, i) => (
-                                                                                            <tr key={item.id} className={`border-b border-architect-50 dark:border-architect-900/50 ${item.type === 'work' ? '' : item.type === 'rough' ? 'bg-amber-50/30 dark:bg-amber-900/10' : 'bg-blue-50/30 dark:bg-blue-900/10'}`}>
-                                                                                                <td className="py-1 text-architect-400 text-left">{i + 1}</td>
-                                                                                                <td className="py-1 text-left">
-                                                                                                    <span className={`font-medium ${item.type === 'work' ? 'text-emerald-700 dark:text-emerald-400' : item.type === 'rough' ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}>
-                                                                                                        {item.type !== 'work' && <span className="text-[10px] mr-1">└</span>}
-                                                                                                        {item.name || '—'}
-                                                                                                    </span>
-                                                                                                </td>
-                                                                                                <td className="py-1 text-architect-500 text-left">{item.unit}</td>
-                                                                                                <td className="py-1 font-bold text-right">{item.quantity.toLocaleString()}</td>
-                                                                                                <td className="py-1 text-architect-600 dark:text-architect-400 text-right">{item.price.toLocaleString()}</td>
-                                                                                                <td className="py-1 font-bold text-architect-900 dark:text-white text-right">{(item.total || 0).toLocaleString()}</td>
-                                                                                            </tr>
-                                                                                        ))}
+                                                                                        {/* Для отделочных работ группируем по подкатегориям */}
+                                                                                        {SECTIONS_WITH_SUBCATEGORIES.includes(sub) ? (
+                                                                                            <>
+                                                                                                {FINISHING_SUBCATEGORIES.map((subcat) => {
+                                                                                                    const subcatItems = sectionData.items.filter((item: any) => {
+                                                                                                        if (item.subcategory) return item.subcategory === subcat;
+                                                                                                        return inferSubcategoryFromName(item.name || '') === subcat;
+                                                                                                    });
+                                                                                                    if (subcatItems.length === 0) return null;
+                                                                                                    let itemCounter = 0;
+                                                                                                    return (
+                                                                                                        <React.Fragment key={subcat}>
+                                                                                                            <tr className="bg-architect-100/50 dark:bg-architect-900/50">
+                                                                                                                <td colSpan={6} className="py-2 px-2">
+                                                                                                                    <span className="text-xs font-bold text-architect-600 dark:text-architect-300">{subcat}</span>
+                                                                                                                    <span className="text-[10px] text-architect-400 ml-2">({subcatItems.length})</span>
+                                                                                                                </td>
+                                                                                                            </tr>
+                                                                                                            {subcatItems.map((item: any) => {
+                                                                                                                itemCounter++;
+                                                                                                                return (
+                                                                                                                    <tr key={item.id} className={`border-b border-architect-50 dark:border-architect-900/50 ${item.type === 'work' ? '' : item.type === 'rough' ? 'bg-amber-50/30 dark:bg-amber-900/10' : 'bg-blue-50/30 dark:bg-blue-900/10'}`}>
+                                                                                                                        <td className="py-1 text-architect-400 text-left">{itemCounter}</td>
+                                                                                                                        <td className="py-1 text-left">
+                                                                                                                            <span className={`font-medium ${item.type === 'work' ? 'text-emerald-700 dark:text-emerald-400' : item.type === 'rough' ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}>
+                                                                                                                                {item.type !== 'work' && <span className="text-[10px] mr-1">└</span>}
+                                                                                                                                {item.name || '—'}
+                                                                                                                            </span>
+                                                                                                                        </td>
+                                                                                                                        <td className="py-1 text-architect-500 text-left">{item.unit}</td>
+                                                                                                                        <td className="py-1 font-bold text-right">{item.quantity.toLocaleString()}</td>
+                                                                                                                        <td className="py-1 text-architect-600 dark:text-architect-400 text-right">{item.price.toLocaleString()}</td>
+                                                                                                                        <td className="py-1 font-bold text-architect-900 dark:text-white text-right">{(item.total || 0).toLocaleString()}</td>
+                                                                                                                    </tr>
+                                                                                                                );
+                                                                                                            })}
+                                                                                                        </React.Fragment>
+                                                                                                    );
+                                                                                                })}
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            /* Обычный рендеринг для остальных секций */
+                                                                                            sectionData.items.map((item: any, i: number) => (
+                                                                                                <tr key={item.id} className={`border-b border-architect-50 dark:border-architect-900/50 ${item.type === 'work' ? '' : item.type === 'rough' ? 'bg-amber-50/30 dark:bg-amber-900/10' : 'bg-blue-50/30 dark:bg-blue-900/10'}`}>
+                                                                                                    <td className="py-1 text-architect-400 text-left">{i + 1}</td>
+                                                                                                    <td className="py-1 text-left">
+                                                                                                        <span className={`font-medium ${item.type === 'work' ? 'text-emerald-700 dark:text-emerald-400' : item.type === 'rough' ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}>
+                                                                                                            {item.type !== 'work' && <span className="text-[10px] mr-1">└</span>}
+                                                                                                            {item.name || '—'}
+                                                                                                        </span>
+                                                                                                    </td>
+                                                                                                    <td className="py-1 text-architect-500 text-left">{item.unit}</td>
+                                                                                                    <td className="py-1 font-bold text-right">{item.quantity.toLocaleString()}</td>
+                                                                                                    <td className="py-1 text-architect-600 dark:text-architect-400 text-right">{item.price.toLocaleString()}</td>
+                                                                                                    <td className="py-1 font-bold text-architect-900 dark:text-white text-right">{(item.total || 0).toLocaleString()}</td>
+                                                                                                </tr>
+                                                                                            ))
+                                                                                        )}
                                                                                     </tbody>
                                                                                 </table>
                                                                                 
