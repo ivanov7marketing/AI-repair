@@ -31,7 +31,13 @@ aptPkgs = [
 ]
 
 [phases.install]
-cmds = ["PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install"]
+# Use npm ci for faster, more reliable installs (requires package-lock.json)
+# npm ci is faster because it installs directly from package-lock.json
+# Flags: --prefer-offline (use cache), --no-audit (skip security audit), --no-fund (skip funding messages)
+# Fallback to npm install if package-lock.json doesn't exist
+cmds = [
+  "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm ci --prefer-offline --no-audit --no-fund --progress=false || PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install --prefer-offline --no-audit --no-fund --progress=false"
+]
 
 [phases.build]
 cmds = ["npm run build"]
