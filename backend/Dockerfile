@@ -50,5 +50,6 @@ RUN npm run build
 EXPOSE 3000
 
 # Start command - run migrations then start server
-CMD ["sh", "-c", "echo 'Running migrations...' && npm run migrate && echo 'Migrations done, starting server...' && npm start"]
+# Using node directly instead of npm to avoid extra process layers
+CMD ["sh", "-c", "echo 'Running migrations...' && node migrate.js && echo 'Migrations done, starting server...' && node dist/index.js"]
 

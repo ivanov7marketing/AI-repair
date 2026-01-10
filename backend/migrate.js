@@ -70,7 +70,7 @@ async function migrate() {
   } catch (error) {
     console.error('Migration error:', error);
     await client.end().catch(() => {});
-    process.exit(1);
+    throw error; // Re-throw to signal failure
   }
   
   // Close connection
@@ -78,14 +78,14 @@ async function migrate() {
   console.log('Database connection closed');
 }
 
-// Run migrations and exit
+// Run migrations
 migrate()
   .then(() => {
-    console.log('Exiting migration script...');
-    process.exit(0);
+    console.log('Migration script finished successfully');
+    process.exit(0); // Exit with success code - allows && chain to continue
   })
   .catch((err) => {
     console.error('Fatal migration error:', err);
-    process.exit(1);
+    process.exit(1); // Exit with error code
   });
 
