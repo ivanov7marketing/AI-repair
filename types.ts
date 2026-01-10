@@ -15,6 +15,7 @@ export interface EstimationItem {
   type?: 'work' | 'rough' | 'finish';
   linkedMaterials?: EstimationItem[];
   supplierUrl?: string;
+  subcategory?: string;
 }
 
 export interface EstimationSection {
