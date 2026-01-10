@@ -66,13 +66,26 @@ async function migrate() {
     } catch (error) {
       console.warn('Failed to initialize superadmin (may already exist):', error.message);
     }
+    console.log('Migration script completed successfully');
   } catch (error) {
     console.error('Migration error:', error);
+    await client.end().catch(() => {});
     process.exit(1);
-  } finally {
-    await client.end();
   }
+  
+  // Close connection
+  await client.end();
+  console.log('Database connection closed');
 }
 
-migrate();
+// Run migrations and exit
+migrate()
+  .then(() => {
+    console.log('Exiting migration script...');
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error('Fatal migration error:', err);
+    process.exit(1);
+  });
 
