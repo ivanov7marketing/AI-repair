@@ -53,7 +53,7 @@ const FINISH_WORK_SECTIONS = [
 const WORK_SUBSECTIONS = [...ROUGH_WORK_SECTIONS, ...FINISH_WORK_SECTIONS];
 
 // Подразделы для отделочных работ
-const FINISHING_SUBCATEGORIES = ['Пол', 'Стены', 'Потолок'];
+const FINISHING_SUBCATEGORIES = ['Пол', 'Стены', 'Потолок', 'Общее'];
 
 // Секции с подразделами
 const SECTIONS_WITH_SUBCATEGORIES = ['Черновые отделочные работы', 'Чистовые отделочные работы'];
@@ -3241,7 +3241,12 @@ const App: React.FC = () => {
                                                                                 {SECTIONS_WITH_SUBCATEGORIES.includes(sub) ? (
                                                                                     <div className="space-y-4">
                                                                                         {FINISHING_SUBCATEGORIES.map((subcat) => {
-                                                                                            const subcatItems = items.filter((item: any) => item.subcategory === subcat);
+                                                                                            // Для "Общее" показываем позиции без subcategory или с subcategory === 'Общее'
+                                                                                            const subcatItems = items.filter((item: any) => 
+                                                                                                subcat === 'Общее' 
+                                                                                                    ? (!item.subcategory || item.subcategory === 'Общее')
+                                                                                                    : item.subcategory === subcat
+                                                                                            );
                                                                                             const isSubcatExpanded = !!expandedEstimateSections[`${sub}-${subcat}`];
                                                                                             return (
                                                                                                 <div key={subcat} className="border border-architect-100 dark:border-architect-700 rounded-lg overflow-hidden">
