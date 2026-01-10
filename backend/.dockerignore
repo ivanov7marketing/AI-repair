@@ -1,0 +1,29 @@
+# Dependencies - will be installed fresh
+node_modules
+
+# Build output - will be rebuilt
+dist
+
+# Development files
+*.log
+npm-debug.log*
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Nixpacks (not needed for Dockerfile build)
+nixpacks.toml
+
+# Documentation
+README.md
+
