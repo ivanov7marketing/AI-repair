@@ -31,11 +31,11 @@ aptPkgs = [
 ]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ["PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install"]
 
 [phases.build]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npm run migrate && npm start"
+cmd = "PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium npm run migrate && npm start"
 
