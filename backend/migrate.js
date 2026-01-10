@@ -59,12 +59,9 @@ async function migrate() {
     // Initialize superadmin and default prices after migrations
     console.log('Initializing superadmin and default prices...');
     try {
-      const { execSync } = require('child_process');
-      // Use execSync with stdio: 'inherit' to see output in real-time
-      execSync('node scripts/init-superadmin.js', { 
-        stdio: 'inherit',
-        timeout: 30000 // 30 second timeout
-      });
+      // Import and run the init function directly instead of spawning a subprocess
+      const initSuperadmin = require('./scripts/init-superadmin-inline.js');
+      await initSuperadmin(client); // Reuse existing connection
       console.log('Superadmin initialization completed');
     } catch (error) {
       console.warn('Failed to initialize superadmin (may already exist):', error.message);

@@ -211,14 +211,17 @@ async function initSuperadmin() {
     }
 
     console.log('Superadmin initialization completed');
-    await client.end();
-    process.exit(0);
   } catch (error) {
     console.error('Error initializing superadmin:', error);
-    await client.end().catch(() => {});
-    process.exit(1);
+    throw error; // Re-throw to signal failure
+  } finally {
+    await client.end();
   }
 }
 
-initSuperadmin();
+// Run and handle errors
+initSuperadmin().catch(err => {
+  console.error('Fatal error:', err);
+  process.exit(1);
+});
 
