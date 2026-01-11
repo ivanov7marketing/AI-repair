@@ -322,7 +322,7 @@ const deleteImageFile = (imageUrl: string | null | undefined) => {
 };
 
 // Upload image file
-router.post('/:id/upload-image', authMiddleware, upload.single('image'), async (req: Request, res: Response) => {
+router.post('/:id/upload-image', authMiddleware, upload.single('image'), async (req: Request & { file?: Express.Multer.File }, res: Response) => {
   try {
     if (!req.user) {
       res.status(401).json({ error: 'Unauthorized' });

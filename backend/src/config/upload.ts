@@ -27,11 +27,11 @@ export const getUploadsDir = (): string => {
 
 // Конфигурация хранилища
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (_req, _file, cb) => {
     const uploadsDir = getUploadsDir();
     cb(null, uploadsDir);
   },
-  filename: (req, file, cb) => {
+  filename: (_req, file, cb) => {
     // Генерируем уникальное имя файла
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
@@ -40,7 +40,7 @@ const storage = multer.diskStorage({
 });
 
 // Фильтр файлов - только изображения
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (_req: any, file: any, cb: any) => {
   const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
