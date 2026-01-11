@@ -97,6 +97,14 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
   let roomRoughTotal = 0;
   let roomFinishTotal = 0;
 
+  console.log(`[PDF Export] Processing room: ${room.name}`);
+  console.log(`[PDF Export] Options:`, JSON.stringify(options));
+  console.log(`[PDF Export] Has estimation:`, !!room.estimation);
+  console.log(`[PDF Export] Has roughMaterials:`, !!room.estimation?.roughMaterials);
+  console.log(`[PDF Export] Has finishMaterials:`, !!room.estimation?.finishMaterials);
+  console.log(`[PDF Export] roughMaterials items count:`, room.estimation?.roughMaterials?.items?.length || 0);
+  console.log(`[PDF Export] finishMaterials items count:`, room.estimation?.finishMaterials?.items?.length || 0);
+
   if (!room.estimation) {
     return {
       roomName: room.name,
@@ -117,8 +125,13 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
     const hasRoughMaterials = isRoughSection && options.includeRoughMaterials && room.estimation?.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0;
     const hasFinishMaterials = !isRoughSection && options.includeFinishMaterials && room.estimation?.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0;
     
+    console.log(`[PDF Export] Section "${sectionName}": hasWorks=${hasWorks}, hasRoughMaterials=${hasRoughMaterials}, hasFinishMaterials=${hasFinishMaterials}, isRoughSection=${isRoughSection}`);
+    
     // Skip section only if it has no works AND no materials to include
-    if (!hasWorks && !hasRoughMaterials && !hasFinishMaterials) return;
+    if (!hasWorks && !hasRoughMaterials && !hasFinishMaterials) {
+      console.log(`[PDF Export] Skipping section "${sectionName}" - no works and no materials`);
+      return;
+    }
 
     const rows: ExportDataRow[] = [];
     let sectionWorkTotal = 0;
@@ -271,7 +284,9 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
     }
 
     // Отдельные секции материалов (обрабатываем даже если секция работ пустая)
+    const materialsBeforeCount = rows.length;
     if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0) {
+      console.log(`[PDF Export] Adding ${room.estimation.roughMaterials.items.length} rough materials to section "${sectionName}"`);
       room.estimation.roughMaterials.items.forEach((mat: any) => {
         itemCounter++;
         rows.push({
@@ -288,6 +303,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
     }
 
     if (!isRoughSection && options.includeFinishMaterials && room.estimation.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0) {
+      console.log(`[PDF Export] Adding ${room.estimation.finishMaterials.items.length} finish materials to section "${sectionName}"`);
       room.estimation.finishMaterials.items.forEach((mat: any) => {
         itemCounter++;
         rows.push({
@@ -303,8 +319,11 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
       });
     }
 
+    console.log(`[PDF Export] Section "${sectionName}": rows before materials=${materialsBeforeCount}, rows after=${rows.length}, sectionRoughTotal=${sectionRoughTotal}, sectionFinishTotal=${sectionFinishTotal}`);
+
     // Добавляем секцию если есть работы ИЛИ материалы
     if (rows.length > 0) {
+      console.log(`[PDF Export] Creating section "${sectionName}" with ${rows.length} rows`);
       rows.push({
         number: 0,
         name: 'Итого по секции',
@@ -328,8 +347,12 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
       roomWorkTotal += sectionWorkTotal;
       roomRoughTotal += sectionRoughTotal;
       roomFinishTotal += sectionFinishTotal;
+    } else {
+      console.log(`[PDF Export] Section "${sectionName}" NOT created - rows.length = ${rows.length}`);
     }
   });
+
+  console.log(`[PDF Export] Room "${room.name}" result: ${sections.length} sections, workTotal=${roomWorkTotal}, roughTotal=${roomRoughTotal}, finishTotal=${roomFinishTotal}`);
 
   return {
     roomName: room.name,
