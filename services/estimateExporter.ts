@@ -131,6 +131,22 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
 
           if (subcatItems.length === 0) return;
 
+          // Фильтруем элементы по опциям экспорта перед добавлением заголовка
+          const filteredSubcatItems: EstimationItem[] = [];
+          subcatItems.forEach((item: EstimationItem) => {
+            if (options.includeWorks && item.type === 'work') {
+              filteredSubcatItems.push(item);
+            } else if (item.type !== 'work') {
+              if ((options.includeRoughMaterials && item.type === 'rough') ||
+                  (options.includeFinishMaterials && item.type === 'finish')) {
+                filteredSubcatItems.push(item);
+              }
+            }
+          });
+
+          // Добавляем заголовок подкатегории только если есть элементы для экспорта
+          if (filteredSubcatItems.length === 0) return;
+
           // Заголовок подкатегории
           rows.push({
             number: 0,
@@ -145,7 +161,7 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
           });
 
           // Элементы подкатегории
-          subcatItems.forEach((item: EstimationItem) => {
+          filteredSubcatItems.forEach((item: EstimationItem) => {
             // Работа
             if (options.includeWorks && item.type === 'work') {
               itemCounter++;
@@ -521,6 +537,25 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
 
         if (subcatItems.length === 0) return;
 
+        // Фильтруем элементы по опциям экспорта перед добавлением заголовка
+        const filteredSubcatItems: EstimationItem[] = [];
+        subcatItems.forEach((item: EstimationItem) => {
+          const isWork = item.type === 'work';
+          const isRoughMaterial = item.type === 'rough';
+          const isFinishMaterial = item.type === 'finish';
+          
+          if (isWork && options.includeWorks) {
+            filteredSubcatItems.push(item);
+          } else if (isRoughMaterial && options.includeRoughMaterials) {
+            filteredSubcatItems.push(item);
+          } else if (isFinishMaterial && options.includeFinishMaterials) {
+            filteredSubcatItems.push(item);
+          }
+        });
+
+        // Добавляем заголовок подкатегории только если есть элементы для экспорта
+        if (filteredSubcatItems.length === 0) return;
+
         rows.push({
           number: 0,
           name: subcat,
@@ -533,16 +568,8 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
           isSubcategoryHeader: true
         });
 
-        subcatItems.forEach((item: EstimationItem) => {
-          // Filter items based on export options
+        filteredSubcatItems.forEach((item: EstimationItem) => {
           const isWork = item.type === 'work';
-          const isRoughMaterial = item.type === 'rough';
-          const isFinishMaterial = item.type === 'finish';
-          
-          // Skip if item type doesn't match export options
-          if (isWork && !options.includeWorks) return;
-          if (isRoughMaterial && !options.includeRoughMaterials) return;
-          if (isFinishMaterial && !options.includeFinishMaterials) return;
           
           itemCounter++;
           const isLinkedMaterial = item.name?.startsWith('  └') || false;
@@ -864,14 +891,22 @@ export function exportEstimateToXLSX(project: Project, options: ExportOptions): 
       }
     });
 
-    // Итоговый лист
-    if (roomDataList.length > 0) {
-      const totalsWs = createTotalsWorksheet({ rooms: roomDataList }, options);
-      XLSX.utils.book_append_sheet(workbook, totalsWs, 'Итого');
+    // Проверяем, есть ли данные для экспорта
+    if (roomDataList.length === 0) {
+      throw new Error('Нет данных для экспорта. Убедитесь, что выбраны правильные типы данных (Работы, Черновые материалы, Чистовые материалы).');
     }
+
+    // Итоговый лист
+    const totalsWs = createTotalsWorksheet({ rooms: roomDataList }, options);
+    XLSX.utils.book_append_sheet(workbook, totalsWs, 'Итого');
   } else {
     // Режим общей сметы
     const sections = prepareGlobalData(project, options);
+
+    // Проверяем, есть ли данные для экспорта
+    if (sections.length === 0) {
+      throw new Error('Нет данных для экспорта. Убедитесь, что выбраны правильные типы данных (Работы, Черновые материалы, Чистовые материалы).');
+    }
 
     sections.forEach(section => {
       const ws = createSectionWorksheet(section, options);
@@ -881,14 +916,17 @@ export function exportEstimateToXLSX(project: Project, options: ExportOptions): 
     });
 
     // Итоговый лист
-    if (sections.length > 0) {
-      const totalsWs = createTotalsWorksheet({ sections }, options);
-      XLSX.utils.book_append_sheet(workbook, totalsWs, 'Итого');
-    }
+    const totalsWs = createTotalsWorksheet({ sections }, options);
+    XLSX.utils.book_append_sheet(workbook, totalsWs, 'Итого');
   }
 
   // Скачивание файла
-  const fileName = `${project.name}_смета.xlsx`.replace(/[<>:"/\\|?*]/g, '_');
-  XLSX.writeFile(workbook, fileName);
+  try {
+    const fileName = `${project.name}_смета.xlsx`.replace(/[<>:"/\\|?*]/g, '_');
+    XLSX.writeFile(workbook, fileName);
+  } catch (error) {
+    console.error('Error writing XLSX file:', error);
+    throw new Error('Ошибка при создании файла Excel. Проверьте данные для экспорта.');
+  }
 }
 
