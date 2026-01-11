@@ -2940,7 +2940,7 @@ const App: React.FC = () => {
       <div className="p-6 flex items-center border-b border-architect-100 dark:border-architect-700 min-h-[81px]">
           <div className="flex items-center gap-3 w-full">
             <Box className="w-8 h-8 text-architect-900 dark:text-white shrink-0" />
-            <span className="font-bold text-xl tracking-tight dark:text-white whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">InteriorAI</span>
+            <span className="font-bold text-xl tracking-tight dark:text-white whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">m7crm</span>
           </div>
           <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-2 rounded-lg hover:bg-architect-50 dark:hover:bg-architect-700 text-architect-900 dark:text-white">
             <X className="w-6 h-6" />
@@ -2992,7 +2992,7 @@ const App: React.FC = () => {
         <div className="w-full max-w-md bg-white dark:bg-architect-800 rounded-2xl shadow-2xl border border-architect-100 dark:border-architect-700 p-8 text-center">
             <div className="flex flex-col items-center mb-8">
                 <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl mb-4"><Box className="w-8 h-8 text-white dark:text-architect-900" /></div>
-                <h1 className="text-3xl font-bold text-architect-900 dark:text-white mb-1">InteriorAI</h1>
+                <h1 className="text-3xl font-bold text-architect-900 dark:text-white mb-1">m7crm</h1>
                 <p className="text-architect-500 dark:text-architect-400 text-sm">
                   {showRegister ? 'Регистрация администратора' : 'Вход в систему управления проектами'}
                 </p>
