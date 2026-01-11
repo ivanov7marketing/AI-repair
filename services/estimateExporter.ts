@@ -475,21 +475,29 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
         }
 
         // Отдельные секции материалов (обрабатываем даже если секция работ пустая)
+        // ВАЖНО: Материалы из roughMaterials/finishMaterials могут дублировать материалы из linkedMaterials
+        // Поэтому проверяем, не был ли уже добавлен этот материал из linkedMaterials
         if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0) {
           room.estimation.roughMaterials.items.forEach((mat: EstimationItem) => {
             const existingMat = sectionData[sectionName].items.find(
               i => i.name === mat.name && i.unit === mat.unit && Number(i.price) === Number(mat.price) && i.type === mat.type
             );
             if (existingMat) {
+              // Материал уже есть - обновляем количество и стоимость
+              const oldTotal = Number(existingMat.total) || 0;
               existingMat.quantity = Number(existingMat.quantity) + Number(mat.quantity);
               existingMat.total = Number(existingMat.total) + Number(mat.total);
+              // Добавляем только разницу в roughTotal, чтобы избежать двойного подсчета
+              sectionData[sectionName].roughTotal += (Number(mat.total) || 0) - oldTotal;
             } else {
+              // Новый материал - добавляем полностью
               sectionData[sectionName].items.push({
                 ...mat,
                 quantity: Number(mat.quantity),
                 total: Number(mat.total),
                 price: Number(mat.price)
               });
+              sectionData[sectionName].roughTotal += Number(mat.total) || 0;
             }
           });
         }
@@ -500,15 +508,21 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
               i => i.name === mat.name && i.unit === mat.unit && Number(i.price) === Number(mat.price) && i.type === mat.type
             );
             if (existingMat) {
+              // Материал уже есть - обновляем количество и стоимость
+              const oldTotal = Number(existingMat.total) || 0;
               existingMat.quantity = Number(existingMat.quantity) + Number(mat.quantity);
               existingMat.total = Number(existingMat.total) + Number(mat.total);
+              // Добавляем только разницу в finishTotal, чтобы избежать двойного подсчета
+              sectionData[sectionName].finishTotal += (Number(mat.total) || 0) - oldTotal;
             } else {
+              // Новый материал - добавляем полностью
               sectionData[sectionName].items.push({
                 ...mat,
                 quantity: Number(mat.quantity),
                 total: Number(mat.total),
                 price: Number(mat.price)
               });
+              sectionData[sectionName].finishTotal += Number(mat.total) || 0;
             }
           });
         }
@@ -536,6 +550,9 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
     const rows: ExportDataRow[] = [];
     let itemCounter = 0;
     const hasSubcategories = SECTIONS_WITH_SUBCATEGORIES.includes(sectionName);
+
+    // Используем уже установленные значения из data (они были установлены при обработке linkedMaterials и материалов из отдельных секций)
+    // Не пересчитываем их из элементов, чтобы избежать двойного подсчета
 
     if (hasSubcategories) {
       FINISHING_SUBCATEGORIES.forEach(subcat => {
@@ -594,13 +611,7 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
             subcategory: subcat
           });
 
-          if (item.type === 'work') {
-            data.workTotal += Number(item.total) || 0;
-          } else if (item.type === 'rough') {
-            data.roughTotal += Number(item.total) || 0;
-          } else {
-            data.finishTotal += Number(item.total) || 0;
-          }
+          // Не пересчитываем - значения уже установлены в data при обработке
         });
       });
     } else {
@@ -628,17 +639,12 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
           type: isWork ? 'Работа' : (item.type === 'rough' ? 'Черн.мат.' : 'Чист.мат.')
         });
 
-        if (item.type === 'work') {
-          data.workTotal += Number(item.total) || 0;
-        } else if (item.type === 'rough') {
-          data.roughTotal += Number(item.total) || 0;
-        } else {
-          data.finishTotal += Number(item.total) || 0;
-        }
+        // Не пересчитываем - значения уже установлены в data при обработке
       });
     }
 
     if (rows.length > 0) {
+      // Используем уже установленные значения из data (они были установлены при обработке linkedMaterials и материалов из отдельных секций)
       // Calculate grand total based on selected options
       let grandTotal = 0;
       if (options.includeWorks) grandTotal += data.workTotal;
