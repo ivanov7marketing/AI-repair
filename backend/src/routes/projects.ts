@@ -14,10 +14,19 @@ const createProjectSchema = z.object({
 });
 
 // Helper function to sanitize filename for HTTP headers
+// Removes ALL non-ASCII characters and invalid HTTP header characters
 const sanitizeFilename = (filename: string): string => {
-  // Remove or replace invalid characters for HTTP headers
-  // Keep only alphanumeric, spaces, hyphens, underscores, and dots
-  let sanitized = filename.replace(/[<>:"/\\|?*\x00-\x1F]/g, '');
+  if (!filename || typeof filename !== 'string') {
+    return 'project';
+  }
+  
+  // Remove all non-ASCII characters (keep only ASCII printable characters)
+  // Remove invalid characters: < > : " / \ | ? * and control characters
+  // Also remove quotes to avoid issues with header parsing
+  let sanitized = filename
+    .replace(/[^\x20-\x7E]/g, '') // Remove all non-ASCII characters
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '') // Remove invalid HTTP header characters
+    .replace(/['"]/g, ''); // Remove quotes
   
   // Replace multiple spaces with single space
   sanitized = sanitized.replace(/\s+/g, ' ');
@@ -780,17 +789,46 @@ router.post('/:id/export-pdf', authMiddleware, async (req: Request & { file?: Ex
     const { generatePDF } = await import('../services/pdfGenerator');
     const pdfBuffer = await generatePDF(project, options);
 
-    // Sanitize filename for HTTP headers (remove all invalid characters)
-    const sanitizedName = sanitizeFilename(project.name || 'project');
+    // Sanitize filename for HTTP headers (remove all invalid characters and non-ASCII)
+    const projectName = project.name || 'project';
+    
+    // Log original name for debugging
+    console.log('PDF Export - Original project name:', JSON.stringify(projectName));
+    console.log('PDF Export - Project name length:', projectName.length);
+    const charCodes = Array.from(projectName).map((c) => (c as string).charCodeAt(0)).join(',');
+    console.log('PDF Export - Project name char codes:', charCodes);
+    
+    const sanitizedName = sanitizeFilename(projectName);
     const safeFilename = `${sanitizedName}_smeta.pdf`;
     
-    // Use ASCII-only filename in the main header, and UTF-8 encoded version for browsers that support it
-    const encodedUtf8Filename = encodeURIComponent(`${project.name || 'project'}_смета.pdf`);
-    const contentDisposition = `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodedUtf8Filename}`;
+    console.log('PDF Export - Sanitized filename:', safeFilename);
+    
+    // Use only ASCII characters in Content-Disposition header
+    // Avoid using filename* with UTF-8 to prevent encoding issues
+    // Browsers will use the ASCII filename, which is safe
+    const contentDisposition = `attachment; filename="${safeFilename}"`;
+
+    // Additional validation: check for any remaining invalid characters
+    const hasInvalidChars = /[\x00-\x1F\x7F-\x9F<>:"/\\|?*]/.test(contentDisposition);
+    
+    if (hasInvalidChars) {
+      console.error('PDF Export - Invalid characters detected in Content-Disposition header');
+      console.error('PDF Export - Header value:', JSON.stringify(contentDisposition));
+      // Fallback to safe default
+      res.setHeader('Content-Disposition', 'attachment; filename="estimate.pdf"');
+    } else {
+      try {
+        res.setHeader('Content-Disposition', contentDisposition);
+      } catch (headerError: any) {
+        console.error('PDF Export - Error setting Content-Disposition header:', headerError);
+        console.error('PDF Export - Header value that failed:', JSON.stringify(contentDisposition));
+        // Fallback to safe default
+        res.setHeader('Content-Disposition', 'attachment; filename="estimate.pdf"');
+      }
+    }
 
     // Set headers
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', contentDisposition);
 
     // Send PDF
     res.send(pdfBuffer);
