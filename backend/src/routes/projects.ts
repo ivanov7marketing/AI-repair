@@ -778,6 +778,18 @@ router.post('/:id/export-pdf', authMiddleware, async (req: Request & { file?: Ex
 
     const row = projectResult.rows[0];
     
+    // Log analysis_data structure for debugging
+    console.log('[PDF Export] Raw analysis_data type:', typeof row.analysis_data);
+    console.log('[PDF Export] Raw analysis_data:', JSON.stringify(row.analysis_data).substring(0, 500));
+    if (row.analysis_data?.rooms) {
+      console.log('[PDF Export] Rooms count in analysis_data:', row.analysis_data.rooms.length);
+      row.analysis_data.rooms.forEach((room: any, idx: number) => {
+        console.log(`[PDF Export] Room ${idx + 1}: ${room.name}, has estimation: ${!!room.estimation}`);
+        console.log(`[PDF Export] Room ${idx + 1}: has roughMaterials: ${!!room.estimation?.roughMaterials}, items: ${room.estimation?.roughMaterials?.items?.length || 0}`);
+        console.log(`[PDF Export] Room ${idx + 1}: has finishMaterials: ${!!room.estimation?.finishMaterials}, items: ${room.estimation?.finishMaterials?.items?.length || 0}`);
+      });
+    }
+    
     // Transform project data
     const project: any = {
       id: row.id,
