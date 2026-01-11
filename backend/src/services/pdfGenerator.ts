@@ -809,9 +809,22 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
       html += `<p><strong>Итого по секции "${section.sectionName}": ${section.grandTotal.toLocaleString('ru-RU')} р.</strong></p>`;
       html += `<br/>`;
 
-      grandTotalWork += section.workTotal;
-      grandTotalRough += section.roughTotal;
-      grandTotalFinish += section.finishTotal;
+      // НЕ включаем глобальные секции (Накладные расходы, Умный дом) в итог по работам/материалам
+      // Они должны отображаться отдельно, как в общей смете проекта
+      // Но включаем их в общий итог
+      if (!GLOBAL_ONLY_SECTIONS.includes(section.sectionName)) {
+        grandTotalWork += section.workTotal;
+        grandTotalRough += section.roughTotal;
+        grandTotalFinish += section.finishTotal;
+      }
+    });
+
+    // Добавляем глобальные секции в общий итог (но не в работы/материалы)
+    let globalSectionsTotal = 0;
+    sections.forEach(section => {
+      if (GLOBAL_ONLY_SECTIONS.includes(section.sectionName)) {
+        globalSectionsTotal += section.grandTotal;
+      }
     });
 
     html += `<div class="totals grand-total" style="page-break-before: always;">`;
@@ -825,7 +838,9 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
     if (options.includeFinishMaterials) {
       html += `<p>Чистовые материалы: ${grandTotalFinish.toLocaleString('ru-RU')} р.</p>`;
     }
-    html += `<p class="grand-total">Общий итог: ${(grandTotalWork + grandTotalRough + grandTotalFinish).toLocaleString('ru-RU')} р.</p>`;
+    // Добавляем глобальные секции в общий итог, если они есть
+    const finalGrandTotal = grandTotalWork + grandTotalRough + grandTotalFinish + globalSectionsTotal;
+    html += `<p class="grand-total">Общий итог: ${finalGrandTotal.toLocaleString('ru-RU')} р.</p>`;
     html += `</div>`;
   }
 

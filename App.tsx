@@ -2465,6 +2465,7 @@ const App: React.FC = () => {
       let totalWork = 0;
       let totalRough = 0;
       let totalFinish = 0;
+      let globalSectionsTotal = 0; // Для глобальных секций (Накладные расходы, Умный дом)
       
       rooms.forEach(room => {
           if (!room.estimation?.works) return;
@@ -2476,7 +2477,23 @@ const App: React.FC = () => {
           });
       });
       
-      return { totalWork, totalRough, totalFinish, grandTotal: totalWork + totalRough + totalFinish };
+      // Добавляем глобальные секции в общий итог (но не в работы/материалы)
+      const globalWorks = currentProject?.analysis?.globalWorks || {};
+      GLOBAL_ONLY_SECTIONS.forEach(sectionName => {
+          const section = globalWorks[sectionName];
+          if (section?.items) {
+              section.items.forEach((item: EstimationItem) => {
+                  globalSectionsTotal += Number(item.total) || 0;
+              });
+          }
+      });
+      
+      return { 
+          totalWork, 
+          totalRough, 
+          totalFinish, 
+          grandTotal: totalWork + totalRough + totalFinish + globalSectionsTotal 
+      };
   };
 
   // Load price items from backend
