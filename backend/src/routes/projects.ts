@@ -706,5 +706,71 @@ router.delete('/:id', authMiddleware, requirePermission(PERMISSIONS.DELETE_PROJE
   }
 });
 
+// Export estimate to PDF
+router.post('/:id/export-pdf', authMiddleware, async (req: Request & { file?: Express.Multer.File }, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const projectId = req.params.id;
+    const options = req.body as {
+      includeWorks: boolean;
+      includeRoughMaterials: boolean;
+      includeFinishMaterials: boolean;
+      groupByRooms: boolean;
+      format: 'xlsx' | 'pdf';
+    };
+
+    // Check access and get project
+    const canViewAll = req.user.role === 'admin' || req.user.role === 'manager';
+    
+    let query: string;
+    let params: any[];
+    
+    if (canViewAll) {
+      query = `SELECT id, name, analysis_data FROM projects WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`;
+      params = [projectId, req.user.organizationId];
+    } else {
+      query = `SELECT p.id, p.name, p.analysis_data 
+               FROM projects p
+               INNER JOIN project_assignments pa ON p.id = pa.project_id
+               WHERE p.id = $1 AND p.organization_id = $2 AND pa.user_id = $3 AND p.deleted_at IS NULL`;
+      params = [projectId, req.user.organizationId, req.user.id];
+    }
+
+    const projectResult = await pool.query(query, params);
+
+    if (projectResult.rows.length === 0) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    const row = projectResult.rows[0];
+    
+    // Transform project data
+    const project: any = {
+      id: row.id,
+      name: row.name,
+      analysis: row.analysis_data || null
+    };
+
+    // Generate PDF
+    const { generatePDF } = await import('../services/pdfGenerator');
+    const pdfBuffer = await generatePDF(project, options);
+
+    // Set headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${project.name}_смета.pdf"`);
+
+    // Send PDF
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Export PDF error:', error);
+    res.status(500).json({ error: 'Failed to export PDF' });
+  }
+});
+
 export default router;
 

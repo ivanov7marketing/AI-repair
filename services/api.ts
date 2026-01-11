@@ -202,6 +202,38 @@ class ApiClient {
     });
   }
 
+  async exportProjectEstimatePDF(projectId: string, options: any): Promise<Blob> {
+    const token = this.getToken();
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const url = `${API_URL}/projects/${projectId}/export-pdf`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(options),
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      window.location.href = '/';
+      throw new Error('Unauthorized');
+    }
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.blob();
+  }
+
   // AI endpoints
   async getAILimit() {
     return this.request('/ai/limit');

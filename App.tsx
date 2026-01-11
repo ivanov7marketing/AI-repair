@@ -15,6 +15,9 @@ import { ImageEditorModal } from './components/ImageEditorModal.tsx';
 import { UsersManagement } from './components/UsersManagement.tsx';
 import { SuperAdminPanel } from './components/SuperAdminPanel.tsx';
 import { SuppliersModal } from './components/SuppliersModal.tsx';
+import { EstimateExportModal } from './components/EstimateExportModal.tsx';
+import { exportEstimateToXLSX } from './services/estimateExporter.ts';
+import { ExportOptions } from './types.ts';
 import { analyzeFloorPlan, generateIsometricView, generateRoomInterior, fileToGenerativePart, identifyStyleFromImage, parseVoiceEstimation, VoiceEstimationItem } from './services/routeraiService.ts';
 import { AppState, AnalysisResult, Room, ImageSize, FurnitureItem, Project, EstimationItem, RoomEstimation, PERMISSIONS } from './types.ts';
 import { useAuth, usePermission } from './contexts/AuthContext.tsx';
@@ -388,6 +391,9 @@ const App: React.FC = () => {
   
   // Поиск в глобальных секциях
   const [globalSectionActiveSearchId, setGlobalSectionActiveSearchId] = useState<string | null>(null);
+
+  // Модальное окно экспорта сметы
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Параметры для автозаполнения сметы
   const [propertyCondition, setPropertyCondition] = useState<PropertyCondition>('secondary');
@@ -1047,6 +1053,31 @@ const App: React.FC = () => {
     } catch (error) {
       console.error('Failed to delete room image:', error);
       alert('Ошибка при удалении изображения');
+    }
+  };
+
+  // Экспорт сметы
+  const handleExportEstimate = async (options: ExportOptions) => {
+    if (!currentProject) return;
+
+    try {
+      if (options.format === 'xlsx') {
+        exportEstimateToXLSX(currentProject, options);
+      } else {
+        // PDF экспорт через backend
+        const blob = await api.exportProjectEstimatePDF(currentProject.id, options);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentProject.name}_смета.pdf`.replace(/[<>:"/\\|?*]/g, '_');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Failed to export estimate:', error);
+      alert('Ошибка при экспорте сметы. Попробуйте еще раз.');
     }
   };
 
@@ -3321,6 +3352,14 @@ const App: React.FC = () => {
                                                         </div>
                                                       </div>
                                                       <div className="flex items-center gap-4">
+                                                        <button
+                                                          onClick={() => setShowExportModal(true)}
+                                                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm font-medium"
+                                                          title="Экспортировать смету"
+                                                        >
+                                                          <FileSpreadsheet className="w-4 h-4" />
+                                                          <span className="hidden md:inline">Экспорт</span>
+                                                        </button>
                                                         <div className="text-right hidden md:block">
                                                             <div className="text-xs text-architect-500">Итого</div>
                                                             <div className="text-lg font-bold text-purple-600">{calculateGlobalTotals().grandTotal.toLocaleString()} ₽</div>
@@ -5062,6 +5101,14 @@ const App: React.FC = () => {
       </main>
 
       {editingImage && <ImageEditorModal imageUrl={editingImage} onClose={() => setEditingImage(null)} onSave={newUrl => { if (currentProject) { if (currentProject.global3DImages?.includes(editingImage)) { const index = currentProject.global3DImages.indexOf(editingImage); const updated = [...currentProject.global3DImages]; updated[index] = newUrl; updateCurrentProject({ global3DImages: updated }); api.updateProject(currentProject.id, { global3dImages: updated }); } else if (selectedRoom && currentProject.roomImages?.[selectedRoom.id]?.includes(editingImage)) { const roomImages = currentProject.roomImages[selectedRoom.id]; const index = roomImages.indexOf(editingImage); const updated = [...roomImages]; updated[index] = newUrl; updateCurrentProject({ roomImages: { ...(currentProject.roomImages || {}), [selectedRoom.id]: updated } }); api.updateProject(currentProject.id, { roomImages: { ...currentProject.roomImages, [selectedRoom.id]: updated } }); } } setEditingImage(null); }} />}
+
+      {showExportModal && (
+        <EstimateExportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          onExport={handleExportEstimate}
+        />
+      )}
       
       {/* Модальное окно подтверждения генерации смет */}
       {showEstimateConfirm && (

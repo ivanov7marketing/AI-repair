@@ -118,3 +118,12 @@ export const PERMISSIONS = {
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
+
+// Export types
+export interface ExportOptions {
+  includeWorks: boolean;
+  includeRoughMaterials: boolean;
+  includeFinishMaterials: boolean;
+  groupByRooms: boolean;
+  format: 'xlsx' | 'pdf';
+}
