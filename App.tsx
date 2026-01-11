@@ -2468,13 +2468,24 @@ const App: React.FC = () => {
       let globalSectionsTotal = 0; // Для глобальных секций (Накладные расходы, Умный дом)
       
       rooms.forEach(room => {
-          if (!room.estimation?.works) return;
+          if (!room.estimation) return;
           
-          Object.values(room.estimation.works).forEach(sec => {
-              totalWork += calculateSubtotalByType((sec as any).items, 'work');
-              totalRough += calculateSubtotalByType((sec as any).items, 'rough');
-              totalFinish += calculateSubtotalByType((sec as any).items, 'finish');
-          });
+          // Учитываем работы и материалы из секций works
+          if (room.estimation.works) {
+              Object.values(room.estimation.works).forEach(sec => {
+                  totalWork += calculateSubtotalByType((sec as any).items, 'work');
+                  totalRough += calculateSubtotalByType((sec as any).items, 'rough');
+                  totalFinish += calculateSubtotalByType((sec as any).items, 'finish');
+              });
+          }
+          
+          // Учитываем материалы из отдельных секций roughMaterials и finishMaterials
+          if (room.estimation.roughMaterials?.items) {
+              totalRough += calculateSubtotalByType(room.estimation.roughMaterials.items, 'rough');
+          }
+          if (room.estimation.finishMaterials?.items) {
+              totalFinish += calculateSubtotalByType(room.estimation.finishMaterials.items, 'finish');
+          }
       });
       
       // Добавляем глобальные секции в общий итог (но не в работы/материалы)
