@@ -629,7 +629,7 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
           } else if (row.isSectionTotal) {
             html += `<tr class="section-total">
               <td colspan="5">Итого по секции</td>
-              <td class="total">${row.total.toLocaleString('ru-RU')} руб.</td>
+              <td class="total">${row.total.toLocaleString('ru-RU')} р.</td>
               <td></td>
             </tr>`;
           } else {
@@ -638,8 +638,8 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
               <td class="name">${row.name}</td>
               <td class="unit">${row.unit}</td>
               <td class="quantity">${Number(row.quantity).toFixed(1)}</td>
-              <td class="price">${row.price.toLocaleString('ru-RU')} руб.</td>
-              <td class="total">${row.total.toLocaleString('ru-RU')} руб.</td>
+              <td class="price">${row.price.toLocaleString('ru-RU')} р.</td>
+              <td class="total">${row.total.toLocaleString('ru-RU')} р.</td>
               <td class="type">${row.type}</td>
             </tr>`;
           }
@@ -651,15 +651,15 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
       html += `<div class="totals">`;
       html += `<p><strong>Итого по комнате "${roomData.roomName}":</strong></p>`;
       if (options.includeWorks) {
-        html += `<p>Работы: ${roomData.workTotal.toLocaleString('ru-RU')} руб.</p>`;
+        html += `<p>Работы: ${roomData.workTotal.toLocaleString('ru-RU')} р.</p>`;
       }
       if (options.includeRoughMaterials) {
-        html += `<p>Черновые материалы: ${roomData.roughTotal.toLocaleString('ru-RU')} руб.</p>`;
+        html += `<p>Черновые материалы: ${roomData.roughTotal.toLocaleString('ru-RU')} р.</p>`;
       }
       if (options.includeFinishMaterials) {
-        html += `<p>Чистовые материалы: ${roomData.finishTotal.toLocaleString('ru-RU')} руб.</p>`;
+        html += `<p>Чистовые материалы: ${roomData.finishTotal.toLocaleString('ru-RU')} р.</p>`;
       }
-      html += `<p class="grand-total">Общий итог: ${roomData.grandTotal.toLocaleString('ru-RU')} руб.</p>`;
+      html += `<p class="grand-total">Общий итог: ${roomData.grandTotal.toLocaleString('ru-RU')} р.</p>`;
       html += `</div>`;
 
       html += `</div>`;
@@ -672,15 +672,15 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
     html += `<div class="totals grand-total" style="page-break-before: always;">`;
     html += `<h2>ОБЩИЙ ИТОГ</h2>`;
     if (options.includeWorks) {
-      html += `<p>Работы: ${grandTotalWork.toLocaleString('ru-RU')} руб.</p>`;
+      html += `<p>Работы: ${grandTotalWork.toLocaleString('ru-RU')} р.</p>`;
     }
     if (options.includeRoughMaterials) {
-      html += `<p>Черновые материалы: ${grandTotalRough.toLocaleString('ru-RU')} руб.</p>`;
+      html += `<p>Черновые материалы: ${grandTotalRough.toLocaleString('ru-RU')} р.</p>`;
     }
     if (options.includeFinishMaterials) {
-      html += `<p>Чистовые материалы: ${grandTotalFinish.toLocaleString('ru-RU')} руб.</p>`;
+      html += `<p>Чистовые материалы: ${grandTotalFinish.toLocaleString('ru-RU')} р.</p>`;
     }
-    html += `<p class="grand-total">Общий итог: ${(grandTotalWork + grandTotalRough + grandTotalFinish).toLocaleString('ru-RU')} руб.</p>`;
+    html += `<p class="grand-total">Общий итог: ${(grandTotalWork + grandTotalRough + grandTotalFinish).toLocaleString('ru-RU')} р.</p>`;
     html += `</div>`;
   } else {
     const sections = prepareGlobalDataForPDF(project, options);
@@ -707,7 +707,7 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
         } else if (row.isSectionTotal) {
           html += `<tr class="section-total">
             <td colspan="5">Итого по секции</td>
-            <td class="total">${row.total.toLocaleString('ru-RU')} ₽</td>
+            <td class="total">${row.total.toLocaleString('ru-RU')} р.</td>
             <td></td>
           </tr>`;
         } else {
@@ -716,15 +716,15 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
             <td class="name">${row.name}</td>
             <td class="unit">${row.unit}</td>
             <td class="quantity">${row.quantity}</td>
-            <td class="price">${row.price.toLocaleString('ru-RU')} ₽</td>
-            <td class="total">${row.total.toLocaleString('ru-RU')} ₽</td>
+            <td class="price">${row.price.toLocaleString('ru-RU')} р.</td>
+            <td class="total">${row.total.toLocaleString('ru-RU')} р.</td>
             <td class="type">${row.type}</td>
           </tr>`;
         }
       });
 
       html += `</tbody></table>`;
-      html += `<p><strong>Итого по секции "${section.sectionName}": ${section.grandTotal.toLocaleString('ru-RU')} руб.</strong></p>`;
+      html += `<p><strong>Итого по секции "${section.sectionName}": ${section.grandTotal.toLocaleString('ru-RU')} р.</strong></p>`;
       html += `<br/>`;
 
       grandTotalWork += section.workTotal;
@@ -735,15 +735,15 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
     html += `<div class="totals grand-total" style="page-break-before: always;">`;
     html += `<h2>ОБЩИЙ ИТОГ</h2>`;
     if (options.includeWorks) {
-      html += `<p>Работы: ${grandTotalWork.toLocaleString('ru-RU')} руб.</p>`;
+      html += `<p>Работы: ${grandTotalWork.toLocaleString('ru-RU')} р.</p>`;
     }
     if (options.includeRoughMaterials) {
-      html += `<p>Черновые материалы: ${grandTotalRough.toLocaleString('ru-RU')} руб.</p>`;
+      html += `<p>Черновые материалы: ${grandTotalRough.toLocaleString('ru-RU')} р.</p>`;
     }
     if (options.includeFinishMaterials) {
-      html += `<p>Чистовые материалы: ${grandTotalFinish.toLocaleString('ru-RU')} руб.</p>`;
+      html += `<p>Чистовые материалы: ${grandTotalFinish.toLocaleString('ru-RU')} р.</p>`;
     }
-    html += `<p class="grand-total">Общий итог: ${(grandTotalWork + grandTotalRough + grandTotalFinish).toLocaleString('ru-RU')} руб.</p>`;
+    html += `<p class="grand-total">Общий итог: ${(grandTotalWork + grandTotalRough + grandTotalFinish).toLocaleString('ru-RU')} р.</p>`;
     html += `</div>`;
   }
 
