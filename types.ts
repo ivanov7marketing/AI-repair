@@ -62,7 +62,7 @@ export interface Project {
   thumbnail?: string;
   analysis?: AnalysisResult;
   global3DImages?: string[];
-  roomImages?: Record<string, string>;
+  roomImages?: Record<string, string[]>;
   planFile?: File | null;
   planPreview?: string | null;
 }

@@ -384,8 +384,13 @@ router.post('/:id/upload-image', authMiddleware, upload.single('image'), async (
       values.push(JSON.stringify(updatedImages));
     } else if (imageType === 'roomImage' && roomId) {
       const roomImages = project.room_images || {};
-      deleteImageFile(roomImages[roomId]);
-      roomImages[roomId] = imageUrl;
+      // Получаем текущий массив изображений для комнаты (миграция данных)
+      const currentImages = roomImages[roomId]
+        ? (Array.isArray(roomImages[roomId]) ? roomImages[roomId] : [roomImages[roomId]])
+        : [];
+      // Добавляем новое изображение в начало массива (лимит 10)
+      const updatedImages = [imageUrl, ...currentImages].slice(0, 10);
+      roomImages[roomId] = updatedImages;
       updates.push(`room_images = $${paramIndex++}`);
       values.push(JSON.stringify(roomImages));
     } else if (imageType === 'propertyPhoto') {
@@ -498,8 +503,13 @@ router.post('/:id/upload-base64-image', authMiddleware, async (req: Request, res
       values.push(JSON.stringify(updatedImages));
     } else if (imageType === 'roomImage' && roomId) {
       const roomImages = project.room_images || {};
-      deleteImageFile(roomImages[roomId]);
-      roomImages[roomId] = imageUrl;
+      // Получаем текущий массив изображений для комнаты (миграция данных)
+      const currentImages = roomImages[roomId]
+        ? (Array.isArray(roomImages[roomId]) ? roomImages[roomId] : [roomImages[roomId]])
+        : [];
+      // Добавляем новое изображение в начало массива (лимит 10)
+      const updatedImages = [imageUrl, ...currentImages].slice(0, 10);
+      roomImages[roomId] = updatedImages;
       updates.push(`room_images = $${paramIndex++}`);
       values.push(JSON.stringify(roomImages));
     } else if (imageType === 'propertyPhoto') {
@@ -593,12 +603,25 @@ router.delete('/:id/image', authMiddleware, async (req: Request, res: Response) 
         res.status(400).json({ error: 'Invalid image index' });
         return;
       }
-    } else if (imageType === 'roomImage' && roomId) {
+    } else if (imageType === 'roomImage' && roomId && typeof photoIndex === 'number') {
       const roomImages = project.room_images || {};
-      deleteImageFile(roomImages[roomId]);
-      delete roomImages[roomId];
-      updates.push(`room_images = $${paramIndex++}`);
-      values.push(JSON.stringify(roomImages));
+      const currentImages = roomImages[roomId]
+        ? (Array.isArray(roomImages[roomId]) ? roomImages[roomId] : [roomImages[roomId]])
+        : [];
+      if (photoIndex >= 0 && photoIndex < currentImages.length) {
+        deleteImageFile(currentImages[photoIndex]);
+        const updatedImages = currentImages.filter((_: string, i: number) => i !== photoIndex);
+        if (updatedImages.length === 0) {
+          delete roomImages[roomId];
+        } else {
+          roomImages[roomId] = updatedImages;
+        }
+        updates.push(`room_images = $${paramIndex++}`);
+        values.push(JSON.stringify(roomImages));
+      } else {
+        res.status(400).json({ error: 'Invalid image index' });
+        return;
+      }
     } else if (imageType === 'propertyPhoto' && typeof photoIndex === 'number') {
       const analysisData = project.analysis_data || {};
       const propertyPhotos = analysisData.propertyPhotos || [];

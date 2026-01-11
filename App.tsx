@@ -992,15 +992,33 @@ const App: React.FC = () => {
       
       const url = await generateRoomInterior(selectedRoom, currentProject.analysis.architecturalStyle, part, imageSize, currentProject.analysis.styleReferenceImage);
       
-      // Upload generated image to server
+      // Convert base64 to File and upload to server
       try {
-        const uploadResult = await api.uploadBase64Image(currentProject.id, url, 'roomImage', selectedRoom.id);
-        const updatedRoomImages = { ...(currentProject.roomImages || {}), [selectedRoom.id]: uploadResult.url };
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const file = new File([blob], `room-${selectedRoom.id}-${Date.now()}.png`, { type: 'image/png' });
+        
+        const uploadResult = await api.uploadProjectImage(
+          currentProject.id, 
+          file, 
+          'roomImage',
+          selectedRoom.id
+        );
+        
+        // Добавляем новое изображение в начало массива (лимит 10)
+        const currentImages = currentProject.roomImages?.[selectedRoom.id] || [];
+        const updatedImages = [uploadResult.url, ...currentImages].slice(0, 10);
+        const updatedRoomImages = { ...(currentProject.roomImages || {}), [selectedRoom.id]: updatedImages };
         updateCurrentProject({ roomImages: updatedRoomImages });
+        
+        // Сохраняем на сервер
+        await api.updateProject(currentProject.id, { roomImages: updatedRoomImages });
       } catch (error) {
         console.error('Failed to save room image:', error);
         // Fallback to base64 if upload fails
-        const updatedRoomImages = { ...(currentProject.roomImages || {}), [selectedRoom.id]: url };
+        const currentImages = currentProject.roomImages?.[selectedRoom.id] || [];
+        const updatedImages = [url, ...currentImages].slice(0, 10);
+        const updatedRoomImages = { ...(currentProject.roomImages || {}), [selectedRoom.id]: updatedImages };
         updateCurrentProject({ roomImages: updatedRoomImages });
       }
     } catch (error: any) {
@@ -1009,6 +1027,26 @@ const App: React.FC = () => {
       alert(`Ошибка генерации: ${errorMessage}. Проверьте консоль для деталей.`);
     } finally {
       setIsGeneratingRoom(false);
+    }
+  };
+
+  const handleDeleteRoomImage = async (roomId: string, imageIndex: number) => {
+    if (!currentProject) return;
+    
+    try {
+      await api.deleteProjectImage(currentProject.id, 'roomImage', roomId, imageIndex);
+      const currentImages = currentProject.roomImages?.[roomId] || [];
+      const updatedImages = currentImages.filter((_, i) => i !== imageIndex);
+      const updatedRoomImages = { ...currentProject.roomImages };
+      if (updatedImages.length === 0) {
+        delete updatedRoomImages[roomId];
+      } else {
+        updatedRoomImages[roomId] = updatedImages;
+      }
+      updateCurrentProject({ roomImages: updatedRoomImages });
+    } catch (error) {
+      console.error('Failed to delete room image:', error);
+      alert('Ошибка при удалении изображения');
     }
   };
 
@@ -4272,8 +4310,65 @@ const App: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="bg-white dark:bg-architect-800 rounded-[40px] border border-architect-200 dark:border-architect-700 p-2 min-h-[500px] flex items-center justify-center relative overflow-hidden text-left">
-                                            {isGeneratingRoom ? <GenerationLoader planUrl={currentProject.planPreview || null} label={`Отрисовываем ${selectedRoom.name}...`} /> : currentProject.roomImages?.[selectedRoom.id] ? <img src={getImageUrl(currentProject.roomImages[selectedRoom.id]) || currentProject.roomImages[selectedRoom.id]} alt="Room interior" className="w-full h-auto rounded-[32px]" /> : <div className="text-architect-200 flex flex-col items-center"><ImageIcon className="w-20 h-20 mb-2 opacity-10" /><p className="text-xs font-bold uppercase tracking-widest opacity-30">Интерьер еще не создан</p></div>}
+                                        <div className="space-y-4 text-left">
+                                            {/* Основное изображение (последнее сгенерированное) */}
+                                            <div className="bg-white dark:bg-architect-800 rounded-[40px] border border-architect-200 dark:border-architect-700 p-2 min-h-[500px] flex items-center justify-center relative overflow-hidden">
+                                                {isGeneratingRoom ? (
+                                                    <GenerationLoader planUrl={currentProject.planPreview || null} label={`Отрисовываем ${selectedRoom.name}...`} />
+                                                ) : currentProject.roomImages?.[selectedRoom.id] && currentProject.roomImages[selectedRoom.id].length > 0 ? (
+                                                    <img 
+                                                        src={getImageUrl(currentProject.roomImages[selectedRoom.id][0]) || currentProject.roomImages[selectedRoom.id][0]} 
+                                                        alt="Room interior" 
+                                                        className="w-full h-auto rounded-[32px]" 
+                                                    />
+                                                ) : (
+                                                    <div className="text-architect-200 flex flex-col items-center">
+                                                        <ImageIcon className="w-20 h-20 mb-2 opacity-10" />
+                                                        <p className="text-xs font-bold uppercase tracking-widest opacity-30">Интерьер еще не создан</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Сетка предыдущих изображений (6 колонок) */}
+                                            {currentProject.roomImages?.[selectedRoom.id] && currentProject.roomImages[selectedRoom.id].length > 1 && (
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-architect-500 uppercase mb-2">История генераций</h4>
+                                                    <div className="grid grid-cols-6 gap-2">
+                                                        {currentProject.roomImages[selectedRoom.id].slice(1).map((imageUrl, index) => (
+                                                            <div 
+                                                                key={index} 
+                                                                className="aspect-square rounded-xl overflow-hidden border border-architect-200 dark:border-architect-700 cursor-pointer hover:opacity-80 hover:border-architect-400 transition-all group relative"
+                                                                onClick={() => {
+                                                                    // При клике переместить изображение в начало
+                                                                    const newImages = [
+                                                                        imageUrl, 
+                                                                        ...currentProject.roomImages![selectedRoom.id].filter((_, i) => i !== index + 1)
+                                                                    ];
+                                                                    const updatedRoomImages = { ...currentProject.roomImages, [selectedRoom.id]: newImages };
+                                                                    updateCurrentProject({ roomImages: updatedRoomImages });
+                                                                    api.updateProject(currentProject.id, { roomImages: updatedRoomImages });
+                                                                }}
+                                                            >
+                                                                <img 
+                                                                    src={getImageUrl(imageUrl) || imageUrl} 
+                                                                    alt={`Previous ${index + 1}`} 
+                                                                    className="w-full h-full object-cover" 
+                                                                />
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDeleteRoomImage(selectedRoom.id, index + 1);
+                                                                    }}
+                                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 z-10"
+                                                                    title="Удалить изображение"
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -4966,7 +5061,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {editingImage && <ImageEditorModal imageUrl={editingImage} onClose={() => setEditingImage(null)} onSave={newUrl => { if (currentProject) { if (currentProject.global3DImages?.includes(editingImage)) { const index = currentProject.global3DImages.indexOf(editingImage); const updated = [...currentProject.global3DImages]; updated[index] = newUrl; updateCurrentProject({ global3DImages: updated }); api.updateProject(currentProject.id, { global3dImages: updated }); } else if (selectedRoom) updateCurrentProject({ roomImages: { ...(currentProject.roomImages || {}), [selectedRoom.id]: newUrl } }); } setEditingImage(null); }} />}
+      {editingImage && <ImageEditorModal imageUrl={editingImage} onClose={() => setEditingImage(null)} onSave={newUrl => { if (currentProject) { if (currentProject.global3DImages?.includes(editingImage)) { const index = currentProject.global3DImages.indexOf(editingImage); const updated = [...currentProject.global3DImages]; updated[index] = newUrl; updateCurrentProject({ global3DImages: updated }); api.updateProject(currentProject.id, { global3dImages: updated }); } else if (selectedRoom && currentProject.roomImages?.[selectedRoom.id]?.includes(editingImage)) { const roomImages = currentProject.roomImages[selectedRoom.id]; const index = roomImages.indexOf(editingImage); const updated = [...roomImages]; updated[index] = newUrl; updateCurrentProject({ roomImages: { ...(currentProject.roomImages || {}), [selectedRoom.id]: updated } }); api.updateProject(currentProject.id, { roomImages: { ...currentProject.roomImages, [selectedRoom.id]: updated } }); } } setEditingImage(null); }} />}
       
       {/* Модальное окно подтверждения генерации смет */}
       {showEstimateConfirm && (
