@@ -102,7 +102,15 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
   if (options.includeWorks || options.includeRoughMaterials || options.includeFinishMaterials) {
     WORK_SUBSECTIONS.forEach(sectionName => {
       const section = room.estimation?.works?.[sectionName];
-      if (!section?.items || section.items.length === 0) return;
+      const isRoughSection = ROUGH_WORK_SECTIONS.includes(sectionName);
+      
+      // Check if section has any data to process
+      const hasWorks = section?.items && section.items.length > 0;
+      const hasRoughMaterials = isRoughSection && options.includeRoughMaterials && room.estimation?.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0;
+      const hasFinishMaterials = !isRoughSection && options.includeFinishMaterials && room.estimation?.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0;
+      
+      // Skip section only if it has no works AND no materials to include
+      if (!hasWorks && !hasRoughMaterials && !hasFinishMaterials) return;
 
       const rows: ExportDataRow[] = [];
       let sectionWorkTotal = 0;
@@ -112,9 +120,8 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
 
       // Определяем, есть ли подкатегории для этой секции
       const hasSubcategories = SECTIONS_WITH_SUBCATEGORIES.includes(sectionName);
-      const isRoughSection = ROUGH_WORK_SECTIONS.includes(sectionName);
 
-      if (hasSubcategories) {
+      if (hasSubcategories && section?.items) {
         // Группируем по подкатегориям
         FINISHING_SUBCATEGORIES.forEach(subcat => {
           const subcatItems = section.items.filter((item: EstimationItem) => {
@@ -202,7 +209,7 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
             }
           });
         });
-      } else {
+      } else if (section?.items) {
         // Без подкатегорий - обрабатываем напрямую
         section.items.forEach((item: EstimationItem) => {
           // Работа
@@ -266,8 +273,8 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
         });
       }
 
-      // Добавляем отдельные секции материалов
-      if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items) {
+      // Добавляем отдельные секции материалов (обрабатываем даже если секция работ пустая)
+      if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0) {
         room.estimation.roughMaterials.items.forEach((mat: EstimationItem) => {
           itemCounter++;
           rows.push({
@@ -283,7 +290,7 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
         });
       }
 
-      if (!isRoughSection && options.includeFinishMaterials && room.estimation.finishMaterials?.items) {
+      if (!isRoughSection && options.includeFinishMaterials && room.estimation.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0) {
         room.estimation.finishMaterials.items.forEach((mat: EstimationItem) => {
           itemCounter++;
           rows.push({
@@ -365,15 +372,30 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
   // Собираем данные из всех комнат
   if (options.includeWorks || options.includeRoughMaterials || options.includeFinishMaterials) {
     rooms.forEach(room => {
-      if (!room.estimation?.works) return;
+      // Process room if it has works OR materials to include
+      const hasWorks = room.estimation?.works;
+      const hasRoughMaterials = options.includeRoughMaterials && room.estimation?.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0;
+      const hasFinishMaterials = options.includeFinishMaterials && room.estimation?.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0;
+      
+      if (!hasWorks && !hasRoughMaterials && !hasFinishMaterials) return;
 
       WORK_SUBSECTIONS.forEach(sectionName => {
         const section = room.estimation.works[sectionName];
-        if (!section?.items) return;
+        const isRoughSection = ROUGH_WORK_SECTIONS.includes(sectionName);
+        
+        // Check if section has any data to process
+        const hasWorksInSection = section?.items && section.items.length > 0;
+        const hasRoughMaterialsInSection = isRoughSection && options.includeRoughMaterials && room.estimation?.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0;
+        const hasFinishMaterialsInSection = !isRoughSection && options.includeFinishMaterials && room.estimation?.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0;
+        
+        // Skip section only if it has no works AND no materials to include
+        if (!hasWorksInSection && !hasRoughMaterialsInSection && !hasFinishMaterialsInSection) return;
 
-        section.items.forEach((item: EstimationItem) => {
-          // Работа
-          if (options.includeWorks && item.type === 'work') {
+        // Process works if section exists
+        if (section?.items) {
+          section.items.forEach((item: EstimationItem) => {
+            // Работа
+            if (options.includeWorks && item.type === 'work') {
             const existing = sectionData[sectionName].items.find(
               i => i.name === item.name && i.unit === item.unit && Number(i.price) === Number(item.price) && i.type === item.type
             );
@@ -412,11 +434,11 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
               });
             }
           }
-        });
+          });
+        }
 
-        // Отдельные секции материалов
-        const isRoughSection = ROUGH_WORK_SECTIONS.includes(sectionName);
-        if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items) {
+        // Отдельные секции материалов (обрабатываем даже если секция работ пустая)
+        if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0) {
           room.estimation.roughMaterials.items.forEach((mat: EstimationItem) => {
             const existingMat = sectionData[sectionName].items.find(
               i => i.name === mat.name && i.unit === mat.unit && Number(i.price) === Number(mat.price) && i.type === mat.type
@@ -435,7 +457,7 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
           });
         }
 
-        if (!isRoughSection && options.includeFinishMaterials && room.estimation.finishMaterials?.items) {
+        if (!isRoughSection && options.includeFinishMaterials && room.estimation.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0) {
           room.estimation.finishMaterials.items.forEach((mat: EstimationItem) => {
             const existingMat = sectionData[sectionName].items.find(
               i => i.name === mat.name && i.unit === mat.unit && Number(i.price) === Number(mat.price) && i.type === mat.type
