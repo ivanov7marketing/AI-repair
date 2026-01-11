@@ -664,7 +664,18 @@ const App: React.FC = () => {
   const performAnalysis = async (project: Project) => {
     setIsAnalyzing(true);
     try {
-      const part = await fileToGenerativePart(project.planFile!);
+      let part;
+      
+      // Используем planFile если есть, иначе загружаем по URL
+      if (project.planFile) {
+        part = await fileToGenerativePart(project.planFile);
+      } else if (project.planPreview) {
+        const blob = await loadImageFromUrl(project.planPreview);
+        part = await fileToGenerativePart(blob);
+      } else {
+        throw new Error('План помещения не найден');
+      }
+      
       const result = await analyzeFloorPlan(part);
       if (result && result.rooms) {
         const h = parseFloat(result.ceilingHeight || '2.7') || 0;
@@ -884,11 +895,32 @@ const App: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Вспомогательная функция для загрузки изображения по URL
+  const loadImageFromUrl = async (url: string): Promise<Blob> => {
+    const fullUrl = getImageUrl(url) || url;
+    const response = await fetch(fullUrl);
+    if (!response.ok) {
+      throw new Error(`Не удалось загрузить изображение: ${response.statusText}`);
+    }
+    return response.blob();
+  };
+
   const handleGenerateGlobal = async () => {
-    if (!currentProject?.planFile || !currentProject.analysis) return;
+    if (!currentProject?.planPreview || !currentProject.analysis) return;
     setIsGeneratingGlobal(true);
     try {
-      const part = await fileToGenerativePart(currentProject.planFile);
+      let part;
+      
+      // Используем planFile если есть, иначе загружаем по URL
+      if (currentProject.planFile) {
+        part = await fileToGenerativePart(currentProject.planFile);
+      } else if (currentProject.planPreview) {
+        const blob = await loadImageFromUrl(currentProject.planPreview);
+        part = await fileToGenerativePart(blob);
+      } else {
+        throw new Error('План помещения не найден');
+      }
+      
       const url = await generateIsometricView(part, currentProject.analysis.architecturalStyle, imageSize, currentProject.analysis.styleReferenceImage);
       
       // Upload generated image to server
@@ -910,10 +942,21 @@ const App: React.FC = () => {
   };
 
   const handleGenerateRoom = async () => {
-    if (!currentProject?.planFile || !currentProject.analysis || !selectedRoom) return;
+    if (!currentProject?.planPreview || !currentProject.analysis || !selectedRoom) return;
     setIsGeneratingRoom(true);
     try {
-      const part = await fileToGenerativePart(currentProject.planFile);
+      let part;
+      
+      // Используем planFile если есть, иначе загружаем по URL
+      if (currentProject.planFile) {
+        part = await fileToGenerativePart(currentProject.planFile);
+      } else if (currentProject.planPreview) {
+        const blob = await loadImageFromUrl(currentProject.planPreview);
+        part = await fileToGenerativePart(blob);
+      } else {
+        throw new Error('План помещения не найден');
+      }
+      
       const url = await generateRoomInterior(selectedRoom, currentProject.analysis.architecturalStyle, part, imageSize, currentProject.analysis.styleReferenceImage);
       
       // Upload generated image to server
@@ -927,6 +970,10 @@ const App: React.FC = () => {
         const updatedRoomImages = { ...(currentProject.roomImages || {}), [selectedRoom.id]: url };
         updateCurrentProject({ roomImages: updatedRoomImages });
       }
+    } catch (error: any) {
+      console.error("Error generating room interior:", error);
+      const errorMessage = error?.message || "Неизвестная ошибка при генерации интерьера";
+      alert(`Ошибка генерации: ${errorMessage}. Проверьте консоль для деталей.`);
     } finally {
       setIsGeneratingRoom(false);
     }
