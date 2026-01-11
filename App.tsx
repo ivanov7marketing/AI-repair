@@ -3290,8 +3290,9 @@ const App: React.FC = () => {
                                                                 const sectionData = globalData[sub] || { work: 0, rough: 0, finish: 0, items: [] };
                                                                 const sectionTotal = sectionData.work + sectionData.rough + sectionData.finish;
                                                                 
-                                                                // Пропускаем пустые секции (кроме глобальных - их показываем всегда для редактирования)
-                                                                if (sectionTotal === 0 && !isGlobalOnlySection) return null;
+                                                                // Пропускаем пустые секции (кроме глобальных и секций "Прочие работы" и "Подключение оборудования" - их показываем всегда)
+                                                                const alwaysShowSections = ["Прочие работы", "Подключение оборудования"];
+                                                                if (sectionTotal === 0 && !isGlobalOnlySection && !alwaysShowSections.includes(sub)) return null;
                                                                 
                                                                 return (
                                                                     <div key={idx} className="border border-architect-100 dark:border-architect-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-architect-800 text-left">
