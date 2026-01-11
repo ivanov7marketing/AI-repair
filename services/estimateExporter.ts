@@ -529,10 +529,17 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
     // Глобальные секции
     GLOBAL_ONLY_SECTIONS.forEach(sectionName => {
       const section = globalWorks[sectionName];
-      if (section?.items && options.includeWorks) {
+      if (section?.items) {
         section.items.forEach((item: EstimationItem) => {
-          if (item.type === 'work') {
+          if (options.includeWorks && item.type === 'work') {
             sectionData[sectionName].items.push({ ...item });
+            sectionData[sectionName].workTotal += Number(item.total) || 0;
+          } else if (options.includeRoughMaterials && item.type === 'rough') {
+            sectionData[sectionName].items.push({ ...item });
+            sectionData[sectionName].roughTotal += Number(item.total) || 0;
+          } else if (options.includeFinishMaterials && item.type === 'finish') {
+            sectionData[sectionName].items.push({ ...item });
+            sectionData[sectionName].finishTotal += Number(item.total) || 0;
           }
         });
       }

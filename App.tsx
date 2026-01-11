@@ -2488,13 +2488,23 @@ const App: React.FC = () => {
           }
       });
       
-      // Добавляем глобальные секции в общий итог (но не в работы/материалы)
+      // Добавляем глобальные секции (Накладные расходы, Умный дом) в итог по работам и в общий итог
       const globalWorks = currentProject?.analysis?.globalWorks || {};
       GLOBAL_ONLY_SECTIONS.forEach(sectionName => {
           const section = globalWorks[sectionName];
           if (section?.items) {
               section.items.forEach((item: EstimationItem) => {
-                  globalSectionsTotal += Number(item.total) || 0;
+                  const itemTotal = Number(item.total) || 0;
+                  // Работы из глобальных секций включаются в итог по работам
+                  if (item.type === 'work') {
+                      totalWork += itemTotal;
+                  } else if (item.type === 'rough') {
+                      totalRough += itemTotal;
+                  } else if (item.type === 'finish') {
+                      totalFinish += itemTotal;
+                  }
+                  // Все позиции включаются в общий итог
+                  globalSectionsTotal += itemTotal;
               });
           }
       });
