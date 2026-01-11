@@ -64,7 +64,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       planFileName: row.plan_file_name,
       planPreview: row.plan_preview,
       analysisData: row.analysis_data || null, // JSONB is already parsed by pg
-      global3dImage: row.global_3d_image,
+      global3dImages: row.global_3d_images ? (typeof row.global_3d_images === 'string' ? JSON.parse(row.global_3d_images) : row.global_3d_images) : [],
       roomImages: row.room_images || {}, // JSONB is already parsed by pg
     })));
   } catch (error) {
@@ -126,7 +126,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
       planFileName: row.plan_file_name,
       planPreview: row.plan_preview,
       analysisData: row.analysis_data || null, // JSONB is already parsed by pg
-      global3dImage: row.global_3d_image,
+      global3dImages: row.global_3d_images ? (typeof row.global_3d_images === 'string' ? JSON.parse(row.global_3d_images) : row.global_3d_images) : [],
       roomImages: row.room_images || {}, // JSONB is already parsed by pg
     });
   } catch (error) {
@@ -236,9 +236,9 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
       values.push(req.body.planPreview);
     }
 
-    if (req.body.global3dImage !== undefined) {
-      updates.push(`global_3d_image = $${paramIndex++}`);
-      values.push(req.body.global3dImage);
+    if (req.body.global3dImages !== undefined) {
+      updates.push(`global_3d_images = $${paramIndex++}`);
+      values.push(JSON.stringify(req.body.global3dImages));
     }
 
     if (req.body.roomImages !== undefined) {
@@ -257,7 +257,7 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
       `UPDATE projects 
        SET ${updates.join(', ')}
        WHERE id = $${paramIndex++} AND organization_id = $${paramIndex++} AND deleted_at IS NULL
-       RETURNING id, name, created_at, created_by, thumbnail, plan_preview, analysis_data, global_3d_image, room_images`,
+       RETURNING id, name, created_at, created_by, thumbnail, plan_preview, analysis_data, global_3d_images, room_images`,
       values
     );
 
@@ -275,7 +275,7 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
       thumbnail: row.thumbnail,
       planPreview: row.plan_preview,
       analysisData: row.analysis_data || null, // JSONB is already parsed by pg
-      global3dImage: row.global_3d_image,
+      global3dImages: row.global_3d_images ? (typeof row.global_3d_images === 'string' ? JSON.parse(row.global_3d_images) : row.global_3d_images) : [],
       roomImages: row.room_images || {}, // JSONB is already parsed by pg
     });
   } catch (error) {
@@ -349,9 +349,9 @@ router.post('/:id/upload-image', authMiddleware, upload.single('image'), async (
       return;
     }
 
-    // Get current project to delete old image
+    // Get current project
     const projectResult = await pool.query(
-      'SELECT plan_preview, global_3d_image, room_images FROM projects WHERE id = $1',
+      'SELECT plan_preview, global_3d_images, room_images FROM projects WHERE id = $1',
       [projectId]
     );
     
@@ -367,15 +367,21 @@ router.post('/:id/upload-image', authMiddleware, upload.single('image'), async (
     const values: any[] = [];
     let paramIndex = 1;
 
-    // Delete old image and update database
+    // Update database
     if (imageType === 'planPreview') {
       deleteImageFile(project.plan_preview);
       updates.push(`plan_preview = $${paramIndex++}`);
       values.push(imageUrl);
     } else if (imageType === 'global3dImage') {
-      deleteImageFile(project.global_3d_image);
-      updates.push(`global_3d_image = $${paramIndex++}`);
-      values.push(imageUrl);
+      // НЕ удаляем старые изображения - добавляем новое в начало массива (лимит 10)
+      const currentImages = project.global_3d_images 
+        ? (typeof project.global_3d_images === 'string' 
+            ? JSON.parse(project.global_3d_images) 
+            : project.global_3d_images)
+        : [];
+      const updatedImages = [imageUrl, ...currentImages].slice(0, 10); // Лимит 10 изображений
+      updates.push(`global_3d_images = $${paramIndex++}`);
+      values.push(JSON.stringify(updatedImages));
     } else if (imageType === 'roomImage' && roomId) {
       const roomImages = project.room_images || {};
       deleteImageFile(roomImages[roomId]);
@@ -458,9 +464,9 @@ router.post('/:id/upload-base64-image', authMiddleware, async (req: Request, res
     fs.writeFileSync(filePath, buffer);
     const imageUrl = `/uploads/images/${filename}`;
 
-    // Get current project to delete old image
+    // Get current project
     const projectResult = await pool.query(
-      'SELECT plan_preview, global_3d_image, room_images, analysis_data FROM projects WHERE id = $1',
+      'SELECT plan_preview, global_3d_images, room_images, analysis_data FROM projects WHERE id = $1',
       [projectId]
     );
     
@@ -481,9 +487,15 @@ router.post('/:id/upload-base64-image', authMiddleware, async (req: Request, res
       updates.push(`plan_preview = $${paramIndex++}`);
       values.push(imageUrl);
     } else if (imageType === 'global3dImage') {
-      deleteImageFile(project.global_3d_image);
-      updates.push(`global_3d_image = $${paramIndex++}`);
-      values.push(imageUrl);
+      // НЕ удаляем старые изображения - добавляем новое в начало массива (лимит 10)
+      const currentImages = project.global_3d_images 
+        ? (typeof project.global_3d_images === 'string' 
+            ? JSON.parse(project.global_3d_images) 
+            : project.global_3d_images)
+        : [];
+      const updatedImages = [imageUrl, ...currentImages].slice(0, 10); // Лимит 10 изображений
+      updates.push(`global_3d_images = $${paramIndex++}`);
+      values.push(JSON.stringify(updatedImages));
     } else if (imageType === 'roomImage' && roomId) {
       const roomImages = project.room_images || {};
       deleteImageFile(roomImages[roomId]);
@@ -546,7 +558,7 @@ router.delete('/:id/image', authMiddleware, async (req: Request, res: Response) 
 
     // Get current project
     const projectResult = await pool.query(
-      'SELECT plan_preview, global_3d_image, room_images, analysis_data FROM projects WHERE id = $1',
+      'SELECT plan_preview, global_3d_images, room_images, analysis_data FROM projects WHERE id = $1',
       [projectId]
     );
     
@@ -565,10 +577,22 @@ router.delete('/:id/image', authMiddleware, async (req: Request, res: Response) 
       deleteImageFile(project.plan_preview);
       updates.push(`plan_preview = $${paramIndex++}`);
       values.push(null);
-    } else if (imageType === 'global3dImage') {
-      deleteImageFile(project.global_3d_image);
-      updates.push(`global_3d_image = $${paramIndex++}`);
-      values.push(null);
+    } else if (imageType === 'global3dImage' && typeof photoIndex === 'number') {
+      // Удаляем конкретное изображение из массива по индексу
+      const currentImages = project.global_3d_images 
+        ? (typeof project.global_3d_images === 'string' 
+            ? JSON.parse(project.global_3d_images) 
+            : project.global_3d_images)
+        : [];
+      if (photoIndex >= 0 && photoIndex < currentImages.length) {
+        deleteImageFile(currentImages[photoIndex]);
+        const updatedImages = currentImages.filter((_: string, i: number) => i !== photoIndex);
+        updates.push(`global_3d_images = $${paramIndex++}`);
+        values.push(JSON.stringify(updatedImages));
+      } else {
+        res.status(400).json({ error: 'Invalid image index' });
+        return;
+      }
     } else if (imageType === 'roomImage' && roomId) {
       const roomImages = project.room_images || {};
       deleteImageFile(roomImages[roomId]);

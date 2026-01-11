@@ -457,7 +457,7 @@ const App: React.FC = () => {
         thumbnail: p.thumbnail,
         planPreview: p.planPreview,
         analysis: p.analysisData ? (typeof p.analysisData === 'string' ? JSON.parse(p.analysisData) : p.analysisData) : undefined,
-        global3DImage: p.global3dImage,
+        global3DImages: p.global3dImages || [],
         roomImages: p.roomImages ? (typeof p.roomImages === 'string' ? JSON.parse(p.roomImages) : p.roomImages) : {},
       }));
       setProjects(transformedProjects);
@@ -496,7 +496,7 @@ const App: React.FC = () => {
         thumbnail: project.thumbnail,
         planPreview: project.planPreview,
         analysisData: project.analysis, // This includes all rooms with estimations
-        global3dImage: project.global3DImage,
+        global3dImages: project.global3DImages || [],
         roomImages: project.roomImages,
       });
     } catch (error) {
@@ -921,16 +921,34 @@ const App: React.FC = () => {
         throw new Error('План помещения не найден');
       }
       
-      const url = await generateIsometricView(part, currentProject.analysis.architecturalStyle, imageSize, currentProject.analysis.styleReferenceImage);
+      const base64Url = await generateIsometricView(part, currentProject.analysis.architecturalStyle, imageSize, currentProject.analysis.styleReferenceImage);
       
-      // Upload generated image to server
+      // Конвертируем base64 в Blob, затем в File
+      const response = await fetch(base64Url);
+      const blob = await response.blob();
+      const file = new File([blob], `global3d-${Date.now()}.png`, { type: 'image/png' });
+      
+      // Загружаем как файл (как план помещения)
       try {
-        const uploadResult = await api.uploadBase64Image(currentProject.id, url, 'global3dImage');
-        updateCurrentProject({ global3DImage: uploadResult.url });
+        const uploadResult = await api.uploadProjectImage(
+          currentProject.id, 
+          file, 
+          'global3dImage'
+        );
+        
+        // Добавляем новое изображение в начало массива (лимит 10)
+        const currentImages = currentProject.global3DImages || [];
+        const updatedImages = [uploadResult.url, ...currentImages].slice(0, 10);
+        
+        updateCurrentProject({ global3DImages: updatedImages });
+        
+        // Сохраняем массив в БД сразу (без debounce)
+        await api.updateProject(currentProject.id, {
+          global3dImages: updatedImages,
+        });
       } catch (error) {
         console.error('Failed to save global 3D image:', error);
-        // Fallback to base64 if upload fails
-        updateCurrentProject({ global3DImage: url });
+        alert('Ошибка при сохранении изображения на сервер');
       }
     } catch (error: any) {
       console.error("Error generating 3D view:", error);
@@ -938,6 +956,21 @@ const App: React.FC = () => {
       alert(`Ошибка генерации: ${errorMessage}. Проверьте консоль для деталей.`);
     } finally {
       setIsGeneratingGlobal(false);
+    }
+  };
+
+  // Удаление глобального 3D изображения
+  const handleDeleteGlobal3DImage = async (imageIndex: number) => {
+    if (!currentProject) return;
+    
+    try {
+      await api.deleteProjectImage(currentProject.id, 'global3dImage', undefined, imageIndex);
+      const currentImages = currentProject.global3DImages || [];
+      const updatedImages = currentImages.filter((_, i) => i !== imageIndex);
+      updateCurrentProject({ global3DImages: updatedImages });
+    } catch (error) {
+      console.error('Failed to delete global 3D image:', error);
+      alert('Ошибка при удалении изображения');
     }
   };
 
@@ -3638,8 +3671,64 @@ const App: React.FC = () => {
                                                   <button onClick={handleGenerateGlobal} disabled={isGeneratingGlobal} className="bg-architect-900 dark:bg-white text-white dark:text-architect-900 px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-all whitespace-nowrap">{isGeneratingGlobal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Box className="w-4 h-4" />} Сгенерировать макет</button>
                                               </div>
                                             </div>
-                                            <div className="bg-white dark:bg-architect-800 rounded-[32px] border border-architect-200 dark:border-architect-700 p-2 min-h-[400px] flex items-center justify-center relative overflow-hidden text-left">
-                                                {isGeneratingGlobal ? <GenerationLoader planUrl={currentProject.planPreview || null} label="Создаем 3D модель..." /> : currentProject.global3DImage ? <img src={getImageUrl(currentProject.global3DImage) || currentProject.global3DImage} alt="Global 3D" className="w-full h-auto rounded-[24px]" /> : <div className="text-architect-300 flex flex-col items-center"><ImageIcon className="w-20 h-20 mb-2 opacity-20" /><p className="text-xs font-bold uppercase tracking-widest opacity-40">Макет еще не создан</p></div>}
+                                            <div className="space-y-4">
+                                                {/* Основное изображение (последнее сгенерированное) */}
+                                                <div className="bg-white dark:bg-architect-800 rounded-[32px] border border-architect-200 dark:border-architect-700 p-2 min-h-[400px] flex items-center justify-center relative overflow-hidden text-left">
+                                                    {isGeneratingGlobal ? (
+                                                        <GenerationLoader planUrl={currentProject.planPreview || null} label="Создаем 3D модель..." />
+                                                    ) : currentProject.global3DImages && currentProject.global3DImages.length > 0 ? (
+                                                        <img 
+                                                            src={getImageUrl(currentProject.global3DImages[0]) || currentProject.global3DImages[0]} 
+                                                            alt="Global 3D" 
+                                                            className="w-full h-auto rounded-[24px]" 
+                                                        />
+                                                    ) : (
+                                                        <div className="text-architect-300 flex flex-col items-center">
+                                                            <ImageIcon className="w-20 h-20 mb-2 opacity-20" />
+                                                            <p className="text-xs font-bold uppercase tracking-widest opacity-40">Макет еще не создан</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Сетка предыдущих изображений (6 колонок) */}
+                                                {currentProject.global3DImages && currentProject.global3DImages.length > 1 && (
+                                                    <div>
+                                                        <h4 className="text-sm font-bold text-architect-500 uppercase mb-2">История генераций</h4>
+                                                        <div className="grid grid-cols-6 gap-2">
+                                                            {currentProject.global3DImages.slice(1).map((imageUrl, index) => (
+                                                                <div 
+                                                                    key={index} 
+                                                                    className="aspect-square rounded-xl overflow-hidden border border-architect-200 dark:border-architect-700 cursor-pointer hover:opacity-80 hover:border-architect-400 transition-all group relative"
+                                                                    onClick={() => {
+                                                                        // При клике переместить изображение в начало
+                                                                        const newImages = [
+                                                                            imageUrl, 
+                                                                            ...currentProject.global3DImages!.filter((_, i) => i !== index + 1)
+                                                                        ];
+                                                                        updateCurrentProject({ global3DImages: newImages });
+                                                                        api.updateProject(currentProject.id, { global3dImages: newImages });
+                                                                    }}
+                                                                >
+                                                                    <img 
+                                                                        src={getImageUrl(imageUrl) || imageUrl} 
+                                                                        alt={`Previous ${index + 1}`} 
+                                                                        className="w-full h-full object-cover" 
+                                                                    />
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDeleteGlobal3DImage(index + 1);
+                                                                        }}
+                                                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 z-10"
+                                                                        title="Удалить изображение"
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </>
@@ -4877,7 +4966,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {editingImage && <ImageEditorModal imageUrl={editingImage} onClose={() => setEditingImage(null)} onSave={newUrl => { if (currentProject) { if (editingImage === currentProject.global3DImage) updateCurrentProject({ global3DImage: newUrl }); else if (selectedRoom) updateCurrentProject({ roomImages: { ...(currentProject.roomImages || {}), [selectedRoom.id]: newUrl } }); } setEditingImage(null); }} />}
+      {editingImage && <ImageEditorModal imageUrl={editingImage} onClose={() => setEditingImage(null)} onSave={newUrl => { if (currentProject) { if (currentProject.global3DImages?.includes(editingImage)) { const index = currentProject.global3DImages.indexOf(editingImage); const updated = [...currentProject.global3DImages]; updated[index] = newUrl; updateCurrentProject({ global3DImages: updated }); api.updateProject(currentProject.id, { global3dImages: updated }); } else if (selectedRoom) updateCurrentProject({ roomImages: { ...(currentProject.roomImages || {}), [selectedRoom.id]: newUrl } }); } setEditingImage(null); }} />}
       
       {/* Модальное окно подтверждения генерации смет */}
       {showEstimateConfirm && (
