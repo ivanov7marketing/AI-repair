@@ -13,6 +13,26 @@ const createProjectSchema = z.object({
   name: z.string().min(1),
 });
 
+// Helper function to sanitize filename for HTTP headers
+const sanitizeFilename = (filename: string): string => {
+  // Remove or replace invalid characters for HTTP headers
+  // Keep only alphanumeric, spaces, hyphens, underscores, and dots
+  let sanitized = filename.replace(/[<>:"/\\|?*\x00-\x1F]/g, '');
+  
+  // Replace multiple spaces with single space
+  sanitized = sanitized.replace(/\s+/g, ' ');
+  
+  // Trim and limit length
+  sanitized = sanitized.trim().substring(0, 200);
+  
+  // If empty after sanitization, use default name
+  if (!sanitized) {
+    sanitized = 'project';
+  }
+  
+  return sanitized;
+};
+
 // Get all projects (filtered by permissions)
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -760,9 +780,17 @@ router.post('/:id/export-pdf', authMiddleware, async (req: Request & { file?: Ex
     const { generatePDF } = await import('../services/pdfGenerator');
     const pdfBuffer = await generatePDF(project, options);
 
+    // Sanitize filename for HTTP headers (remove all invalid characters)
+    const sanitizedName = sanitizeFilename(project.name || 'project');
+    const safeFilename = `${sanitizedName}_smeta.pdf`;
+    
+    // Use ASCII-only filename in the main header, and UTF-8 encoded version for browsers that support it
+    const encodedUtf8Filename = encodeURIComponent(`${project.name || 'project'}_смета.pdf`);
+    const contentDisposition = `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodedUtf8Filename}`;
+
     // Set headers
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${project.name}_смета.pdf"`);
+    res.setHeader('Content-Disposition', contentDisposition);
 
     // Send PDF
     res.send(pdfBuffer);
