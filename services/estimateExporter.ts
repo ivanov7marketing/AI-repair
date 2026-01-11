@@ -476,19 +476,18 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
 
         // Отдельные секции материалов (обрабатываем даже если секция работ пустая)
         // ВАЖНО: Материалы из roughMaterials/finishMaterials могут дублировать материалы из linkedMaterials
-        // Поэтому проверяем, не был ли уже добавлен этот материал из linkedMaterials
+        // Если материал уже есть в items (добавлен из linkedMaterials), НЕ добавляем его в roughTotal/finishTotal
+        // Потому что он уже был добавлен при обработке linkedMaterials
         if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0) {
           room.estimation.roughMaterials.items.forEach((mat: EstimationItem) => {
             const existingMat = sectionData[sectionName].items.find(
               i => i.name === mat.name && i.unit === mat.unit && Number(i.price) === Number(mat.price) && i.type === mat.type
             );
             if (existingMat) {
-              // Материал уже есть - обновляем количество и стоимость
-              const oldTotal = Number(existingMat.total) || 0;
+              // Материал уже есть (добавлен из linkedMaterials) - обновляем количество и стоимость
+              // НЕ добавляем в roughTotal, потому что он уже был добавлен при обработке linkedMaterials
               existingMat.quantity = Number(existingMat.quantity) + Number(mat.quantity);
               existingMat.total = Number(existingMat.total) + Number(mat.total);
-              // Добавляем только разницу в roughTotal, чтобы избежать двойного подсчета
-              sectionData[sectionName].roughTotal += (Number(mat.total) || 0) - oldTotal;
             } else {
               // Новый материал - добавляем полностью
               sectionData[sectionName].items.push({
@@ -508,12 +507,10 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
               i => i.name === mat.name && i.unit === mat.unit && Number(i.price) === Number(mat.price) && i.type === mat.type
             );
             if (existingMat) {
-              // Материал уже есть - обновляем количество и стоимость
-              const oldTotal = Number(existingMat.total) || 0;
+              // Материал уже есть (добавлен из linkedMaterials) - обновляем количество и стоимость
+              // НЕ добавляем в finishTotal, потому что он уже был добавлен при обработке linkedMaterials
               existingMat.quantity = Number(existingMat.quantity) + Number(mat.quantity);
               existingMat.total = Number(existingMat.total) + Number(mat.total);
-              // Добавляем только разницу в finishTotal, чтобы избежать двойного подсчета
-              sectionData[sectionName].finishTotal += (Number(mat.total) || 0) - oldTotal;
             } else {
               // Новый материал - добавляем полностью
               sectionData[sectionName].items.push({
