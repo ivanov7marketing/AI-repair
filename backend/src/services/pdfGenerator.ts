@@ -270,8 +270,8 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
       });
     }
 
-    // Отдельные секции материалов
-    if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items) {
+    // Отдельные секции материалов (обрабатываем даже если секция работ пустая)
+    if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0) {
       room.estimation.roughMaterials.items.forEach((mat: any) => {
         itemCounter++;
         rows.push({
@@ -287,7 +287,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
       });
     }
 
-    if (!isRoughSection && options.includeFinishMaterials && room.estimation.finishMaterials?.items) {
+    if (!isRoughSection && options.includeFinishMaterials && room.estimation.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0) {
       room.estimation.finishMaterials.items.forEach((mat: any) => {
         itemCounter++;
         rows.push({
@@ -303,6 +303,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
       });
     }
 
+    // Добавляем секцию если есть работы ИЛИ материалы
     if (rows.length > 0) {
       rows.push({
         number: 0,
@@ -364,7 +365,12 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
 
   if (options.includeWorks || options.includeRoughMaterials || options.includeFinishMaterials) {
     rooms.forEach(room => {
-      if (!room.estimation?.works) return;
+      // Process room if it has works OR materials to include
+      const hasWorks = room.estimation?.works;
+      const hasRoughMaterials = options.includeRoughMaterials && room.estimation?.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0;
+      const hasFinishMaterials = options.includeFinishMaterials && room.estimation?.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0;
+      
+      if (!hasWorks && !hasRoughMaterials && !hasFinishMaterials) return;
 
       WORK_SUBSECTIONS.forEach(sectionName => {
         const section = room.estimation.works[sectionName];
@@ -378,6 +384,7 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
         // Skip section only if it has no works AND no materials to include
         if (!hasWorks && !hasRoughMaterials && !hasFinishMaterials) return;
 
+        // Process works if section exists
         if (section?.items) {
           section.items.forEach((item: any) => {
           if (options.includeWorks && item.type === 'work') {
@@ -421,7 +428,8 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
           });
         }
 
-        if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items) {
+        // Add materials from roughMaterials/finishMaterials even if section is empty
+        if (isRoughSection && options.includeRoughMaterials && room.estimation.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0) {
           room.estimation.roughMaterials.items.forEach((mat: any) => {
             const existingMat = sectionData[sectionName].items.find(
               i => i.name === mat.name && i.unit === mat.unit && Number(i.price) === Number(mat.price) && i.type === mat.type
@@ -440,7 +448,7 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
           });
         }
 
-        if (!isRoughSection && options.includeFinishMaterials && room.estimation.finishMaterials?.items) {
+        if (!isRoughSection && options.includeFinishMaterials && room.estimation.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0) {
           room.estimation.finishMaterials.items.forEach((mat: any) => {
             const existingMat = sectionData[sectionName].items.find(
               i => i.name === mat.name && i.unit === mat.unit && Number(i.price) === Number(mat.price) && i.type === mat.type
