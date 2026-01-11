@@ -2504,8 +2504,7 @@ const App: React.FC = () => {
                   } else if (item.type === 'finish') {
                       totalFinish += itemTotal;
                   }
-                  // Все позиции включаются в общий итог
-                  globalSectionsTotal += itemTotal;
+                  // Глобальные секции уже учтены в totalWork/totalRough/totalFinish, поэтому не добавляем их отдельно
               });
           }
       });
@@ -2514,7 +2513,7 @@ const App: React.FC = () => {
           totalWork, 
           totalRough, 
           totalFinish, 
-          grandTotal: totalWork + totalRough + totalFinish + globalSectionsTotal 
+          grandTotal: totalWork + totalRough + totalFinish 
       };
   };
 
