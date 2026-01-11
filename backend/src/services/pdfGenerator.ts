@@ -419,24 +419,33 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
 
         // Process works if section exists
         if (section?.items) {
+          console.log(`[PDF Export] Global: Section "${sectionName}" has ${section.items.length} items`);
           section.items.forEach((item: any) => {
-          if (options.includeWorks && item.type === 'work') {
-            const existing = sectionData[sectionName].items.find(
-              i => i.name === item.name && i.unit === item.unit && Number(i.price) === Number(item.price) && i.type === item.type
-            );
-            if (existing) {
-              existing.quantity = Number(existing.quantity) + Number(item.quantity);
-              existing.total = Number(existing.total) + Number(item.total);
-            } else {
-              sectionData[sectionName].items.push({
-                ...item,
-                quantity: Number(item.quantity),
-                total: Number(item.total),
-                price: Number(item.price)
-              });
+            // Process linkedMaterials even if works are not selected (if only materials are selected)
+            if (item.linkedMaterials && item.linkedMaterials.length > 0 && (options.includeRoughMaterials || options.includeFinishMaterials)) {
+              console.log(`[PDF Export] Global: Item "${item.name}" has ${item.linkedMaterials.length} linkedMaterials`);
             }
-
-            if (item.linkedMaterials) {
+            
+            // Process works
+            if (options.includeWorks && item.type === 'work') {
+              const existing = sectionData[sectionName].items.find(
+                i => i.name === item.name && i.unit === item.unit && Number(i.price) === Number(item.price) && i.type === item.type
+              );
+              if (existing) {
+                existing.quantity = Number(existing.quantity) + Number(item.quantity);
+                existing.total = Number(existing.total) + Number(item.total);
+              } else {
+                sectionData[sectionName].items.push({
+                  ...item,
+                  quantity: Number(item.quantity),
+                  total: Number(item.total),
+                  price: Number(item.price)
+                });
+              }
+            }
+            
+            // Process linkedMaterials even if works are not selected (if only materials are selected)
+            if (item.linkedMaterials && (options.includeRoughMaterials || options.includeFinishMaterials)) {
               item.linkedMaterials.forEach((mat: any) => {
                 if ((options.includeRoughMaterials && mat.type === 'rough') ||
                     (options.includeFinishMaterials && mat.type === 'finish')) {
@@ -457,7 +466,6 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
                 }
               });
             }
-          }
           });
         }
 
