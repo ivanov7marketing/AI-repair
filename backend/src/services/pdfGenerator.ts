@@ -85,6 +85,11 @@ const inferSubcategoryFromName = (name: string): string => {
   }
 };
 
+// Функция для округления вверх до 1 знака после запятой
+const roundUpToOneDecimal = (value: number): number => {
+  return Math.ceil(value * 10) / 10;
+};
+
 // Подготовка данных комнаты для PDF
 function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomData {
   const sections: ExportSectionData[] = [];
@@ -144,7 +149,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
               number: itemCounter,
               name: item.name || '',
               unit: item.unit || '',
-              quantity: Number(item.quantity) || 0,
+              quantity: roundUpToOneDecimal(Number(item.quantity) || 0),
               price: Number(item.price) || 0,
               total: Number(item.total) || 0,
               type: 'Работа',
@@ -161,7 +166,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
                     number: itemCounter,
                     name: `└ ${mat.name || ''}`,
                     unit: mat.unit || '',
-                    quantity: Number(mat.quantity) || 0,
+                    quantity: roundUpToOneDecimal(Number(mat.quantity) || 0),
                     price: Number(mat.price) || 0,
                     total: Number(mat.total) || 0,
                     type: mat.type === 'rough' ? 'Черн.мат.' : 'Чист.мат.',
@@ -183,7 +188,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
                 number: itemCounter,
                 name: item.name || '',
                 unit: item.unit || '',
-                quantity: Number(item.quantity) || 0,
+                quantity: roundUpToOneDecimal(Number(item.quantity) || 0),
                 price: Number(item.price) || 0,
                 total: Number(item.total) || 0,
                 type: item.type === 'rough' ? 'Черн.мат.' : 'Чист.мат.',
@@ -206,7 +211,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
             number: itemCounter,
             name: item.name || '',
             unit: item.unit || '',
-            quantity: Number(item.quantity) || 0,
+            quantity: roundUpToOneDecimal(Number(item.quantity) || 0),
             price: Number(item.price) || 0,
             total: Number(item.total) || 0,
             type: 'Работа'
@@ -222,7 +227,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
                   number: itemCounter,
                   name: `└ ${mat.name || ''}`,
                   unit: mat.unit || '',
-                  quantity: Number(mat.quantity) || 0,
+                  quantity: roundUpToOneDecimal(Number(mat.quantity) || 0),
                   price: Number(mat.price) || 0,
                   total: Number(mat.total) || 0,
                   type: mat.type === 'rough' ? 'Черн.мат.' : 'Чист.мат.'
@@ -243,7 +248,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
               number: itemCounter,
               name: item.name || '',
               unit: item.unit || '',
-              quantity: Number(item.quantity) || 0,
+              quantity: roundUpToOneDecimal(Number(item.quantity) || 0),
               price: Number(item.price) || 0,
               total: Number(item.total) || 0,
               type: item.type === 'rough' ? 'Черн.мат.' : 'Чист.мат.'
@@ -266,7 +271,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
           number: itemCounter,
           name: mat.name || '',
           unit: mat.unit || '',
-          quantity: Number(mat.quantity) || 0,
+          quantity: roundUpToOneDecimal(Number(mat.quantity) || 0),
           price: Number(mat.price) || 0,
           total: Number(mat.total) || 0,
           type: 'Черн.мат.'
@@ -282,7 +287,7 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
           number: itemCounter,
           name: mat.name || '',
           unit: mat.unit || '',
-          quantity: Number(mat.quantity) || 0,
+          quantity: roundUpToOneDecimal(Number(mat.quantity) || 0),
           price: Number(mat.price) || 0,
           total: Number(mat.total) || 0,
           type: 'Чист.мат.'
@@ -489,7 +494,7 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
             number: itemCounter,
             name: isWork ? item.name || '' : `└ ${item.name || ''}`,
             unit: item.unit || '',
-            quantity: Number(item.quantity) || 0,
+            quantity: roundUpToOneDecimal(Number(item.quantity) || 0),
             price: Number(item.price) || 0,
             total: Number(item.total) || 0,
             type: isWork ? 'Работа' : (item.type === 'rough' ? 'Черн.мат.' : 'Чист.мат.'),
@@ -514,7 +519,7 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
           number: itemCounter,
           name: isWork ? item.name || '' : `└ ${item.name || ''}`,
           unit: item.unit || '',
-          quantity: Number(item.quantity) || 0,
+          quantity: roundUpToOneDecimal(Number(item.quantity) || 0),
           price: Number(item.price) || 0,
           total: Number(item.total) || 0,
           type: isWork ? 'Работа' : (item.type === 'rough' ? 'Черн.мат.' : 'Чист.мат.')
@@ -624,7 +629,7 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
           } else if (row.isSectionTotal) {
             html += `<tr class="section-total">
               <td colspan="5">Итого по секции</td>
-              <td class="total">${row.total.toLocaleString('ru-RU')} ₽</td>
+              <td class="total">${row.total.toLocaleString('ru-RU')} руб.</td>
               <td></td>
             </tr>`;
           } else {
@@ -632,9 +637,9 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
               <td class="number">${row.number || ''}</td>
               <td class="name">${row.name}</td>
               <td class="unit">${row.unit}</td>
-              <td class="quantity">${row.quantity}</td>
-              <td class="price">${row.price.toLocaleString('ru-RU')} ₽</td>
-              <td class="total">${row.total.toLocaleString('ru-RU')} ₽</td>
+              <td class="quantity">${Number(row.quantity).toFixed(1)}</td>
+              <td class="price">${row.price.toLocaleString('ru-RU')} руб.</td>
+              <td class="total">${row.total.toLocaleString('ru-RU')} руб.</td>
               <td class="type">${row.type}</td>
             </tr>`;
           }
@@ -646,15 +651,15 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
       html += `<div class="totals">`;
       html += `<p><strong>Итого по комнате "${roomData.roomName}":</strong></p>`;
       if (options.includeWorks) {
-        html += `<p>Работы: ${roomData.workTotal.toLocaleString('ru-RU')} ₽</p>`;
+        html += `<p>Работы: ${roomData.workTotal.toLocaleString('ru-RU')} руб.</p>`;
       }
       if (options.includeRoughMaterials) {
-        html += `<p>Черновые материалы: ${roomData.roughTotal.toLocaleString('ru-RU')} ₽</p>`;
+        html += `<p>Черновые материалы: ${roomData.roughTotal.toLocaleString('ru-RU')} руб.</p>`;
       }
       if (options.includeFinishMaterials) {
-        html += `<p>Чистовые материалы: ${roomData.finishTotal.toLocaleString('ru-RU')} ₽</p>`;
+        html += `<p>Чистовые материалы: ${roomData.finishTotal.toLocaleString('ru-RU')} руб.</p>`;
       }
-      html += `<p class="grand-total">Общий итог: ${roomData.grandTotal.toLocaleString('ru-RU')} ₽</p>`;
+      html += `<p class="grand-total">Общий итог: ${roomData.grandTotal.toLocaleString('ru-RU')} руб.</p>`;
       html += `</div>`;
 
       html += `</div>`;
@@ -667,15 +672,15 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
     html += `<div class="totals grand-total" style="page-break-before: always;">`;
     html += `<h2>ОБЩИЙ ИТОГ</h2>`;
     if (options.includeWorks) {
-      html += `<p>Работы: ${grandTotalWork.toLocaleString('ru-RU')} ₽</p>`;
+      html += `<p>Работы: ${grandTotalWork.toLocaleString('ru-RU')} руб.</p>`;
     }
     if (options.includeRoughMaterials) {
-      html += `<p>Черновые материалы: ${grandTotalRough.toLocaleString('ru-RU')} ₽</p>`;
+      html += `<p>Черновые материалы: ${grandTotalRough.toLocaleString('ru-RU')} руб.</p>`;
     }
     if (options.includeFinishMaterials) {
-      html += `<p>Чистовые материалы: ${grandTotalFinish.toLocaleString('ru-RU')} ₽</p>`;
+      html += `<p>Чистовые материалы: ${grandTotalFinish.toLocaleString('ru-RU')} руб.</p>`;
     }
-    html += `<p class="grand-total">Общий итог: ${(grandTotalWork + grandTotalRough + grandTotalFinish).toLocaleString('ru-RU')} ₽</p>`;
+    html += `<p class="grand-total">Общий итог: ${(grandTotalWork + grandTotalRough + grandTotalFinish).toLocaleString('ru-RU')} руб.</p>`;
     html += `</div>`;
   } else {
     const sections = prepareGlobalDataForPDF(project, options);
@@ -719,7 +724,7 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
       });
 
       html += `</tbody></table>`;
-      html += `<p><strong>Итого по секции "${section.sectionName}": ${section.grandTotal.toLocaleString('ru-RU')} ₽</strong></p>`;
+      html += `<p><strong>Итого по секции "${section.sectionName}": ${section.grandTotal.toLocaleString('ru-RU')} руб.</strong></p>`;
       html += `<br/>`;
 
       grandTotalWork += section.workTotal;
@@ -730,15 +735,15 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
     html += `<div class="totals grand-total" style="page-break-before: always;">`;
     html += `<h2>ОБЩИЙ ИТОГ</h2>`;
     if (options.includeWorks) {
-      html += `<p>Работы: ${grandTotalWork.toLocaleString('ru-RU')} ₽</p>`;
+      html += `<p>Работы: ${grandTotalWork.toLocaleString('ru-RU')} руб.</p>`;
     }
     if (options.includeRoughMaterials) {
-      html += `<p>Черновые материалы: ${grandTotalRough.toLocaleString('ru-RU')} ₽</p>`;
+      html += `<p>Черновые материалы: ${grandTotalRough.toLocaleString('ru-RU')} руб.</p>`;
     }
     if (options.includeFinishMaterials) {
-      html += `<p>Чистовые материалы: ${grandTotalFinish.toLocaleString('ru-RU')} ₽</p>`;
+      html += `<p>Чистовые материалы: ${grandTotalFinish.toLocaleString('ru-RU')} руб.</p>`;
     }
-    html += `<p class="grand-total">Общий итог: ${(grandTotalWork + grandTotalRough + grandTotalFinish).toLocaleString('ru-RU')} ₽</p>`;
+    html += `<p class="grand-total">Общий итог: ${(grandTotalWork + grandTotalRough + grandTotalFinish).toLocaleString('ru-RU')} руб.</p>`;
     html += `</div>`;
   }
 
