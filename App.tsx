@@ -2947,7 +2947,7 @@ const App: React.FC = () => {
             <X className="w-6 h-6" />
           </button>
       </div>
-      <nav className="flex-1 p-4 space-y-2 mt-4 overflow-y-auto">
+      <nav className="flex-1 p-4 space-y-1 mt-4 overflow-y-auto">
           <button onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }} className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900 shadow-lg' : 'text-architect-500 hover:bg-architect-50 dark:hover:bg-architect-700'}`}>
             <LayoutDashboard className="w-5 h-5 shrink-0" /> 
             <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">Дашборд</span>
@@ -2985,11 +2985,7 @@ const App: React.FC = () => {
             <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">Настройки</span>
           </button>
       </nav>
-      <div className="p-4 border-t border-architect-100 dark:border-architect-700 space-y-2">
-          <button onClick={toggleTheme} className="w-full flex items-center px-4 py-2 text-sm text-architect-500 hover:text-architect-800 dark:hover:text-architect-200 transition-colors">
-              {isDarkMode ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />} 
-              <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">{isDarkMode ? 'Светлая тема' : 'Темная тема'}</span>
-          </button>
+      <div className="p-4 border-t border-architect-100 dark:border-architect-700">
           <button onClick={() => { logout(); setState(AppState.LOGIN); }} className="w-full flex items-center px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
             <LogOut className="w-5 h-5 shrink-0" /> 
             <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">Выйти</span>
@@ -5345,7 +5341,23 @@ const App: React.FC = () => {
                 </div>
             )}
             {activeTab === 'settings' && (
-                <div className="animate-in fade-in duration-300">
+                <div className="animate-in fade-in duration-300 space-y-6">
+                  <div className="bg-white dark:bg-architect-800 rounded-xl border border-architect-200 dark:border-architect-700 p-6">
+                    <h2 className="text-xl font-bold dark:text-white mb-4">Внешний вид</h2>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {isDarkMode ? <Moon className="w-5 h-5 text-architect-500" /> : <Sun className="w-5 h-5 text-architect-500" />}
+                        <span className="text-sm font-medium dark:text-white">{isDarkMode ? 'Темная тема' : 'Светлая тема'}</span>
+                      </div>
+                      <button
+                        onClick={toggleTheme}
+                        className="px-4 py-2 bg-architect-900 dark:bg-white text-white dark:text-architect-900 rounded-lg hover:opacity-90 transition-all flex items-center gap-2"
+                      >
+                        {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                        <span>Переключить</span>
+                      </button>
+                    </div>
+                  </div>
                   <UsersManagement />
                 </div>
             )}
