@@ -307,6 +307,12 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
       }
 
       if (rows.length > 0) {
+        // Calculate section grand total based on selected options
+        let sectionGrandTotal = 0;
+        if (options.includeWorks) sectionGrandTotal += sectionWorkTotal;
+        if (options.includeRoughMaterials) sectionGrandTotal += sectionRoughTotal;
+        if (options.includeFinishMaterials) sectionGrandTotal += sectionFinishTotal;
+        
         // Итого по секции
         rows.push({
           number: 0,
@@ -314,7 +320,7 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
           unit: '',
           quantity: 0,
           price: 0,
-          total: sectionWorkTotal + sectionRoughTotal + sectionFinishTotal,
+          total: sectionGrandTotal,
           type: '',
           isSectionTotal: true,
           sectionName: sectionName
@@ -326,7 +332,7 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
           workTotal: sectionWorkTotal,
           roughTotal: sectionRoughTotal,
           finishTotal: sectionFinishTotal,
-          grandTotal: sectionWorkTotal + sectionRoughTotal + sectionFinishTotal
+          grandTotal: sectionGrandTotal
         });
 
         roomWorkTotal += sectionWorkTotal;
@@ -336,13 +342,19 @@ function prepareRoomData(room: Room, options: ExportOptions): ExportRoomData {
     });
   }
 
+  // Calculate room grand total based on selected options
+  let roomGrandTotal = 0;
+  if (options.includeWorks) roomGrandTotal += roomWorkTotal;
+  if (options.includeRoughMaterials) roomGrandTotal += roomRoughTotal;
+  if (options.includeFinishMaterials) roomGrandTotal += roomFinishTotal;
+  
   return {
     roomName: room.name,
     sections,
     workTotal: roomWorkTotal,
     roughTotal: roomRoughTotal,
     finishTotal: roomFinishTotal,
-    grandTotal: roomWorkTotal + roomRoughTotal + roomFinishTotal
+    grandTotal: roomGrandTotal
   };
 }
 
@@ -522,14 +534,22 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
         });
 
         subcatItems.forEach((item: EstimationItem) => {
-          itemCounter++;
+          // Filter items based on export options
           const isWork = item.type === 'work';
-          const isMaterial = item.type === 'rough' || item.type === 'finish';
+          const isRoughMaterial = item.type === 'rough';
+          const isFinishMaterial = item.type === 'finish';
+          
+          // Skip if item type doesn't match export options
+          if (isWork && !options.includeWorks) return;
+          if (isRoughMaterial && !options.includeRoughMaterials) return;
+          if (isFinishMaterial && !options.includeFinishMaterials) return;
+          
+          itemCounter++;
           const isLinkedMaterial = item.name?.startsWith('  └') || false;
 
           rows.push({
             number: itemCounter,
-            name: isLinkedMaterial || !isWork ? (isLinkedMaterial ? item.name : `  └ ${item.name || ''}`) : item.name || '',
+            name: isLinkedMaterial ? item.name : (isWork ? item.name || '' : `  └ ${item.name || ''}`),
             unit: item.unit || '',
             quantity: Number(item.quantity) || 0,
             price: Number(item.price) || 0,
@@ -549,12 +569,22 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
       });
     } else {
       data.items.forEach((item: EstimationItem) => {
-        itemCounter++;
+        // Filter items based on export options
         const isWork = item.type === 'work';
+        const isRoughMaterial = item.type === 'rough';
+        const isFinishMaterial = item.type === 'finish';
+        
+        // Skip if item type doesn't match export options
+        if (isWork && !options.includeWorks) return;
+        if (isRoughMaterial && !options.includeRoughMaterials) return;
+        if (isFinishMaterial && !options.includeFinishMaterials) return;
+        
+        itemCounter++;
+        const isLinkedMaterial = item.name?.startsWith('  └') || false;
 
         rows.push({
           number: itemCounter,
-          name: isWork ? item.name || '' : `  └ ${item.name || ''}`,
+          name: isLinkedMaterial ? item.name : (isWork ? item.name || '' : `  └ ${item.name || ''}`),
           unit: item.unit || '',
           quantity: Number(item.quantity) || 0,
           price: Number(item.price) || 0,
@@ -573,13 +603,19 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
     }
 
     if (rows.length > 0) {
+      // Calculate grand total based on selected options
+      let grandTotal = 0;
+      if (options.includeWorks) grandTotal += data.workTotal;
+      if (options.includeRoughMaterials) grandTotal += data.roughTotal;
+      if (options.includeFinishMaterials) grandTotal += data.finishTotal;
+      
       rows.push({
         number: 0,
         name: 'Итого по секции',
         unit: '',
         quantity: 0,
         price: 0,
-        total: data.workTotal + data.roughTotal + data.finishTotal,
+        total: grandTotal,
         type: '',
         isSectionTotal: true,
         sectionName: sectionName
@@ -591,7 +627,7 @@ function prepareGlobalData(project: Project, options: ExportOptions): ExportSect
         workTotal: data.workTotal,
         roughTotal: data.roughTotal,
         finishTotal: data.finishTotal,
-        grandTotal: data.workTotal + data.roughTotal + data.finishTotal
+        grandTotal: grandTotal
       });
     }
   });
@@ -740,12 +776,18 @@ function createTotalsWorksheet(data: { rooms?: ExportRoomData[], sections?: Expo
     rows.push(['Комната', 'Работы', 'Черновые материалы', 'Чистовые материалы', 'Итого']);
     
     data.rooms.forEach(room => {
+      // Calculate room grand total based on selected options
+      let roomGrandTotal = 0;
+      if (options.includeWorks) roomGrandTotal += room.workTotal;
+      if (options.includeRoughMaterials) roomGrandTotal += room.roughTotal;
+      if (options.includeFinishMaterials) roomGrandTotal += room.finishTotal;
+      
       rows.push([
         room.roomName,
         options.includeWorks ? room.workTotal : 0,
         options.includeRoughMaterials ? room.roughTotal : 0,
         options.includeFinishMaterials ? room.finishTotal : 0,
-        room.grandTotal
+        roomGrandTotal
       ]);
       totalWork += room.workTotal;
       totalRough += room.roughTotal;
@@ -756,12 +798,18 @@ function createTotalsWorksheet(data: { rooms?: ExportRoomData[], sections?: Expo
     rows.push(['Секция', 'Работы', 'Черновые материалы', 'Чистовые материалы', 'Итого']);
     
     data.sections.forEach(section => {
+      // Calculate section grand total based on selected options
+      let sectionGrandTotal = 0;
+      if (options.includeWorks) sectionGrandTotal += section.workTotal;
+      if (options.includeRoughMaterials) sectionGrandTotal += section.roughTotal;
+      if (options.includeFinishMaterials) sectionGrandTotal += section.finishTotal;
+      
       rows.push([
         section.sectionName,
         options.includeWorks ? section.workTotal : 0,
         options.includeRoughMaterials ? section.roughTotal : 0,
         options.includeFinishMaterials ? section.finishTotal : 0,
-        section.grandTotal
+        sectionGrandTotal
       ]);
       totalWork += section.workTotal;
       totalRough += section.roughTotal;
@@ -770,7 +818,17 @@ function createTotalsWorksheet(data: { rooms?: ExportRoomData[], sections?: Expo
   }
 
   rows.push([]);
-  rows.push(['ОБЩИЙ ИТОГ', totalWork, totalRough, totalFinish, totalWork + totalRough + totalFinish]);
+  // Calculate grand total based on selected options
+  let grandTotal = 0;
+  if (options.includeWorks) grandTotal += totalWork;
+  if (options.includeRoughMaterials) grandTotal += totalRough;
+  if (options.includeFinishMaterials) grandTotal += totalFinish;
+  
+  rows.push(['ОБЩИЙ ИТОГ', 
+    options.includeWorks ? totalWork : 0, 
+    options.includeRoughMaterials ? totalRough : 0, 
+    options.includeFinishMaterials ? totalFinish : 0, 
+    grandTotal]);
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
 
