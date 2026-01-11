@@ -7,7 +7,8 @@ import {
   ArrowUpToLine, Folder, Settings, CreditCard, LogOut, 
   ChevronRight, Search, Menu, CircleHelp, ImagePlus,
   ChevronDown, Calculator, DoorOpen, Layout, Hammer, Package, Sparkles,
-  Mic, MicOff, Upload, FileSpreadsheet, RefreshCw, ExternalLink
+  Mic, MicOff, Upload, FileSpreadsheet, RefreshCw, ExternalLink,
+  LayoutDashboard, CheckSquare, TrendingUp, Building, Users, Warehouse
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { PlanUploader } from './components/PlanUploader.tsx';
@@ -344,7 +345,7 @@ const App: React.FC = () => {
   const [imageSize] = useState<ImageSize>('1K');
   const [editingImage, setEditingImage] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'projects' | 'prices' | 'settings'>('projects');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'sales' | 'objects' | 'projects' | 'executors' | 'warehouse' | 'prices' | 'settings'>('projects');
   const [showStyleTooltip, setShowStyleTooltip] = useState(false);
   const [isDetectingStyle, setIsDetectingStyle] = useState(false);
   const [expandedEstimateSections, setExpandedEstimateSections] = useState<Record<string, boolean>>({});
@@ -2946,10 +2947,34 @@ const App: React.FC = () => {
             <X className="w-6 h-6" />
           </button>
       </div>
-      <nav className="flex-1 p-4 space-y-2 mt-4">
+      <nav className="flex-1 p-4 space-y-2 mt-4 overflow-y-auto">
+          <button onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }} className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900 shadow-lg' : 'text-architect-500 hover:bg-architect-50 dark:hover:bg-architect-700'}`}>
+            <LayoutDashboard className="w-5 h-5 shrink-0" /> 
+            <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">Дашборд</span>
+          </button>
+          <button onClick={() => { setActiveTab('tasks'); setIsSidebarOpen(false); }} className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'tasks' ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900 shadow-lg' : 'text-architect-500 hover:bg-architect-50 dark:hover:bg-architect-700'}`}>
+            <CheckSquare className="w-5 h-5 shrink-0" /> 
+            <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">Задачи</span>
+          </button>
+          <button onClick={() => { setActiveTab('sales'); setIsSidebarOpen(false); }} className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'sales' ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900 shadow-lg' : 'text-architect-500 hover:bg-architect-50 dark:hover:bg-architect-700'}`}>
+            <TrendingUp className="w-5 h-5 shrink-0" /> 
+            <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">Продажи</span>
+          </button>
+          <button onClick={() => { setActiveTab('objects'); setIsSidebarOpen(false); }} className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'objects' ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900 shadow-lg' : 'text-architect-500 hover:bg-architect-50 dark:hover:bg-architect-700'}`}>
+            <Building className="w-5 h-5 shrink-0" /> 
+            <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">Объекты</span>
+          </button>
           <button onClick={() => { setActiveTab('projects'); setIsSidebarOpen(false); }} className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'projects' ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900 shadow-lg' : 'text-architect-500 hover:bg-architect-50 dark:hover:bg-architect-700'}`}>
             <Folder className="w-5 h-5 shrink-0" /> 
             <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">Проекты</span>
+          </button>
+          <button onClick={() => { setActiveTab('executors'); setIsSidebarOpen(false); }} className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'executors' ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900 shadow-lg' : 'text-architect-500 hover:bg-architect-50 dark:hover:bg-architect-700'}`}>
+            <Users className="w-5 h-5 shrink-0" /> 
+            <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">Исполнители</span>
+          </button>
+          <button onClick={() => { setActiveTab('warehouse'); setIsSidebarOpen(false); }} className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'warehouse' ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900 shadow-lg' : 'text-architect-500 hover:bg-architect-50 dark:hover:bg-architect-700'}`}>
+            <Warehouse className="w-5 h-5 shrink-0" /> 
+            <span className="ml-3 whitespace-nowrap overflow-hidden transition-all duration-300 md:opacity-0 md:group-hover:opacity-100">Склад</span>
           </button>
           <button onClick={() => { setActiveTab('prices'); setIsSidebarOpen(false); }} className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'prices' ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900 shadow-lg' : 'text-architect-500 hover:bg-architect-50 dark:hover:bg-architect-700'}`}>
             <CreditCard className="w-5 h-5 shrink-0" /> 
@@ -3142,7 +3167,17 @@ const App: React.FC = () => {
                   <Menu className="w-6 h-6" />
                 </button>
                 <div className="text-left">
-                    <h2 className="font-bold text-lg text-architect-900 dark:text-white capitalize">{activeTab === 'projects' ? 'Проекты' : activeTab === 'prices' ? 'Прайс-листы' : 'Настройки'}</h2>
+                    <h2 className="font-bold text-lg text-architect-900 dark:text-white capitalize">
+                      {activeTab === 'dashboard' ? 'Дашборд' : 
+                       activeTab === 'tasks' ? 'Задачи' : 
+                       activeTab === 'sales' ? 'Продажи' : 
+                       activeTab === 'objects' ? 'Объекты' : 
+                       activeTab === 'projects' ? 'Проекты' : 
+                       activeTab === 'executors' ? 'Исполнители' : 
+                       activeTab === 'warehouse' ? 'Склад' : 
+                       activeTab === 'prices' ? 'Прайс-листы' : 
+                       activeTab === 'settings' ? 'Настройки' : 'Главная'}
+                    </h2>
                 </div>
             </div>
             {state === AppState.VIEW_PROJECT && (
@@ -3153,6 +3188,196 @@ const App: React.FC = () => {
         </header>
 
         <section className="flex-1 overflow-y-auto p-4 md:p-8 text-left">
+            {activeTab === 'dashboard' && (
+                <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl">
+                                <LayoutDashboard className="w-8 h-8 text-white dark:text-architect-900" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-architect-900 dark:text-white">Дашборд</h1>
+                                <p className="text-architect-500 dark:text-architect-400 text-sm">Панель управления и аналитика</p>
+                            </div>
+                        </div>
+                        <div className="space-y-4 text-architect-700 dark:text-architect-300">
+                            <p className="text-lg font-semibold text-architect-900 dark:text-white mb-4">В этом разделе будет отображаться:</p>
+                            <ul className="space-y-3 list-disc list-inside">
+                                <li><strong>Сводки по маркетингу</strong> - статистика по рекламным кампаниям, источникам лидов, конверсиям</li>
+                                <li><strong>Лиды</strong> - количество новых лидов, в работе, конверсия в замеры</li>
+                                <li><strong>Замеры</strong> - запланированные и выполненные замеры, конверсия в договоры</li>
+                                <li><strong>Договоры</strong> - количество подписанных договоров, сумма сделок, средний чек</li>
+                                <li><strong>Объекты в работе</strong> - текущие активные объекты, этапы выполнения, сроки</li>
+                                <li><strong>Прибыль и расходы</strong> - финансовая аналитика, доходы, расходы, прибыльность</li>
+                                <li><strong>Показатели работы сотрудников</strong> - KPI менеджеров, прорабов, мастеров</li>
+                                <li><strong>Уведомления о нарушениях сроков</strong> - задачи с просрочкой, предупреждения о приближающихся дедлайнах</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {activeTab === 'tasks' && (
+                <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl">
+                                <CheckSquare className="w-8 h-8 text-white dark:text-architect-900" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-architect-900 dark:text-white">Задачи</h1>
+                                <p className="text-architect-500 dark:text-architect-400 text-sm">Управление задачами в формате канбан</p>
+                            </div>
+                        </div>
+                        <div className="space-y-4 text-architect-700 dark:text-architect-300">
+                            <p className="text-lg font-semibold text-architect-900 dark:text-white mb-4">В этом разделе будет реализовано:</p>
+                            <ul className="space-y-3 list-disc list-inside">
+                                <li><strong>Канбан-доска с 3 столбцами:</strong>
+                                    <ul className="ml-6 mt-2 space-y-2 list-disc">
+                                        <li>Задачи на сегодня</li>
+                                        <li>Задачи на завтра</li>
+                                        <li>Задачи на неделю</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Карточки задач</strong> - с информацией о задаче, исполнителе, приоритете, статусе</li>
+                                <li><strong>Перетаскивание задач</strong> - между столбцами для изменения сроков</li>
+                                <li><strong>Фильтры и сортировка</strong> - по исполнителю, приоритету, типу задачи</li>
+                                <li><strong>Уведомления</strong> - о просроченных задачах и приближающихся дедлайнах</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {activeTab === 'sales' && (
+                <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl">
+                                <TrendingUp className="w-8 h-8 text-white dark:text-architect-900" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-architect-900 dark:text-white">Продажи</h1>
+                                <p className="text-architect-500 dark:text-architect-400 text-sm">Управление сделками и лидами</p>
+                            </div>
+                        </div>
+                        <div className="space-y-4 text-architect-700 dark:text-architect-300">
+                            <p className="text-lg font-semibold text-architect-900 dark:text-white mb-4">В этом разделе будет реализовано:</p>
+                            <ul className="space-y-3 list-disc list-inside">
+                                <li><strong>Канбан со сделками</strong> - классическая воронка продаж с этапами от нового лида до подписания договора</li>
+                                <li><strong>Автоматическое создание лидов</strong> - новые лиды с сайта будут автоматически попадать в раздел</li>
+                                <li><strong>Карточки клиентов</strong> - полная информация о клиенте:
+                                    <ul className="ml-6 mt-2 space-y-2 list-disc">
+                                        <li>Контактные данные</li>
+                                        <li>История взаимодействий</li>
+                                        <li>Замеры и встречи</li>
+                                        <li>Коммерческие предложения</li>
+                                        <li>Договоры и документы</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Перемещение карточек</strong> - между этапами воронки продаж</li>
+                                <li><strong>Аналитика продаж</strong> - конверсии по этапам, средний чек, воронка продаж</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {activeTab === 'objects' && (
+                <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl">
+                                <Building className="w-8 h-8 text-white dark:text-architect-900" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-architect-900 dark:text-white">Объекты</h1>
+                                <p className="text-architect-500 dark:text-architect-400 text-sm">Управление объектами в работе</p>
+                            </div>
+                        </div>
+                        <div className="space-y-4 text-architect-700 dark:text-architect-300">
+                            <p className="text-lg font-semibold text-architect-900 dark:text-white mb-4">В этом разделе будет реализовано:</p>
+                            <ul className="space-y-3 list-disc list-inside">
+                                <li><strong>Карточки объектов</strong> - с полной информацией о текущих объектах в работе</li>
+                                <li><strong>График работ</strong> - календарный план выполнения работ, этапы, сроки</li>
+                                <li><strong>Текущее состояние</strong> - статус объекта, процент выполнения, фотоотчеты</li>
+                                <li><strong>Отчеты о выполненных работах</strong> - прорабы и мастера смогут добавлять:
+                                    <ul className="ml-6 mt-2 space-y-2 list-disc">
+                                        <li>Текстовые отчеты</li>
+                                        <li>Фотоотчеты выполненных работ</li>
+                                        <li>Информацию о затраченном времени</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Акты о выполненных работах</strong> - менеджер или прораб сможет формировать акты для клиента</li>
+                                <li><strong>Команда объекта</strong> - назначенные прорабы, мастера, подрядчики</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {activeTab === 'executors' && (
+                <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl">
+                                <Users className="w-8 h-8 text-white dark:text-architect-900" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-architect-900 dark:text-white">Исполнители</h1>
+                                <p className="text-architect-500 dark:text-architect-400 text-sm">Управление исполнителями работ</p>
+                            </div>
+                        </div>
+                        <div className="space-y-4 text-architect-700 dark:text-architect-300">
+                            <p className="text-lg font-semibold text-architect-900 dark:text-white mb-4">В этом разделе будет реализовано:</p>
+                            <ul className="space-y-3 list-disc list-inside">
+                                <li><strong>Таблица с карточками исполнителей</strong> - прорабы, мастера, подрядчики</li>
+                                <li><strong>Информация о каждом исполнителе:</strong>
+                                    <ul className="ml-6 mt-2 space-y-2 list-disc">
+                                        <li>Контактные данные</li>
+                                        <li>Специализация и навыки</li>
+                                        <li>Текущие объекты и задачи</li>
+                                        <li>История работы</li>
+                                        <li>Рейтинг и отзывы</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Категории подрядчиков</strong> - потолочники, кондиционерщики, дизайнеры и т.д.</li>
+                                <li><strong>Назначение на объекты</strong> - возможность назначить исполнителя на конкретный объект или задачу</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {activeTab === 'warehouse' && (
+                <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl">
+                                <Warehouse className="w-8 h-8 text-white dark:text-architect-900" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-architect-900 dark:text-white">Склад</h1>
+                                <p className="text-architect-500 dark:text-architect-400 text-sm">Управление материалами и оборудованием</p>
+                            </div>
+                        </div>
+                        <div className="space-y-4 text-architect-700 dark:text-architect-300">
+                            <p className="text-lg font-semibold text-architect-900 dark:text-white mb-4">В этом разделе будет реализовано:</p>
+                            <ul className="space-y-3 list-disc list-inside">
+                                <li><strong>Таблица с карточками материалов и оборудования</strong> - в собственности компании</li>
+                                <li><strong>Информация о каждом материале/оборудовании:</strong>
+                                    <ul className="ml-6 mt-2 space-y-2 list-disc">
+                                        <li>Название и описание</li>
+                                        <li>Фото</li>
+                                        <li>Количество на складе</li>
+                                        <li>Единица измерения</li>
+                                        <li>Стоимость</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Приход/расход</strong> - учет поступления и выдачи материалов</li>
+                                <li><strong>История операций</strong> - кто принял/выдал, дата, количество, объект</li>
+                                <li><strong>Остатки на складе</strong> - текущее количество каждого материала</li>
+                                <li><strong>Уведомления о низких остатках</strong> - предупреждения при достижении минимального уровня</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
             {activeTab === 'projects' && (
                 <>
                     {state === AppState.PROJECT_LIST && (
