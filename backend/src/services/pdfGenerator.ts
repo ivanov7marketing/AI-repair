@@ -773,10 +773,10 @@ export async function generatePDF(project: Project, options: ExportOptions): Pro
     const pdf = await page.pdf({
       format: 'A4',
       margin: {
-        top: '20mm',
-        right: '15mm',
-        bottom: '20mm',
-        left: '15mm'
+        top: '10mm',
+        right: '8mm',
+        bottom: '10mm',
+        left: '8mm'
       },
       printBackground: true,
       preferCSSPageSize: false
