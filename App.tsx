@@ -3175,38 +3175,6 @@ const App: React.FC = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-4 text-left">
-                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-left">
-                                              <h3 className="text-xl font-bold dark:text-white">3D Изометрическая визуализация</h3>
-                                              <div className="flex items-center gap-3">
-                                                  {/* Архитектурный стиль */}
-                                                  <div className="flex items-center gap-2 relative">
-                                                      <div className="relative">
-                                                          <button onMouseEnter={() => setShowStyleTooltip(true)} onMouseLeave={() => setShowStyleTooltip(false)} className="text-architect-400 hover:text-architect-800 dark:hover:text-white transition-colors">
-                                                              <CircleHelp className="w-4 h-4" />
-                                                          </button>
-                                                          {showStyleTooltip && (
-                                                              <div className="absolute bottom-full right-0 mb-2 w-64 p-4 bg-architect-900 text-white text-[12px] rounded-xl shadow-2xl z-50 text-left">
-                                                                  <p className="font-bold border-b border-white/20 pb-1 mb-2">{currentProject.analysis?.architecturalStyle}</p>
-                                                                  <p className="leading-relaxed opacity-90">{STYLE_DESCRIPTIONS[currentProject.analysis?.architecturalStyle || 'Современный']}</p>
-                                                              </div>
-                                                          )}
-                                                      </div>
-                                                      <select value={currentProject.analysis?.architecturalStyle || ''} onChange={(e) => handleUpdateStyle(e.target.value)} className="px-3 py-2 text-sm border border-architect-300 dark:border-architect-600 rounded-lg bg-architect-50 dark:bg-architect-900 text-architect-900 dark:text-white outline-none min-w-[150px]">
-                                                          {PREDEFINED_STYLES.map(style => (<option key={style} value={style}>{style}</option>))}
-                                                      </select>
-                                                      <div className="w-10 h-10 shrink-0 bg-architect-50 dark:bg-architect-900 rounded-lg border border-architect-300 dark:border-architect-600 flex items-center justify-center cursor-pointer relative group overflow-hidden" title="Загрузить референс стиля">
-                                                          {isDetectingStyle ? <Loader2 className="w-4 h-4 animate-spin text-purple-500" /> : currentProject.analysis?.styleReferenceImage ? <img src={currentProject.analysis.styleReferenceImage} alt="Ref" className="w-full h-full object-cover" /> : <ImagePlus className="w-5 h-5 text-architect-400" />}
-                                                          <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleStyleImageUpload(e.target.files[0])} />
-                                                      </div>
-                                                  </div>
-                                                  <button onClick={handleGenerateGlobal} disabled={isGeneratingGlobal} className="bg-architect-900 dark:bg-white text-white dark:text-architect-900 px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-all whitespace-nowrap">{isGeneratingGlobal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Box className="w-4 h-4" />} Сгенерировать макет</button>
-                                              </div>
-                                            </div>
-                                            <div className="bg-white dark:bg-architect-800 rounded-[32px] border border-architect-200 dark:border-architect-700 p-2 min-h-[400px] flex items-center justify-center relative overflow-hidden text-left">
-                                                {isGeneratingGlobal ? <GenerationLoader planUrl={currentProject.planPreview || null} label="Создаем 3D модель..." /> : currentProject.global3DImage ? <img src={getImageUrl(currentProject.global3DImage) || currentProject.global3DImage} alt="Global 3D" className="w-full h-auto rounded-[24px]" /> : <div className="text-architect-300 flex flex-col items-center"><ImageIcon className="w-20 h-20 mb-2 opacity-20" /><p className="text-xs font-bold uppercase tracking-widest opacity-40">Макет еще не создан</p></div>}
-                                            </div>
-                                        </div>
                                         
                                         {/* Автозаполнение смет */}
                                         <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-2xl border border-purple-200 dark:border-purple-800 shadow-sm overflow-hidden text-left">
@@ -3638,6 +3606,40 @@ const App: React.FC = () => {
                                                         )}
                                                       </div>
                                                     )}
+                                        </div>
+                                        
+                                        {/* 3D Изометрическая визуализация */}
+                                        <div className="space-y-4 text-left">
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-left">
+                                              <h3 className="text-xl font-bold dark:text-white">3D Изометрическая визуализация</h3>
+                                              <div className="flex items-center gap-3">
+                                                  {/* Архитектурный стиль */}
+                                                  <div className="flex items-center gap-2 relative">
+                                                      <div className="relative">
+                                                          <button onMouseEnter={() => setShowStyleTooltip(true)} onMouseLeave={() => setShowStyleTooltip(false)} className="text-architect-400 hover:text-architect-800 dark:hover:text-white transition-colors">
+                                                              <CircleHelp className="w-4 h-4" />
+                                                          </button>
+                                                          {showStyleTooltip && (
+                                                              <div className="absolute bottom-full right-0 mb-2 w-64 p-4 bg-architect-900 text-white text-[12px] rounded-xl shadow-2xl z-50 text-left">
+                                                                  <p className="font-bold border-b border-white/20 pb-1 mb-2">{currentProject.analysis?.architecturalStyle}</p>
+                                                                  <p className="leading-relaxed opacity-90">{STYLE_DESCRIPTIONS[currentProject.analysis?.architecturalStyle || 'Современный']}</p>
+                                                              </div>
+                                                          )}
+                                                      </div>
+                                                      <select value={currentProject.analysis?.architecturalStyle || ''} onChange={(e) => handleUpdateStyle(e.target.value)} className="px-3 py-2 text-sm border border-architect-300 dark:border-architect-600 rounded-lg bg-architect-50 dark:bg-architect-900 text-architect-900 dark:text-white outline-none min-w-[150px]">
+                                                          {PREDEFINED_STYLES.map(style => (<option key={style} value={style}>{style}</option>))}
+                                                      </select>
+                                                      <div className="w-10 h-10 shrink-0 bg-architect-50 dark:bg-architect-900 rounded-lg border border-architect-300 dark:border-architect-600 flex items-center justify-center cursor-pointer relative group overflow-hidden" title="Загрузить референс стиля">
+                                                          {isDetectingStyle ? <Loader2 className="w-4 h-4 animate-spin text-purple-500" /> : currentProject.analysis?.styleReferenceImage ? <img src={currentProject.analysis.styleReferenceImage} alt="Ref" className="w-full h-full object-cover" /> : <ImagePlus className="w-5 h-5 text-architect-400" />}
+                                                          <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => e.target.files?.[0] && handleStyleImageUpload(e.target.files[0])} />
+                                                      </div>
+                                                  </div>
+                                                  <button onClick={handleGenerateGlobal} disabled={isGeneratingGlobal} className="bg-architect-900 dark:bg-white text-white dark:text-architect-900 px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-all whitespace-nowrap">{isGeneratingGlobal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Box className="w-4 h-4" />} Сгенерировать макет</button>
+                                              </div>
+                                            </div>
+                                            <div className="bg-white dark:bg-architect-800 rounded-[32px] border border-architect-200 dark:border-architect-700 p-2 min-h-[400px] flex items-center justify-center relative overflow-hidden text-left">
+                                                {isGeneratingGlobal ? <GenerationLoader planUrl={currentProject.planPreview || null} label="Создаем 3D модель..." /> : currentProject.global3DImage ? <img src={getImageUrl(currentProject.global3DImage) || currentProject.global3DImage} alt="Global 3D" className="w-full h-auto rounded-[24px]" /> : <div className="text-architect-300 flex flex-col items-center"><ImageIcon className="w-20 h-20 mb-2 opacity-20" /><p className="text-xs font-bold uppercase tracking-widest opacity-40">Макет еще не создан</p></div>}
+                                            </div>
                                         </div>
                                     </>
                                 ) : (
