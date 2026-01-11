@@ -366,8 +366,11 @@ function prepareRoomDataForPDF(room: any, options: ExportOptions): ExportRoomDat
 
 // Подготовка данных общей сметы для PDF
 function prepareGlobalDataForPDF(project: Project, options: ExportOptions): ExportSectionData[] {
+  console.log(`[PDF Export] prepareGlobalDataForPDF called`);
+  console.log(`[PDF Export] Options:`, JSON.stringify(options));
   const rooms = project.analysis?.rooms || [];
   const globalWorks = project.analysis?.globalWorks || {};
+  console.log(`[PDF Export] Rooms count: ${rooms.length}, has globalWorks: ${!!globalWorks}`);
   const sections: ExportSectionData[] = [];
 
   const sectionData: Record<string, {
@@ -387,13 +390,20 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
   });
 
   if (options.includeWorks || options.includeRoughMaterials || options.includeFinishMaterials) {
-    rooms.forEach(room => {
+    rooms.forEach((room, roomIdx) => {
+      console.log(`[PDF Export] Global: Processing room ${roomIdx + 1}/${rooms.length}: ${room.name}`);
       // Process room if it has works OR materials to include
       const hasWorks = room.estimation?.works;
       const hasRoughMaterials = options.includeRoughMaterials && room.estimation?.roughMaterials?.items && room.estimation.roughMaterials.items.length > 0;
       const hasFinishMaterials = options.includeFinishMaterials && room.estimation?.finishMaterials?.items && room.estimation.finishMaterials.items.length > 0;
       
-      if (!hasWorks && !hasRoughMaterials && !hasFinishMaterials) return;
+      console.log(`[PDF Export] Global: Room "${room.name}" - hasWorks=${!!hasWorks}, hasRoughMaterials=${hasRoughMaterials}, hasFinishMaterials=${hasFinishMaterials}`);
+      console.log(`[PDF Export] Global: Room "${room.name}" - roughMaterials items: ${room.estimation?.roughMaterials?.items?.length || 0}, finishMaterials items: ${room.estimation?.finishMaterials?.items?.length || 0}`);
+      
+      if (!hasWorks && !hasRoughMaterials && !hasFinishMaterials) {
+        console.log(`[PDF Export] Global: Skipping room "${room.name}" - no works and no materials`);
+        return;
+      }
 
       WORK_SUBSECTIONS.forEach(sectionName => {
         const section = room.estimation.works[sectionName];
@@ -506,7 +516,11 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
 
   ALL_WORK_SECTIONS.forEach(sectionName => {
     const data = sectionData[sectionName];
-    if (data.items.length === 0) return;
+    console.log(`[PDF Export] Global: Section "${sectionName}" has ${data.items.length} items`);
+    if (data.items.length === 0) {
+      console.log(`[PDF Export] Global: Skipping section "${sectionName}" - no items`);
+      return;
+    }
 
     const rows: ExportDataRow[] = [];
     let itemCounter = 0;
@@ -610,6 +624,12 @@ function prepareGlobalDataForPDF(project: Project, options: ExportOptions): Expo
 
 // Генерация HTML для PDF
 function generatePDFHTML(project: Project, options: ExportOptions): string {
+  console.log(`[PDF Export] generatePDFHTML called with options:`, JSON.stringify(options));
+  console.log(`[PDF Export] Project has analysis:`, !!project.analysis);
+  console.log(`[PDF Export] Project has rooms:`, !!project.analysis?.rooms);
+  console.log(`[PDF Export] Rooms count:`, project.analysis?.rooms?.length || 0);
+  console.log(`[PDF Export] groupByRooms:`, options.groupByRooms);
+  
   let html = `
 <!DOCTYPE html>
 <html>
@@ -651,8 +671,13 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
     let grandTotalFinish = 0;
 
     rooms.forEach((room, roomIndex) => {
+      console.log(`[PDF Export] Processing room ${roomIndex + 1}/${rooms.length}: ${room.name}`);
       const roomData = prepareRoomDataForPDF(room, options);
-      if (roomData.sections.length === 0) return;
+      console.log(`[PDF Export] Room "${room.name}" returned ${roomData.sections.length} sections`);
+      if (roomData.sections.length === 0) {
+        console.log(`[PDF Export] Skipping room "${room.name}" - no sections`);
+        return;
+      }
 
       html += `<div class="room-section">`;
       html += `<h2>${roomData.roomName}</h2>`;
@@ -730,7 +755,9 @@ function generatePDFHTML(project: Project, options: ExportOptions): string {
     html += `<p class="grand-total">Общий итог: ${(grandTotalWork + grandTotalRough + grandTotalFinish).toLocaleString('ru-RU')} р.</p>`;
     html += `</div>`;
   } else {
+    console.log(`[PDF Export] Using global data (not grouped by rooms)`);
     const sections = prepareGlobalDataForPDF(project, options);
+    console.log(`[PDF Export] Global data returned ${sections.length} sections`);
     let grandTotalWork = 0;
     let grandTotalRough = 0;
     let grandTotalFinish = 0;
