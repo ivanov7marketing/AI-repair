@@ -919,7 +919,7 @@ export function exportEstimateToXLSX(project: Project, options: ExportOptions): 
     const totalsWs = createTotalsWorksheet({ rooms: roomDataList }, options);
     XLSX.utils.book_append_sheet(workbook, totalsWs, 'Итого');
   } else {
-    // Режим общей сметы
+    // Режим общей сметы - все на одном листе
     const sections = prepareGlobalData(project, options);
 
     // Проверяем, есть ли данные для экспорта
@@ -927,16 +927,89 @@ export function exportEstimateToXLSX(project: Project, options: ExportOptions): 
       throw new Error('Нет данных для экспорта. Убедитесь, что выбраны правильные типы данных (Работы, Черновые материалы, Чистовые материалы).');
     }
 
+    // Создаем один лист со всеми секциями
+    const rows: any[][] = [];
+    
+    // Заголовок
+    rows.push([project.name || 'Общая смета']);
+    rows.push([]);
+    
+    // Заголовки таблицы
+    rows.push(['№', 'Наименование', 'Ед. изм.', 'Количество', 'Цена', 'Стоимость', 'Тип']);
+    
+    // Данные по всем секциям
     sections.forEach(section => {
-      const ws = createSectionWorksheet(section, options);
-      // Ограничиваем длину имени листа
-      const sheetName = section.sectionName.length > 31 ? section.sectionName.substring(0, 31) : section.sectionName;
-      XLSX.utils.book_append_sheet(workbook, ws, sheetName);
+      // Заголовок секции
+      rows.push([section.sectionName, '', '', '', '', '', '']);
+      
+      // Данные секции
+      section.rows.forEach(row => {
+        if (row.isSubcategoryHeader) {
+          rows.push(['', row.name, '', '', '', '', '']);
+        } else if (row.isSectionTotal) {
+          rows.push(['', 'Итого по секции', '', '', '', row.total, '']);
+        } else {
+          rows.push([
+            row.number || '',
+            row.name,
+            row.unit,
+            row.quantity,
+            row.price,
+            row.total,
+            row.type
+          ]);
+        }
+      });
+      
+      rows.push([]);
     });
-
-    // Итоговый лист
-    const totalsWs = createTotalsWorksheet({ sections }, options);
-    XLSX.utils.book_append_sheet(workbook, totalsWs, 'Итого');
+    
+    // Итоги
+    rows.push([]);
+    rows.push(['ОБЩИЙ ИТОГ', '', '', '', '', '', '']);
+    
+    let totalWork = 0;
+    let totalRough = 0;
+    let totalFinish = 0;
+    
+    sections.forEach(section => {
+      totalWork += section.workTotal;
+      totalRough += section.roughTotal;
+      totalFinish += section.finishTotal;
+    });
+    
+    if (options.includeWorks) {
+      rows.push(['', 'Работы:', '', '', '', totalWork, '']);
+    }
+    if (options.includeRoughMaterials) {
+      rows.push(['', 'Черновые материалы:', '', '', '', totalRough, '']);
+    }
+    if (options.includeFinishMaterials) {
+      rows.push(['', 'Чистовые материалы:', '', '', '', totalFinish, '']);
+    }
+    
+    let grandTotal = 0;
+    if (options.includeWorks) grandTotal += totalWork;
+    if (options.includeRoughMaterials) grandTotal += totalRough;
+    if (options.includeFinishMaterials) grandTotal += totalFinish;
+    
+    rows.push(['', 'ВСЕГО:', '', '', '', grandTotal, '']);
+    
+    // Создаем лист
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    
+    // Ширина колонок
+    ws['!cols'] = [
+      { wch: 5 },   // №
+      { wch: 40 },  // Наименование
+      { wch: 10 },  // Ед. изм.
+      { wch: 12 },  // Количество
+      { wch: 12 },  // Цена
+      { wch: 15 },  // Стоимость
+      { wch: 12 }   // Тип
+    ];
+    
+    XLSX.utils.book_append_sheet(workbook, ws, 'Общая смета');
   }
 
   // Скачивание файла
