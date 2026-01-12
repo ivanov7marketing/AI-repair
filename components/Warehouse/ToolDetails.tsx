@@ -17,6 +17,7 @@ export const ToolDetails: React.FC<ToolDetailsProps> = ({
   onClose,
   onUpdate,
   hasPermission,
+  onEdit,
 }) => {
   const [tool, setTool] = useState<Tool>(initialTool);
   const [movements, setMovements] = useState<ToolMovement[]>([]);
