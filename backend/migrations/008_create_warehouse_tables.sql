@@ -1,5 +1,30 @@
 -- Create warehouse and purchase request tables
 
+-- 0. Suppliers table (must be created first as it's referenced by other tables)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'suppliers') THEN
+    CREATE TABLE suppliers (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      contacts TEXT,
+      address TEXT,
+      return_conditions TEXT,
+      discounts TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  ELSE
+    -- Extend existing suppliers table if needed
+    ALTER TABLE suppliers
+    ADD COLUMN IF NOT EXISTS return_conditions TEXT,
+    ADD COLUMN IF NOT EXISTS discounts TEXT;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_suppliers_organization ON suppliers(organization_id);
+
 -- 1. Materials catalog (extended reference)
 CREATE TABLE IF NOT EXISTS materials_catalog (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -139,29 +164,7 @@ CREATE TABLE IF NOT EXISTS material_returns (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- 10. Suppliers (if not exists, extend existing)
--- Check if suppliers table exists, if not create it
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'suppliers') THEN
-    CREATE TABLE suppliers (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-      name VARCHAR(255) NOT NULL,
-      contacts TEXT,
-      address TEXT,
-      return_conditions TEXT,
-      discounts TEXT,
-      created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW()
-    );
-  ELSE
-    -- Extend existing suppliers table if needed
-    ALTER TABLE suppliers
-    ADD COLUMN IF NOT EXISTS return_conditions TEXT,
-    ADD COLUMN IF NOT EXISTS discounts TEXT;
-  END IF;
-END $$;
+-- 10. Suppliers table already created at the beginning
 
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_materials_catalog_organization ON materials_catalog(organization_id);
@@ -199,8 +202,6 @@ CREATE INDEX IF NOT EXISTS idx_material_movements_created_at ON material_movemen
 CREATE INDEX IF NOT EXISTS idx_material_returns_organization ON material_returns(organization_id);
 CREATE INDEX IF NOT EXISTS idx_material_returns_project ON material_returns(project_id);
 CREATE INDEX IF NOT EXISTS idx_material_returns_status ON material_returns(status);
-
-CREATE INDEX IF NOT EXISTS idx_suppliers_organization ON suppliers(organization_id);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_materials_catalog_updated_at()
