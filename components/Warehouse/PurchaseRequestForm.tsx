@@ -264,16 +264,62 @@ export const PurchaseRequestForm: React.FC<PurchaseRequestFormProps> = ({
 
           {/* Items */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-architect-900 dark:text-white">Материалы</h3>
-              <button
-                type="button"
-                onClick={() => setShowMaterialSelect(true)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-architect-900 dark:bg-white text-white dark:text-architect-900 rounded-lg text-sm hover:bg-architect-800 dark:hover:bg-architect-100 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Добавить материал
-              </button>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-architect-900 dark:text-white mb-3">Материалы</h3>
+              
+              {/* Material input with autocomplete */}
+              <div className="relative" ref={materialInputRef}>
+                <input
+                  type="text"
+                  placeholder="Введите название материала или выберите из списка..."
+                  value={materialSearch}
+                  onChange={(e) => {
+                    setMaterialSearch(e.target.value);
+                    setShowMaterialSelect(true);
+                  }}
+                  onFocus={() => setShowMaterialSelect(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && materialSearch.trim() && !filteredMaterials.some(m => m.name.toLowerCase() === materialSearch.toLowerCase())) {
+                      e.preventDefault();
+                      handleAddItem(undefined, materialSearch.trim());
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-lg outline-none dark:text-white text-sm"
+                />
+                {showMaterialSelect && materialSearch && filteredMaterials.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredMaterials.slice(0, 10).map((material) => (
+                      <button
+                        key={material.id}
+                        type="button"
+                        onClick={() => {
+                          handleAddItem(material);
+                        }}
+                        className="w-full p-3 text-left hover:bg-architect-50 dark:hover:bg-architect-700 transition-colors border-b border-architect-100 dark:border-architect-700 last:border-b-0"
+                      >
+                        <div className="font-medium text-architect-900 dark:text-white">{material.name}</div>
+                        <div className="text-sm text-architect-500 dark:text-architect-400">
+                          {material.unit} • {material.averagePrice ? `${material.averagePrice.toLocaleString('ru-RU')} ₽` : 'Цена не указана'}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {materialSearch && !filteredMaterials.some(m => m.name.toLowerCase() === materialSearch.toLowerCase()) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (materialSearch.trim()) {
+                        handleAddItem(undefined, materialSearch.trim());
+                      }
+                    }}
+                    className="mt-2 w-full px-3 py-2 bg-architect-100 dark:bg-architect-700 text-architect-900 dark:text-white rounded-lg text-sm hover:bg-architect-200 dark:hover:bg-architect-600 transition-colors flex items-center gap-2 justify-center"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Добавить "{materialSearch}" как новый материал
+                  </button>
+                )}
+              </div>
             </div>
 
             {items.length === 0 ? (
