@@ -3531,7 +3531,7 @@ const App: React.FC = () => {
                                             onCreateNew={() => setShowToolForm(true)}
                                             onEditTool={(tool) => {
                                                 setSelectedTool(tool);
-                                                // ToolDetails will show edit form
+                                                setShowToolForm(true);
                                             }}
                                             hasPermission={hasPermission}
                                             refreshTrigger={warehouseRefreshTrigger}
@@ -3552,9 +3552,16 @@ const App: React.FC = () => {
                                         )}
                                         {showToolForm && (
                                             <ToolForm
-                                                onClose={() => setShowToolForm(false)}
+                                                initialData={selectedTool || undefined}
+                                                onClose={() => {
+                                                    setShowToolForm(false);
+                                                    if (selectedTool) {
+                                                        setSelectedTool(null);
+                                                    }
+                                                }}
                                                 onSuccess={() => {
                                                     setShowToolForm(false);
+                                                    setSelectedTool(null);
                                                     setWarehouseRefreshTrigger(Date.now());
                                                 }}
                                             />
