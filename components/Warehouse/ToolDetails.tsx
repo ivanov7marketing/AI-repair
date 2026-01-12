@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, User, MapPin, Package, Calendar, Wrench, ArrowRight, ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import { api } from '../../services/api';
 import { Tool, ToolMovement } from '../../types';
+import { ToolForm } from './ToolForm';
 
 interface ToolDetailsProps {
   tool: Tool;
