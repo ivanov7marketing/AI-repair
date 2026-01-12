@@ -51,9 +51,16 @@ export const ToolForm: React.FC<ToolFormProps> = ({ onClose, onSuccess, initialD
       onClose();
     } catch (error: any) {
       console.error('Tool save error:', error);
-      const errorMessage = error.details 
-        ? `Ошибка валидации: ${JSON.stringify(error.details)}`
-        : (error.message || 'Не удалось сохранить инструмент');
+      let errorMessage = 'Не удалось сохранить инструмент';
+      
+      if (error.details && Array.isArray(error.details)) {
+        // Zod validation errors
+        const details = error.details.map((d: any) => `${d.path?.join('.') || 'field'}: ${d.message}`).join(', ');
+        errorMessage = `Ошибка валидации: ${details}`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       alert('Ошибка: ' + errorMessage);
     } finally {
       setLoading(false);
