@@ -394,52 +394,6 @@ export const PurchaseRequestForm: React.FC<PurchaseRequestFormProps> = ({
             </div>
           </div>
 
-          {/* Material select modal */}
-          {showMaterialSelect && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-              <div className="bg-white dark:bg-architect-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                <div className="p-4 border-b border-architect-200 dark:border-architect-700 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-architect-900 dark:text-white">
-                    Выберите материал
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowMaterialSelect(false);
-                      setMaterialSearch('');
-                    }}
-                    className="p-1 hover:bg-architect-100 dark:hover:bg-architect-700 rounded"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="p-4">
-                  <input
-                    type="text"
-                    placeholder="Поиск материала..."
-                    value={materialSearch}
-                    onChange={(e) => setMaterialSearch(e.target.value)}
-                    className="w-full px-3 py-2 mb-4 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-lg outline-none dark:text-white text-sm"
-                    autoFocus
-                  />
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {filteredMaterials.map((material) => (
-                      <button
-                        key={material.id}
-                        type="button"
-                        onClick={() => handleAddItem(material)}
-                        className="w-full p-3 text-left border border-architect-200 dark:border-architect-700 rounded-lg hover:bg-architect-50 dark:hover:bg-architect-700 transition-colors"
-                      >
-                        <div className="font-medium text-architect-900 dark:text-white">{material.name}</div>
-                        <div className="text-sm text-architect-500 dark:text-architect-400">
-                          {material.unit} • {material.averagePrice ? `${material.averagePrice.toLocaleString('ru-RU')} ₽` : 'Цена не указана'}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Actions */}
           <div className="flex gap-2 pt-4 border-t border-architect-200 dark:border-architect-700">
