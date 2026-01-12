@@ -63,8 +63,18 @@ export const PurchaseRequestForm: React.FC<PurchaseRequestFormProps> = ({
 
   const loadMaterials = async () => {
     try {
-      const data = await api.getMaterials();
-      setMaterials(data);
+      // Get materials from price list (only rough and finish materials, not works)
+      const priceItems = await api.getPriceItems();
+      const materialsFromPrices = priceItems
+        .filter((item: any) => item.type === 'rough' || item.type === 'finish')
+        .map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          unit: item.unit,
+          averagePrice: item.price,
+          category: item.category,
+        }));
+      setMaterials(materialsFromPrices);
     } catch (error) {
       console.error('Failed to load materials:', error);
     }
