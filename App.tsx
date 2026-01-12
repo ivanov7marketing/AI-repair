@@ -345,7 +345,14 @@ const App: React.FC = () => {
   const [imageSize] = useState<ImageSize>('1K');
   const [editingImage, setEditingImage] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'sales' | 'objects' | 'projects' | 'executors' | 'warehouse' | 'prices' | 'settings'>('projects');
+  // Восстанавливаем activeTab из localStorage при монтировании
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'sales' | 'objects' | 'projects' | 'executors' | 'warehouse' | 'prices' | 'settings'>(() => {
+    const savedTab = localStorage.getItem('activeTab');
+    if (savedTab && ['dashboard', 'tasks', 'sales', 'objects', 'projects', 'executors', 'warehouse', 'prices', 'settings'].includes(savedTab)) {
+      return savedTab as 'dashboard' | 'tasks' | 'sales' | 'objects' | 'projects' | 'executors' | 'warehouse' | 'prices' | 'settings';
+    }
+    return 'projects'; // Значение по умолчанию
+  });
   const [showStyleTooltip, setShowStyleTooltip] = useState(false);
   const [isDetectingStyle, setIsDetectingStyle] = useState(false);
   const [expandedEstimateSections, setExpandedEstimateSections] = useState<Record<string, boolean>>({});
@@ -447,9 +454,14 @@ const App: React.FC = () => {
       loadProjects();
       loadPriceItems();
     } else if (!user && !isLoading) {
-      setState(AppState.LOGIN);
-      setProjects([]); // Clear projects on logout
-      setPriceList([]); // Clear prices on logout
+      // Проверяем, есть ли токен в localStorage - если есть, значит пользователь авторизован, просто еще загружается
+      const savedToken = localStorage.getItem('auth_token');
+      if (!savedToken) {
+        setState(AppState.LOGIN);
+        setProjects([]); // Clear projects on logout
+        setPriceList([]); // Clear prices on logout
+      }
+      // Если токен есть, но user еще не загружен, не меняем state - ждем загрузки
     }
   }, [user, isLoading]);
 
@@ -519,6 +531,11 @@ const App: React.FC = () => {
       document.documentElement.classList.add('dark');
     }
   }, []);
+
+  // Сохраняем activeTab в localStorage при изменении
+  useEffect(() => {
+    localStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
 
   // Закрытие выпадающего списка при клике вне его области
   useEffect(() => {
@@ -617,6 +634,11 @@ const App: React.FC = () => {
     // Regular user login
     try {
       await login({ email, password });
+      // При первом входе устанавливаем активный раздел на "Дашборд"
+      const savedTab = localStorage.getItem('activeTab');
+      if (!savedTab) {
+        setActiveTab('dashboard');
+      }
       await loadProjects(); // loadProjects will set state internally
     } catch (error: any) {
       console.error('User login error:', error);
@@ -630,6 +652,11 @@ const App: React.FC = () => {
     setIsRegistering(true);
     try {
       await registerAdmin(registerData);
+      // При первой регистрации устанавливаем активный раздел на "Дашборд"
+      const savedTab = localStorage.getItem('activeTab');
+      if (!savedTab) {
+        setActiveTab('dashboard');
+      }
       await loadProjects(); // loadProjects will set state internally
       setShowRegister(false);
     } catch (error: any) {
@@ -3006,7 +3033,18 @@ const App: React.FC = () => {
     return <SuperAdminPanel onLogout={handleSuperadminLogout} />;
   }
 
-  if (state === AppState.LOGIN || !user) {
+  // Проверяем наличие токена в localStorage - если есть, но user еще не загружен, показываем загрузку
+  const savedToken = localStorage.getItem('auth_token');
+  if (!user && savedToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-architect-50 dark:bg-architect-900">
+        <Loader2 className="w-8 h-8 text-architect-900 dark:text-white animate-spin" />
+      </div>
+    );
+  }
+
+  // Показываем страницу входа только если нет токена и нет пользователя
+  if (state === AppState.LOGIN || (!user && !savedToken)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-architect-50 dark:bg-architect-900 p-4 transition-colors">
         <div className="w-full max-w-md bg-white dark:bg-architect-800 rounded-2xl shadow-2xl border border-architect-100 dark:border-architect-700 p-8 text-center">
