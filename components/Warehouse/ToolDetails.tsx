@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, MapPin, Package, Calendar, Wrench, ArrowRight, ArrowLeft } from 'lucide-react';
+import { X, User, MapPin, Package, Calendar, Wrench, ArrowRight, ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import { api } from '../../services/api';
 import { Tool, ToolMovement } from '../../types';
 
@@ -21,6 +21,8 @@ export const ToolDetails: React.FC<ToolDetailsProps> = ({
   const [loading, setLoading] = useState(false);
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [showReturnForm, setShowReturnForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadToolDetails();
@@ -56,6 +58,23 @@ export const ToolDetails: React.FC<ToolDetailsProps> = ({
       disposed: 'Утилизирован',
     };
     return conditionMap[condition] || condition;
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Вы уверены, что хотите удалить этот инструмент?')) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      await api.deleteTool(tool.id);
+      onUpdate();
+      onClose();
+    } catch (error: any) {
+      alert('Ошибка: ' + (error.message || 'Не удалось удалить инструмент'));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -235,14 +254,31 @@ export const ToolDetails: React.FC<ToolDetailsProps> = ({
           {/* Actions */}
           {hasPermission('manage_tools') && (
             <div className="flex gap-2 pt-4 border-t border-architect-200 dark:border-architect-700">
+              <button
+                onClick={() => setShowEditForm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-architect-900 dark:bg-white text-white dark:text-architect-900 rounded-lg hover:bg-architect-800 dark:hover:bg-architect-100 transition-colors"
+              >
+                <Edit className="w-4 h-4" />
+                Редактировать
+              </button>
               {tool.currentLocation === 'base' ? (
-                <button
-                  onClick={() => setShowIssueForm(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                  Выдать инструмент
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowIssueForm(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                    Выдать инструмент
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {deleting ? 'Удаление...' : 'Удалить'}
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={() => setShowReturnForm(true)}
@@ -273,6 +309,23 @@ export const ToolDetails: React.FC<ToolDetailsProps> = ({
               toolId={tool.id}
               onClose={() => {
                 setShowReturnForm(false);
+                loadToolDetails();
+                onUpdate();
+              }}
+            />
+          )}
+
+          {/* Edit form */}
+          {showEditForm && (
+            <ToolForm
+              initialData={tool}
+              onClose={() => {
+                setShowEditForm(false);
+                loadToolDetails();
+                onUpdate();
+              }}
+              onSuccess={() => {
+                setShowEditForm(false);
                 loadToolDetails();
                 onUpdate();
               }}

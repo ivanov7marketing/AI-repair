@@ -619,6 +619,12 @@ class ApiClient {
     return this.request(`/tools/${id}/movements`);
   }
 
+  async deleteTool(id: string) {
+    return this.request(`/tools/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Warehouse - Material Returns endpoints
   async getReturns(params?: { status?: string; projectId?: string }) {
     const query = new URLSearchParams();

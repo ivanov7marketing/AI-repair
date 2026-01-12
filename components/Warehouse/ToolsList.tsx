@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Wrench, MapPin, User, Package } from 'lucide-react';
+import { Plus, Search, Filter, Wrench, MapPin, User, Package, Edit } from 'lucide-react';
 import { api } from '../../services/api';
 import { Tool } from '../../types';
 
 interface ToolsListProps {
   onSelectTool: (tool: Tool) => void;
   onCreateNew: () => void;
+  onEditTool?: (tool: Tool) => void;
   hasPermission: (permission: string) => boolean;
   refreshTrigger?: number;
 }
@@ -13,6 +14,7 @@ interface ToolsListProps {
 export const ToolsList: React.FC<ToolsListProps> = ({
   onSelectTool,
   onCreateNew,
+  onEditTool,
   hasPermission,
   refreshTrigger,
 }) => {

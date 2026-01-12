@@ -540,6 +540,47 @@ router.post('/:id/return', authMiddleware, requirePermission(PERMISSIONS.MANAGE_
   }
 });
 
+// Delete tool
+router.delete('/:id', authMiddleware, requirePermission(PERMISSIONS.MANAGE_TOOLS), async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const toolId = req.params.id;
+    const organizationId = req.user.organizationId;
+
+    // Check if tool exists
+    const checkResult = await pool.query(
+      'SELECT id, current_location FROM tools WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL',
+      [toolId, organizationId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      res.status(404).json({ error: 'Tool not found' });
+      return;
+    }
+
+    // Check if tool is currently in use
+    if (checkResult.rows[0].current_location !== 'base') {
+      res.status(400).json({ error: 'Cannot delete tool that is currently in use' });
+      return;
+    }
+
+    // Soft delete
+    await pool.query(
+      'UPDATE tools SET deleted_at = NOW() WHERE id = $1',
+      [toolId]
+    );
+
+    res.json({ message: 'Tool deleted successfully' });
+  } catch (error) {
+    console.error('Delete tool error:', error);
+    res.status(500).json({ error: 'Failed to delete tool' });
+  }
+});
+
 // Get tool movements
 router.get('/:id/movements', authMiddleware, requirePermission(PERMISSIONS.VIEW_WAREHOUSE), async (req: Request, res: Response) => {
   try {

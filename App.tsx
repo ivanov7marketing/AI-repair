@@ -3529,6 +3529,10 @@ const App: React.FC = () => {
                                         <ToolsList
                                             onSelectTool={(tool) => setSelectedTool(tool)}
                                             onCreateNew={() => setShowToolForm(true)}
+                                            onEditTool={(tool) => {
+                                                setSelectedTool(tool);
+                                                // ToolDetails will show edit form
+                                            }}
                                             hasPermission={hasPermission}
                                             refreshTrigger={warehouseRefreshTrigger}
                                         />
