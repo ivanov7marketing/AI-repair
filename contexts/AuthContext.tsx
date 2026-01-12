@@ -61,15 +61,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (savedToken && savedUser) {
       try {
+        const parsedUser = JSON.parse(savedUser);
+        // Устанавливаем состояние синхронно
         setToken(savedToken);
-        setUser(JSON.parse(savedUser));
+        setUser(parsedUser);
+        // Устанавливаем isLoading в false только после установки user и token
+        // Используем setTimeout(0) чтобы гарантировать, что state обновится
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 0);
       } catch (error) {
         console.error('Failed to parse saved user:', error);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
+        setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const login = async (data: LoginRequest) => {

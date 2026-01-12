@@ -3020,6 +3020,20 @@ const App: React.FC = () => {
     </>
   );
 
+  // Проверяем наличие токена в localStorage ПЕРЕД всеми проверками
+  // Это предотвращает мигание формы входа при обновлении страницы
+  const savedToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  
+  // Если есть токен, но user еще не загружен, показываем загрузку (даже если isLoading false)
+  // Это критично для предотвращения мигания формы входа
+  if (savedToken && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-architect-50 dark:bg-architect-900">
+        <Loader2 className="w-8 h-8 text-architect-900 dark:text-white animate-spin" />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-architect-50 dark:bg-architect-900">
@@ -3031,16 +3045,6 @@ const App: React.FC = () => {
   // Show superadmin panel if logged in as superadmin
   if (isSuperadmin) {
     return <SuperAdminPanel onLogout={handleSuperadminLogout} />;
-  }
-
-  // Проверяем наличие токена в localStorage - если есть, но user еще не загружен, показываем загрузку
-  const savedToken = localStorage.getItem('auth_token');
-  if (!user && savedToken) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-architect-50 dark:bg-architect-900">
-        <Loader2 className="w-8 h-8 text-architect-900 dark:text-white animate-spin" />
-      </div>
-    );
   }
 
   // Показываем страницу входа только если нет токена и нет пользователя
