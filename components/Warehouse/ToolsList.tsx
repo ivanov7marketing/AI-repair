@@ -154,19 +154,34 @@ export const ToolsList: React.FC<ToolsListProps> = ({
               className="bg-white dark:bg-architect-800 rounded-lg border border-architect-200 dark:border-architect-700 p-4 cursor-pointer hover:shadow-lg transition-shadow"
             >
               <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
+                <div className="flex-1 cursor-pointer" onClick={() => onSelectTool(tool)}>
                   <h3 className="font-semibold text-architect-900 dark:text-white mb-1">{tool.name}</h3>
                   <p className="text-xs text-architect-500 dark:text-architect-400">
                     Инв. № {tool.inventoryNumber}
                   </p>
                 </div>
-                {tool.photo && (
-                  <img
-                    src={tool.photo}
-                    alt={tool.name}
-                    className="w-16 h-16 object-cover rounded-lg"
-                  />
-                )}
+                <div className="flex items-center gap-2">
+                  {hasPermission('manage_tools') && onEditTool && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditTool(tool);
+                      }}
+                      className="p-2 hover:bg-architect-100 dark:hover:bg-architect-700 rounded-lg transition-colors"
+                      title="Редактировать"
+                    >
+                      <Edit className="w-4 h-4 text-architect-600 dark:text-architect-400" />
+                    </button>
+                  )}
+                  {tool.photo && (
+                    <img
+                      src={tool.photo}
+                      alt={tool.name}
+                      className="w-16 h-16 object-cover rounded-lg cursor-pointer"
+                      onClick={() => onSelectTool(tool)}
+                    />
+                  )}
+                </div>
               </div>
               <div className="space-y-2 text-sm">
                 {tool.brand && tool.model && (
