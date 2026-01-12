@@ -257,7 +257,13 @@ export const ToolDetails: React.FC<ToolDetailsProps> = ({
           {hasPermission('manage_tools') && (
             <div className="flex gap-2 pt-4 border-t border-architect-200 dark:border-architect-700">
               <button
-                onClick={() => setShowEditForm(true)}
+                onClick={() => {
+                  if (onEdit) {
+                    onEdit();
+                  } else {
+                    setShowEditForm(true);
+                  }
+                }}
                 className="flex items-center gap-2 px-4 py-2 bg-architect-900 dark:bg-white text-white dark:text-architect-900 rounded-lg hover:bg-architect-800 dark:hover:bg-architect-100 transition-colors"
               >
                 <Edit className="w-4 h-4" />
