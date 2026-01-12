@@ -198,7 +198,9 @@ router.get('/:id', authMiddleware, requirePermission(PERMISSIONS.VIEW_WAREHOUSE)
 
     // Get items
     const itemsResult = await pool.query(
-      `SELECT pri.*, mc.name as material_name, mc.unit as material_unit
+      `SELECT pri.*, 
+              COALESCE(pri.material_name, mc.name) as material_name, 
+              mc.unit as material_unit
        FROM purchase_request_items pri
        LEFT JOIN materials_catalog mc ON pri.material_id = mc.id
        WHERE pri.request_id = $1
