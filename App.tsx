@@ -3409,12 +3409,12 @@ const App: React.FC = () => {
                 </div>
             )}
             {activeTab === 'warehouse' && (
-                <div className="animate-in fade-in duration-300 max-w-7xl mx-auto">
-                    <div className="flex gap-6">
+                <div className="animate-in fade-in duration-300">
+                    <div className="flex flex-col lg:flex-row gap-8">
                         {/* Vertical menu */}
-                        <div className="w-64 shrink-0">
-                            <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-4">
-                                <div className="flex items-center gap-3 mb-6 px-2">
+                        <aside className="w-full lg:w-80 space-y-6 shrink-0">
+                            <div className="rounded-xl border border-architect-200 dark:border-architect-700 p-2 bg-white dark:bg-architect-800 shadow-sm overflow-hidden">
+                                <div className="flex items-center gap-3 mb-4 px-2">
                                     <div className="bg-architect-900 dark:bg-architect-100 p-2 rounded-lg">
                                         <Warehouse className="w-5 h-5 text-white dark:text-architect-900" />
                                     </div>
@@ -3480,10 +3480,10 @@ const App: React.FC = () => {
                                     </button>
                                 </nav>
                             </div>
-                        </div>
+                        </aside>
                         {/* Content area */}
                         <div className="flex-1">
-                            <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
+                            <div className="bg-white dark:bg-architect-800 rounded-xl border border-architect-200 dark:border-architect-700 shadow-sm p-6">
                                 {warehouseSubTab === 'purchase-requests' && (
                                     <div>
                                         <PurchaseRequestsList
