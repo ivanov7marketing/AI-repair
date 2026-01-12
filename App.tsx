@@ -3414,14 +3414,6 @@ const App: React.FC = () => {
                         {/* Vertical menu */}
                         <aside className="w-full lg:w-80 space-y-6 shrink-0">
                             <div className="rounded-xl border border-architect-200 dark:border-architect-700 p-2 bg-white dark:bg-architect-800 shadow-sm overflow-hidden">
-                                <div className="flex items-center gap-3 mb-4 px-2">
-                                    <div className="bg-architect-900 dark:bg-architect-100 p-2 rounded-lg">
-                                        <Warehouse className="w-5 h-5 text-white dark:text-architect-900" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-lg font-bold text-architect-900 dark:text-white">Склад</h2>
-                                    </div>
-                                </div>
                                 <nav className="space-y-1">
                                     <button
                                         onClick={() => { setWarehouseSubTab('purchase-requests'); localStorage.setItem('warehouseSubTab', 'purchase-requests'); }}
