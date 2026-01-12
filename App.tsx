@@ -371,6 +371,7 @@ const App: React.FC = () => {
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [showToolForm, setShowToolForm] = useState(false);
   const [showReturnForm, setShowReturnForm] = useState(false);
+  const [warehouseRefreshTrigger, setWarehouseRefreshTrigger] = useState(0);
   // Warehouse sub-tabs
   const [warehouseSubTab, setWarehouseSubTab] = useState<'purchase-requests' | 'project-materials' | 'tools' | 'returns' | 'operations'>(() => {
     const saved = localStorage.getItem('warehouseSubTab');
@@ -3526,6 +3527,7 @@ const App: React.FC = () => {
                                             <ProjectMaterialsList
                                                 onSelectProject={(project) => setSelectedProjectForMaterials(project)}
                                                 hasPermission={hasPermission}
+                                                refreshTrigger={warehouseRefreshTrigger}
                                             />
                                         )}
                                     </div>
