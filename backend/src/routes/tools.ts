@@ -12,7 +12,7 @@ const createToolSchema = z.object({
   brand: z.string().optional().nullable(),
   model: z.string().optional().nullable(),
   category: z.enum(['электроинструмент', 'ручной', 'измерительный']).optional().nullable(),
-  photo: z.string().url().optional().nullable(),
+  photo: z.union([z.string().url(), z.literal('')]).optional().nullable(),
   purchaseDate: z.string().optional().nullable(),
   purchasePrice: z.number().min(0).optional().nullable(),
 });
@@ -22,7 +22,7 @@ const updateToolSchema = z.object({
   brand: z.string().optional().nullable(),
   model: z.string().optional().nullable(),
   category: z.enum(['электроинструмент', 'ручной', 'измерительный']).optional().nullable(),
-  photo: z.string().url().optional().nullable(),
+  photo: z.union([z.string().url(), z.literal('')]).optional().nullable(),
   purchaseDate: z.string().optional().nullable(),
   purchasePrice: z.number().min(0).optional().nullable(),
   condition: z.enum(['working', 'repair', 'disposed']).optional(),
@@ -228,7 +228,7 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.MANAGE_TOOLS), as
         body.brand || null,
         body.model || null,
         body.category || null,
-        body.photo || null,
+        (body.photo && body.photo.trim()) || null,
         body.purchaseDate || null,
         body.purchasePrice || null,
       ]

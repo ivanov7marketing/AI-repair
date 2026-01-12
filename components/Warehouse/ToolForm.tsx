@@ -30,15 +30,31 @@ export const ToolForm: React.FC<ToolFormProps> = ({ onClose, onSuccess, initialD
 
     try {
       setLoading(true);
+      // Prepare data: convert empty strings to null for optional fields
+      const dataToSend = {
+        inventoryNumber: formData.inventoryNumber,
+        name: formData.name,
+        brand: formData.brand?.trim() || null,
+        model: formData.model?.trim() || null,
+        category: formData.category || null,
+        photo: formData.photo?.trim() || null,
+        purchaseDate: formData.purchaseDate || null,
+        purchasePrice: formData.purchasePrice > 0 ? formData.purchasePrice : null,
+      };
+
       if (initialData) {
-        await api.updateTool(initialData.id, formData);
+        await api.updateTool(initialData.id, dataToSend);
       } else {
-        await api.createTool(formData);
+        await api.createTool(dataToSend);
       }
       onSuccess();
       onClose();
     } catch (error: any) {
-      alert('Ошибка: ' + (error.message || 'Не удалось сохранить инструмент'));
+      console.error('Tool save error:', error);
+      const errorMessage = error.details 
+        ? `Ошибка валидации: ${JSON.stringify(error.details)}`
+        : (error.message || 'Не удалось сохранить инструмент');
+      alert('Ошибка: ' + errorMessage);
     } finally {
       setLoading(false);
     }
