@@ -28,6 +28,13 @@ import aiRoutes from './routes/ai';
 import priceRoutes from './routes/prices';
 import superadminRoutes from './routes/superadmin';
 import supplierRoutes from './routes/suppliers';
+import materialsRoutes from './routes/materials';
+import purchaseRequestRoutes from './routes/purchaseRequests';
+import projectMaterialsRoutes from './routes/projectMaterials';
+import warehouseRoutes from './routes/warehouse';
+import toolsRoutes from './routes/tools';
+import materialReturnsRoutes from './routes/materialReturns';
+import warehouseOperationsRoutes from './routes/warehouseOperations';
 
 dotenv.config();
 
@@ -89,6 +96,14 @@ app.use('/prices', priceRoutes);
 app.use('/superadmin', superadminRoutes);
 app.use('/superadmin/suppliers', supplierRoutes);
 app.use('/suppliers', supplierRoutes);
+// Warehouse routes
+app.use('/materials', materialsRoutes);
+app.use('/purchase-requests', purchaseRequestRoutes);
+app.use('/projects', projectMaterialsRoutes);
+app.use('/warehouse', warehouseRoutes);
+app.use('/tools', toolsRoutes);
+app.use('/returns', materialReturnsRoutes);
+app.use('/warehouse-operations', warehouseOperationsRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: express.NextFunction): void => {

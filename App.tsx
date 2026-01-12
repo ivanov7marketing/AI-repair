@@ -8,7 +8,8 @@ import {
   ChevronRight, Search, Menu, CircleHelp, ImagePlus,
   ChevronDown, Calculator, DoorOpen, Layout, Hammer, Package, Sparkles,
   Mic, MicOff, Upload, FileSpreadsheet, RefreshCw, ExternalLink,
-  LayoutDashboard, CheckSquare, TrendingUp, Building, Users, Warehouse
+  LayoutDashboard, CheckSquare, TrendingUp, Building, Users, Warehouse,
+  ShoppingCart, Package2, Wrench, RotateCcw, History
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { PlanUploader } from './components/PlanUploader.tsx';
@@ -17,10 +18,21 @@ import { UsersManagement } from './components/UsersManagement.tsx';
 import { SuperAdminPanel } from './components/SuperAdminPanel.tsx';
 import { SuppliersModal } from './components/SuppliersModal.tsx';
 import { EstimateExportModal } from './components/EstimateExportModal.tsx';
+import { PurchaseRequestsList } from './components/Warehouse/PurchaseRequestsList.tsx';
+import { PurchaseRequestDetails } from './components/Warehouse/PurchaseRequestDetails.tsx';
+import { PurchaseRequestForm } from './components/Warehouse/PurchaseRequestForm.tsx';
+import { ProjectMaterialsList } from './components/Warehouse/ProjectMaterialsList.tsx';
+import { ProjectMaterialsCard } from './components/Warehouse/ProjectMaterialsCard.tsx';
+import { ToolsList } from './components/Warehouse/ToolsList.tsx';
+import { ToolDetails } from './components/Warehouse/ToolDetails.tsx';
+import { ToolForm } from './components/Warehouse/ToolForm.tsx';
+import { ReturnsList } from './components/Warehouse/ReturnsList.tsx';
+import { ReturnForm } from './components/Warehouse/ReturnForm.tsx';
+import { OperationsList } from './components/Warehouse/OperationsList.tsx';
 import { exportEstimateToXLSX } from './services/estimateExporter.ts';
 import { ExportOptions } from './types.ts';
 import { analyzeFloorPlan, generateIsometricView, generateRoomInterior, fileToGenerativePart, identifyStyleFromImage, parseVoiceEstimation, VoiceEstimationItem } from './services/routeraiService.ts';
-import { AppState, AnalysisResult, Room, ImageSize, FurnitureItem, Project, EstimationItem, RoomEstimation, PERMISSIONS } from './types.ts';
+import { AppState, AnalysisResult, Room, ImageSize, FurnitureItem, Project, EstimationItem, RoomEstimation, PERMISSIONS, PurchaseRequest } from './types.ts';
 import { useAuth, usePermission } from './contexts/AuthContext.tsx';
 import { api, getImageUrl } from './services/api.ts';
 
@@ -351,7 +363,21 @@ const App: React.FC = () => {
     if (savedTab && ['dashboard', 'tasks', 'sales', 'objects', 'projects', 'executors', 'warehouse', 'prices', 'settings'].includes(savedTab)) {
       return savedTab as 'dashboard' | 'tasks' | 'sales' | 'objects' | 'projects' | 'executors' | 'warehouse' | 'prices' | 'settings';
     }
-    return 'projects'; // Значение по умолчанию
+  });
+  // Warehouse states
+  const [selectedPurchaseRequest, setSelectedPurchaseRequest] = useState<PurchaseRequest | null>(null);
+  const [showPurchaseRequestForm, setShowPurchaseRequestForm] = useState(false);
+  const [selectedProjectForMaterials, setSelectedProjectForMaterials] = useState<Project | null>(null);
+  const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
+  const [showToolForm, setShowToolForm] = useState(false);
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  // Warehouse sub-tabs
+  const [warehouseSubTab, setWarehouseSubTab] = useState<'purchase-requests' | 'project-materials' | 'tools' | 'returns' | 'operations'>(() => {
+    const saved = localStorage.getItem('warehouseSubTab');
+    if (saved && ['purchase-requests', 'project-materials', 'tools', 'returns', 'operations'].includes(saved)) {
+      return saved as 'purchase-requests' | 'project-materials' | 'tools' | 'returns' | 'operations';
+    }
+    return 'purchase-requests';
   });
   const [showStyleTooltip, setShowStyleTooltip] = useState(false);
   const [isDetectingStyle, setIsDetectingStyle] = useState(false);
@@ -3382,35 +3408,182 @@ const App: React.FC = () => {
                 </div>
             )}
             {activeTab === 'warehouse' && (
-                <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
-                    <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl">
-                                <Warehouse className="w-8 h-8 text-white dark:text-architect-900" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-architect-900 dark:text-white">Склад</h1>
-                                <p className="text-architect-500 dark:text-architect-400 text-sm">Управление материалами и оборудованием</p>
+                <div className="animate-in fade-in duration-300 max-w-7xl mx-auto">
+                    <div className="flex gap-6">
+                        {/* Vertical menu */}
+                        <div className="w-64 shrink-0">
+                            <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-4">
+                                <div className="flex items-center gap-3 mb-6 px-2">
+                                    <div className="bg-architect-900 dark:bg-architect-100 p-2 rounded-lg">
+                                        <Warehouse className="w-5 h-5 text-white dark:text-architect-900" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-bold text-architect-900 dark:text-white">Склад</h2>
+                                    </div>
+                                </div>
+                                <nav className="space-y-1">
+                                    <button
+                                        onClick={() => { setWarehouseSubTab('purchase-requests'); localStorage.setItem('warehouseSubTab', 'purchase-requests'); }}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                            warehouseSubTab === 'purchase-requests'
+                                                ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900'
+                                                : 'text-architect-600 dark:text-architect-400 hover:bg-architect-50 dark:hover:bg-architect-700'
+                                        }`}
+                                    >
+                                        <ShoppingCart className="w-4 h-4" />
+                                        <span>Заявки на закупку</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setWarehouseSubTab('project-materials'); localStorage.setItem('warehouseSubTab', 'project-materials'); }}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                            warehouseSubTab === 'project-materials'
+                                                ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900'
+                                                : 'text-architect-600 dark:text-architect-400 hover:bg-architect-50 dark:hover:bg-architect-700'
+                                        }`}
+                                    >
+                                        <Package2 className="w-4 h-4" />
+                                        <span>Материалы на объектах</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setWarehouseSubTab('tools'); localStorage.setItem('warehouseSubTab', 'tools'); }}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                            warehouseSubTab === 'tools'
+                                                ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900'
+                                                : 'text-architect-600 dark:text-architect-400 hover:bg-architect-50 dark:hover:bg-architect-700'
+                                        }`}
+                                    >
+                                        <Wrench className="w-4 h-4" />
+                                        <span>Инструменты</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setWarehouseSubTab('returns'); localStorage.setItem('warehouseSubTab', 'returns'); }}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                            warehouseSubTab === 'returns'
+                                                ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900'
+                                                : 'text-architect-600 dark:text-architect-400 hover:bg-architect-50 dark:hover:bg-architect-700'
+                                        }`}
+                                    >
+                                        <RotateCcw className="w-4 h-4" />
+                                        <span>Возвраты</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setWarehouseSubTab('operations'); localStorage.setItem('warehouseSubTab', 'operations'); }}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                            warehouseSubTab === 'operations'
+                                                ? 'bg-architect-900 dark:bg-white text-white dark:text-architect-900'
+                                                : 'text-architect-600 dark:text-architect-400 hover:bg-architect-50 dark:hover:bg-architect-700'
+                                        }`}
+                                    >
+                                        <History className="w-4 h-4" />
+                                        <span>История операций</span>
+                                    </button>
+                                </nav>
                             </div>
                         </div>
-                        <div className="space-y-4 text-architect-700 dark:text-architect-300">
-                            <p className="text-lg font-semibold text-architect-900 dark:text-white mb-4">В этом разделе будет реализовано:</p>
-                            <ul className="space-y-3 list-disc list-inside">
-                                <li><strong>Таблица с карточками материалов и оборудования</strong> - в собственности компании</li>
-                                <li><strong>Информация о каждом материале/оборудовании:</strong>
-                                    <ul className="ml-6 mt-2 space-y-2 list-disc">
-                                        <li>Название и описание</li>
-                                        <li>Фото</li>
-                                        <li>Количество на складе</li>
-                                        <li>Единица измерения</li>
-                                        <li>Стоимость</li>
-                                    </ul>
-                                </li>
-                                <li><strong>Приход/расход</strong> - учет поступления и выдачи материалов</li>
-                                <li><strong>История операций</strong> - кто принял/выдал, дата, количество, объект</li>
-                                <li><strong>Остатки на складе</strong> - текущее количество каждого материала</li>
-                                <li><strong>Уведомления о низких остатках</strong> - предупреждения при достижении минимального уровня</li>
-                            </ul>
+                        {/* Content area */}
+                        <div className="flex-1">
+                            <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
+                                {warehouseSubTab === 'purchase-requests' && (
+                                    <div>
+                                        <PurchaseRequestsList
+                                            onSelectRequest={(request) => setSelectedPurchaseRequest(request)}
+                                            onCreateNew={() => setShowPurchaseRequestForm(true)}
+                                            hasPermission={hasPermission}
+                                            refreshTrigger={warehouseRefreshTrigger}
+                                        />
+                                        {selectedPurchaseRequest && (
+                                            <PurchaseRequestDetails
+                                                request={selectedPurchaseRequest}
+                                                onClose={() => setSelectedPurchaseRequest(null)}
+                                                onUpdate={() => {
+                                                    setSelectedPurchaseRequest(null);
+                                                    setWarehouseRefreshTrigger(Date.now());
+                                                }}
+                                                hasPermission={hasPermission}
+                                            />
+                                        )}
+                                        {showPurchaseRequestForm && (
+                                            <PurchaseRequestForm
+                                                onClose={() => setShowPurchaseRequestForm(false)}
+                                                onSuccess={() => {
+                                                    setShowPurchaseRequestForm(false);
+                                                    setWarehouseRefreshTrigger(Date.now());
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                )}
+                                {warehouseSubTab === 'project-materials' && (
+                                    <div>
+                                        {selectedProjectForMaterials ? (
+                                            <ProjectMaterialsCard
+                                                project={selectedProjectForMaterials}
+                                                onClose={() => setSelectedProjectForMaterials(null)}
+                                                onRefresh={() => setWarehouseRefreshTrigger(Date.now())}
+                                                hasPermission={hasPermission}
+                                            />
+                                        ) : (
+                                            <ProjectMaterialsList
+                                                onSelectProject={(project) => setSelectedProjectForMaterials(project)}
+                                                hasPermission={hasPermission}
+                                            />
+                                        )}
+                                    </div>
+                                )}
+                                {warehouseSubTab === 'tools' && (
+                                    <div>
+                                        <ToolsList
+                                            onSelectTool={(tool) => setSelectedTool(tool)}
+                                            onCreateNew={() => setShowToolForm(true)}
+                                            hasPermission={hasPermission}
+                                            refreshTrigger={warehouseRefreshTrigger}
+                                        />
+                                        {selectedTool && (
+                                            <ToolDetails
+                                                tool={selectedTool}
+                                                onClose={() => setSelectedTool(null)}
+                                                onUpdate={() => {
+                                                    setSelectedTool(null);
+                                                    setWarehouseRefreshTrigger(Date.now());
+                                                }}
+                                                hasPermission={hasPermission}
+                                            />
+                                        )}
+                                        {showToolForm && (
+                                            <ToolForm
+                                                onClose={() => setShowToolForm(false)}
+                                                onSuccess={() => {
+                                                    setShowToolForm(false);
+                                                    setWarehouseRefreshTrigger(Date.now());
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                )}
+                                {warehouseSubTab === 'returns' && (
+                                    <div>
+                                        <ReturnsList
+                                            onCreateNew={() => setShowReturnForm(true)}
+                                            hasPermission={hasPermission}
+                                            refreshTrigger={warehouseRefreshTrigger}
+                                        />
+                                        {showReturnForm && (
+                                            <ReturnForm
+                                                onClose={() => setShowReturnForm(false)}
+                                                onSuccess={() => {
+                                                    setShowReturnForm(false);
+                                                    setWarehouseRefreshTrigger(Date.now());
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                )}
+                                {warehouseSubTab === 'operations' && (
+                                    <div>
+                                        <OperationsList hasPermission={hasPermission} />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

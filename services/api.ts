@@ -434,6 +434,252 @@ class ApiClient {
       throw error;
     }
   }
+
+  // Warehouse - Materials endpoints
+  async getMaterials(params?: { category?: string; search?: string }) {
+    const query = new URLSearchParams();
+    if (params?.category) query.append('category', params.category);
+    if (params?.search) query.append('search', params.search);
+    return this.request(`/materials${query.toString() ? '?' + query.toString() : ''}`);
+  }
+
+  async getMaterial(id: string) {
+    return this.request(`/materials/${id}`);
+  }
+
+  async createMaterial(data: any) {
+    return this.request('/materials', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateMaterial(id: string, data: any) {
+    return this.request(`/materials/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMaterial(id: string) {
+    return this.request(`/materials/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Warehouse - Purchase Requests endpoints
+  async getPurchaseRequests(params?: { status?: string; projectId?: string; dateFrom?: string; dateTo?: string; createdBy?: string }) {
+    const query = new URLSearchParams();
+    if (params?.status) query.append('status', params.status);
+    if (params?.projectId) query.append('projectId', params.projectId);
+    if (params?.dateFrom) query.append('dateFrom', params.dateFrom);
+    if (params?.dateTo) query.append('dateTo', params.dateTo);
+    if (params?.createdBy) query.append('createdBy', params.createdBy);
+    return this.request(`/purchase-requests${query.toString() ? '?' + query.toString() : ''}`);
+  }
+
+  async getPurchaseRequest(id: string) {
+    return this.request(`/purchase-requests/${id}`);
+  }
+
+  async createPurchaseRequest(data: any) {
+    return this.request('/purchase-requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePurchaseRequest(id: string, data: any) {
+    return this.request(`/purchase-requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async approvePurchaseRequest(id: string, data?: { items?: any[] }) {
+    return this.request(`/purchase-requests/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
+  }
+
+  async rejectPurchaseRequest(id: string, reason?: string) {
+    return this.request(`/purchase-requests/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async movePurchaseRequestToPurchase(id: string, data: any) {
+    return this.request(`/purchase-requests/${id}/to-purchase`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPurchaseRequestLog(id: string) {
+    return this.request(`/purchase-requests/${id}/log`);
+  }
+
+  // Warehouse - Project Materials endpoints
+  async getProjectMaterials(projectId: string) {
+    return this.request(`/projects/${projectId}/materials`);
+  }
+
+  async recordMaterialArrival(projectId: string, data: any) {
+    return this.request(`/projects/${projectId}/materials/arrival`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async writeoffMaterial(projectId: string, data: any) {
+    return this.request(`/projects/${projectId}/materials/writeoff`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async returnMaterial(projectId: string, data: any) {
+    return this.request(`/projects/${projectId}/materials/return`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Warehouse - Central Warehouse endpoints
+  async getWarehouseStock(params?: { category?: string; search?: string }) {
+    const query = new URLSearchParams();
+    if (params?.category) query.append('category', params.category);
+    if (params?.search) query.append('search', params.search);
+    return this.request(`/warehouse/stock${query.toString() ? '?' + query.toString() : ''}`);
+  }
+
+  async getLowStockMaterials() {
+    return this.request('/warehouse/stock/low');
+  }
+
+  async recordWarehouseArrival(data: any) {
+    return this.request('/warehouse/stock/arrival', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async transferMaterialToProject(data: any) {
+    return this.request('/warehouse/stock/transfer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Warehouse - Tools endpoints
+  async getTools(params?: { category?: string; status?: string; employeeId?: string; projectId?: string }) {
+    const query = new URLSearchParams();
+    if (params?.category) query.append('category', params.category);
+    if (params?.status) query.append('status', params.status);
+    if (params?.employeeId) query.append('employeeId', params.employeeId);
+    if (params?.projectId) query.append('projectId', params.projectId);
+    return this.request(`/tools${query.toString() ? '?' + query.toString() : ''}`);
+  }
+
+  async getTool(id: string) {
+    return this.request(`/tools/${id}`);
+  }
+
+  async createTool(data: any) {
+    return this.request('/tools', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTool(id: string, data: any) {
+    return this.request(`/tools/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async issueTool(id: string, data: any) {
+    return this.request(`/tools/${id}/issue`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async returnTool(id: string, data: any) {
+    return this.request(`/tools/${id}/return`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getToolMovements(id: string) {
+    return this.request(`/tools/${id}/movements`);
+  }
+
+  // Warehouse - Material Returns endpoints
+  async getReturns(params?: { status?: string; projectId?: string }) {
+    const query = new URLSearchParams();
+    if (params?.status) query.append('status', params.status);
+    if (params?.projectId) query.append('projectId', params.projectId);
+    return this.request(`/returns${query.toString() ? '?' + query.toString() : ''}`);
+  }
+
+  async getReturn(id: string) {
+    return this.request(`/returns/${id}`);
+  }
+
+  async createReturn(data: any) {
+    return this.request('/returns', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateReturn(id: string, data: any) {
+    return this.request(`/returns/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Warehouse - Operations endpoints
+  async getWarehouseOperations(params?: { operationType?: string; dateFrom?: string; dateTo?: string; projectId?: string; employeeId?: string; materialId?: string; toolId?: string }) {
+    const query = new URLSearchParams();
+    if (params?.operationType) query.append('operationType', params.operationType);
+    if (params?.dateFrom) query.append('dateFrom', params.dateFrom);
+    if (params?.dateTo) query.append('dateTo', params.dateTo);
+    if (params?.projectId) query.append('projectId', params.projectId);
+    if (params?.employeeId) query.append('employeeId', params.employeeId);
+    if (params?.materialId) query.append('materialId', params.materialId);
+    if (params?.toolId) query.append('toolId', params.toolId);
+    return this.request(`/warehouse-operations${query.toString() ? '?' + query.toString() : ''}`);
+  }
+
+  // Warehouse - Suppliers endpoints
+  async getSuppliers() {
+    return this.request('/suppliers/list');
+  }
+
+  async getSupplier(id: string) {
+    return this.request(`/suppliers/list/${id}`);
+  }
+
+  async createSupplier(data: any) {
+    return this.request('/suppliers/list', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSupplier(id: string, data: any) {
+    return this.request(`/suppliers/list/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const api = new ApiClient();

@@ -395,5 +395,211 @@ router.post('/search-material', superadminAuthMiddleware, async (req: Request, r
   }
 });
 
+// Supplier management endpoints (CRUD)
+const createSupplierSchema = z.object({
+  name: z.string().min(1),
+  contacts: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  returnConditions: z.string().optional().nullable(),
+  discounts: z.string().optional().nullable(),
+});
+
+const updateSupplierSchema = z.object({
+  name: z.string().min(1).optional(),
+  contacts: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  returnConditions: z.string().optional().nullable(),
+  discounts: z.string().optional().nullable(),
+});
+
+// Get all suppliers
+router.get('/list', authMiddleware, requirePermission(PERMISSIONS.VIEW_WAREHOUSE), async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const organizationId = req.user.organizationId;
+
+    const result = await pool.query(
+      `SELECT id, organization_id, name, contacts, address, return_conditions, discounts, created_at, updated_at
+       FROM suppliers
+       WHERE organization_id = $1
+       ORDER BY name ASC`,
+      [organizationId]
+    );
+
+    res.json(result.rows.map(row => ({
+      id: row.id,
+      organizationId: row.organization_id,
+      name: row.name,
+      contacts: row.contacts,
+      address: row.address,
+      returnConditions: row.return_conditions,
+      discounts: row.discounts,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })));
+  } catch (error) {
+    console.error('Get suppliers error:', error);
+    res.status(500).json({ error: 'Failed to fetch suppliers' });
+  }
+});
+
+// Get single supplier
+router.get('/list/:id', authMiddleware, requirePermission(PERMISSIONS.VIEW_WAREHOUSE), async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const supplierId = req.params.id;
+    const organizationId = req.user.organizationId;
+
+    const result = await pool.query(
+      `SELECT id, organization_id, name, contacts, address, return_conditions, discounts, created_at, updated_at
+       FROM suppliers
+       WHERE id = $1 AND organization_id = $2`,
+      [supplierId, organizationId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Supplier not found' });
+      return;
+    }
+
+    const row = result.rows[0];
+    res.json({
+      id: row.id,
+      organizationId: row.organization_id,
+      name: row.name,
+      contacts: row.contacts,
+      address: row.address,
+      returnConditions: row.return_conditions,
+      discounts: row.discounts,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    });
+  } catch (error) {
+    console.error('Get supplier error:', error);
+    res.status(500).json({ error: 'Failed to fetch supplier' });
+  }
+});
+
+// Create supplier
+router.post('/list', authMiddleware, requirePermission(PERMISSIONS.MANAGE_WAREHOUSE), async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const body = createSupplierSchema.parse(req.body);
+    const organizationId = req.user.organizationId;
+
+    const result = await pool.query(
+      `INSERT INTO suppliers (organization_id, name, contacts, address, return_conditions, discounts)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, created_at`,
+      [
+        organizationId,
+        body.name,
+        body.contacts || null,
+        body.address || null,
+        body.returnConditions || null,
+        body.discounts || null,
+      ]
+    );
+
+    res.status(201).json({
+      id: result.rows[0].id,
+      createdAt: result.rows[0].created_at,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation error', details: error.errors });
+      return;
+    }
+    console.error('Create supplier error:', error);
+    res.status(500).json({ error: 'Failed to create supplier' });
+  }
+});
+
+// Update supplier
+router.patch('/list/:id', authMiddleware, requirePermission(PERMISSIONS.MANAGE_WAREHOUSE), async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const supplierId = req.params.id;
+    const organizationId = req.user.organizationId;
+    const body = updateSupplierSchema.parse(req.body);
+
+    // Check if supplier exists
+    const checkResult = await pool.query(
+      'SELECT id FROM suppliers WHERE id = $1 AND organization_id = $2',
+      [supplierId, organizationId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      res.status(404).json({ error: 'Supplier not found' });
+      return;
+    }
+
+    // Build update query
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (body.name !== undefined) {
+      updates.push(`name = $${paramIndex++}`);
+      values.push(body.name);
+    }
+    if (body.contacts !== undefined) {
+      updates.push(`contacts = $${paramIndex++}`);
+      values.push(body.contacts);
+    }
+    if (body.address !== undefined) {
+      updates.push(`address = $${paramIndex++}`);
+      values.push(body.address);
+    }
+    if (body.returnConditions !== undefined) {
+      updates.push(`return_conditions = $${paramIndex++}`);
+      values.push(body.returnConditions);
+    }
+    if (body.discounts !== undefined) {
+      updates.push(`discounts = $${paramIndex++}`);
+      values.push(body.discounts);
+    }
+
+    if (updates.length === 0) {
+      res.status(400).json({ error: 'No fields to update' });
+      return;
+    }
+
+    values.push(supplierId, organizationId);
+
+    await pool.query(
+      `UPDATE suppliers 
+       SET ${updates.join(', ')}, updated_at = NOW()
+       WHERE id = $${paramIndex++} AND organization_id = $${paramIndex++}`,
+      values
+    );
+
+    res.json({ message: 'Supplier updated successfully' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation error', details: error.errors });
+      return;
+    }
+    console.error('Update supplier error:', error);
+    res.status(500).json({ error: 'Failed to update supplier' });
+  }
+});
+
 export default router;
 
