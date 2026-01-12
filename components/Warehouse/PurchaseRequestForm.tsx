@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, AlertCircle, Package } from 'lucide-react';
 import { api } from '../../services/api';
 import { Material, Project, PurchaseRequestItem } from '../../types';
@@ -25,9 +25,10 @@ export const PurchaseRequestForm: React.FC<PurchaseRequestFormProps> = ({
     urgency: 'normal' as 'normal' | 'urgent',
     estimateProjectId: initialData?.estimateProjectId || '',
   });
-  const [items, setItems] = useState<Array<Partial<PurchaseRequestItem> & { tempId: string }>>([]);
+  const [items, setItems] = useState<Array<Partial<PurchaseRequestItem> & { tempId: string; customMaterialName?: string }>>([]);
   const [showMaterialSelect, setShowMaterialSelect] = useState(false);
   const [materialSearch, setMaterialSearch] = useState('');
+  const materialInputRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadProjects();
@@ -35,6 +36,20 @@ export const PurchaseRequestForm: React.FC<PurchaseRequestFormProps> = ({
     if (initialData?.estimateProjectId) {
       loadEstimateMaterials(initialData.estimateProjectId);
     }
+  }, []);
+
+  // Close material dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (materialInputRef.current && !materialInputRef.current.contains(event.target as Node)) {
+        setShowMaterialSelect(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const loadProjects = async () => {
@@ -104,11 +119,12 @@ export const PurchaseRequestForm: React.FC<PurchaseRequestFormProps> = ({
     }
   };
 
-  const handleAddItem = (material?: Material) => {
-    const newItem: Partial<PurchaseRequestItem> & { tempId: string } = {
+  const handleAddItem = (material?: Material, customName?: string) => {
+    const newItem: Partial<PurchaseRequestItem> & { tempId: string; customMaterialName?: string } = {
       tempId: `temp-${Date.now()}`,
       materialId: material?.id,
-      quantityRequested: 0,
+      customMaterialName: customName,
+      quantityRequested: 1,
       unitPrice: material?.averagePrice || 0,
       note: '',
       fromEstimate: false,
@@ -149,6 +165,7 @@ export const PurchaseRequestForm: React.FC<PurchaseRequestFormProps> = ({
         estimateProjectId: formData.estimateProjectId || undefined,
         items: items.map((item) => ({
           materialId: item.materialId || undefined,
+          materialName: item.customMaterialName || undefined, // For custom materials
           quantityRequested: item.quantityRequested!,
           unitPrice: item.unitPrice || undefined,
           note: item.note || undefined,
@@ -267,6 +284,7 @@ export const PurchaseRequestForm: React.FC<PurchaseRequestFormProps> = ({
               <div className="space-y-2">
                 {items.map((item) => {
                   const material = materials.find((m) => m.id === item.materialId);
+                  const itemName = item.customMaterialName || material?.name || 'Материал не выбран';
                   return (
                     <div
                       key={item.tempId}
@@ -278,13 +296,21 @@ export const PurchaseRequestForm: React.FC<PurchaseRequestFormProps> = ({
                             {item.fromEstimate && (
                               <span className="text-xs text-blue-600 dark:text-blue-400">Из сметы</span>
                             )}
+                            {item.customMaterialName && (
+                              <span className="text-xs text-green-600 dark:text-green-400">Новый материал</span>
+                            )}
                             <span className="font-medium text-architect-900 dark:text-white">
-                              {material?.name || 'Материал не выбран'}
+                              {itemName}
                             </span>
                           </div>
                           {material && (
                             <span className="text-sm text-architect-500 dark:text-architect-400">
                               {material.unit}
+                            </span>
+                          )}
+                          {item.customMaterialName && !material && (
+                            <span className="text-sm text-architect-500 dark:text-architect-400">
+                              Единица измерения не указана
                             </span>
                           )}
                         </div>

@@ -12,6 +12,7 @@ const createPurchaseRequestSchema = z.object({
   estimateProjectId: z.string().uuid().optional().nullable(),
   items: z.array(z.object({
     materialId: z.string().uuid().optional().nullable(),
+    materialName: z.string().optional().nullable(), // For custom materials
     quantityRequested: z.number().min(0.01),
     unitPrice: z.number().min(0).optional().nullable(),
     note: z.string().optional().nullable(),
@@ -315,11 +316,12 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.CREATE_PURCHASE_R
       for (const item of body.items) {
         await client.query(
           `INSERT INTO purchase_request_items 
-           (request_id, material_id, quantity_requested, unit_price, note, from_estimate, estimate_item_id, estimate_project_id, estimate_room_id, estimate_item_path)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+           (request_id, material_id, material_name, quantity_requested, unit_price, note, from_estimate, estimate_item_id, estimate_project_id, estimate_room_id, estimate_item_path)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [
             requestId,
             item.materialId || null,
+            item.materialName || null,
             item.quantityRequested,
             item.unitPrice || null,
             item.note || null,
@@ -434,11 +436,12 @@ router.patch('/:id', authMiddleware, requirePermission(PERMISSIONS.CREATE_PURCHA
         for (const item of body.items) {
           await client.query(
             `INSERT INTO purchase_request_items 
-             (request_id, material_id, quantity_requested, quantity_approved, unit_price, note, from_estimate, estimate_item_id, estimate_room_id, estimate_item_path)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+             (request_id, material_id, material_name, quantity_requested, quantity_approved, unit_price, note, from_estimate, estimate_item_id, estimate_room_id, estimate_item_path)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [
               requestId,
               item.materialId || null,
+              item.materialName || null,
               item.quantityRequested,
               item.quantityApproved || null,
               item.unitPrice || null,
