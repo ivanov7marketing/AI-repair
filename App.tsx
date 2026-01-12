@@ -3536,7 +3536,7 @@ const App: React.FC = () => {
                                             hasPermission={hasPermission}
                                             refreshTrigger={warehouseRefreshTrigger}
                                         />
-                                        {selectedTool && (
+                                        {selectedTool && !showToolForm && (
                                             <ToolDetails
                                                 tool={selectedTool}
                                                 onClose={() => setSelectedTool(null)}
@@ -3545,6 +3545,9 @@ const App: React.FC = () => {
                                                     setWarehouseRefreshTrigger(Date.now());
                                                 }}
                                                 hasPermission={hasPermission}
+                                                onEdit={() => {
+                                                    setShowToolForm(true);
+                                                }}
                                             />
                                         )}
                                         {showToolForm && (

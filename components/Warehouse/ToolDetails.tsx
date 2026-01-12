@@ -9,6 +9,7 @@ interface ToolDetailsProps {
   onClose: () => void;
   onUpdate: () => void;
   hasPermission: (permission: string) => boolean;
+  onEdit?: () => void;
 }
 
 export const ToolDetails: React.FC<ToolDetailsProps> = ({
