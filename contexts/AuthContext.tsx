@@ -26,6 +26,12 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'edit_estimates',
     'manage_settings',
     'manage_permissions',
+    // Warehouse permissions
+    'view_warehouse',
+    'create_purchase_requests',
+    'approve_purchase_requests',
+    'manage_warehouse',
+    'manage_tools',
   ],
   manager: [
     'view_all_projects',
@@ -33,6 +39,12 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'view_estimates',
     'edit_estimates',
     'use_ai_generation',
+    // Warehouse permissions
+    'view_warehouse',
+    'create_purchase_requests',
+    'approve_purchase_requests',
+    'manage_warehouse',
+    'manage_tools',
   ],
   measurer: [
     'create_projects',
@@ -42,9 +54,15 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
   foreman: [
     'view_estimates',
     'edit_estimates',
+    // Warehouse permissions
+    'view_warehouse',
+    'create_purchase_requests',
   ],
   master: [
     'view_estimates',
+    // Warehouse permissions
+    'view_warehouse',
+    'create_purchase_requests',
   ],
   client: [],
 };
