@@ -28,6 +28,7 @@ const updatePurchaseRequestSchema = z.object({
   items: z.array(z.object({
     id: z.string().uuid().optional(),
     materialId: z.string().uuid().optional().nullable(),
+    materialName: z.string().optional().nullable(), // For custom materials
     quantityRequested: z.number().min(0.01),
     quantityApproved: z.number().min(0).optional().nullable(),
     unitPrice: z.number().min(0).optional().nullable(),
