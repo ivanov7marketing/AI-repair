@@ -78,39 +78,48 @@ export const DealModal: React.FC<DealModalProps> = ({
   const currentStage = stages.find(s => s.id === localDeal.stageId);
 
   const handleFieldUpdate = async (field: string, value: any) => {
+    // Skip if field doesn't exist in Deal type - prevents "No fields to update" error
+    const dealFields = Object.keys(localDeal) as Array<keyof Deal>;
+    if (!dealFields.includes(field as keyof Deal)) {
+      setEditingField(null);
+      return;
+    }
+
     const currentValue = localDeal[field as keyof Deal];
     
-    // Normalize values for comparison (handle null, empty string, undefined)
-    const normalizeForCompare = (val: any) => {
+    // Normalize and compare values
+    const normalizeValue = (val: any): any => {
       if (val === null || val === undefined || val === '') return null;
-      // For numbers, ensure consistent type
-      if (typeof val === 'number' || (!isNaN(Number(val)) && val !== '')) {
+      // For numbers, convert to number type
+      const numericFields = ['area', 'budgetFrom', 'budgetTo', 'ceilingHeight', 'prepaymentAmount'];
+      if (numericFields.includes(field)) {
         const numVal = typeof val === 'number' ? val : Number(val);
         return isNaN(numVal) ? null : numVal;
       }
-      return String(val);
+      // For strings, trim and convert empty to null
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        return trimmed === '' ? null : trimmed;
+      }
+      return val;
     };
     
-    const normalizedCurrent = normalizeForCompare(currentValue);
-    const normalizedNew = normalizeForCompare(value);
+    const normalizedCurrent = normalizeValue(currentValue);
+    const normalizedNew = normalizeValue(value);
     
-    // Check if values are actually different (using JSON.stringify for deep comparison)
-    if (JSON.stringify(normalizedCurrent) === JSON.stringify(normalizedNew)) {
+    // Simple comparison - if values are the same, don't update
+    if (normalizedCurrent === normalizedNew || 
+        (normalizedCurrent === null && normalizedNew === null) ||
+        (normalizedCurrent === '' && normalizedNew === null) ||
+        (normalizedCurrent === null && normalizedNew === '')) {
       setEditingField(null);
       return;
     }
 
     try {
       setSaving(true);
-      // Convert empty string to null, but preserve type for numbers
-      let updateValue: any = value === '' || value === null || value === undefined ? null : value;
-      
-      // For numeric fields, ensure we send a number (not a string)
-      const numericFields = ['area', 'budgetFrom', 'budgetTo', 'ceilingHeight', 'prepaymentAmount'];
-      if (numericFields.includes(field) && updateValue !== null) {
-        const numValue = typeof updateValue === 'number' ? updateValue : Number(updateValue);
-        updateValue = isNaN(numValue) ? null : numValue;
-      }
+      // Prepare value for backend - normalize empty strings to null
+      const updateValue = normalizedNew;
       
       await api.updateDeal(localDeal.id, { [field]: updateValue });
       setLocalDeal({ ...localDeal, [field]: updateValue });
@@ -383,10 +392,6 @@ export const DealModal: React.FC<DealModalProps> = ({
                 type="text"
                 render={(v) => v || '...'}
               />
-              <EditableField label="Электрика" field="electricity" value={null} />
-              <EditableField label="Сантехника" field="plumbing" value={null} />
-              <EditableField label="Доп.работы" field="additionalWorks" value={null} />
-              <EditableField label="Подарок" field="gift" value={null} />
               <EditableField
                 label="Удобное время"
                 field="desiredStartDate"
