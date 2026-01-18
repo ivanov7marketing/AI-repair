@@ -76,7 +76,19 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
     }).format(d);
   };
 
+  // Определяем, является ли событие "не основным" действием
+  const isSecondaryAction = (eventType: string) => {
+    return ['deal_created', 'stage_change', 'field_change'].includes(eventType);
+  };
+
   const renderContent = () => {
+    const isSecondary = isSecondaryAction(event.eventType);
+    
+    // Стили для "не основных" действий: меньший шрифт (на 30% меньше text-xs) и более светлый цвет
+    const secondaryTextClass = 'text-[8.5px] text-architect-500 dark:text-architect-400';
+    // Стили для основных действий: текущий размер и цвет
+    const primaryTextClass = 'text-xs text-architect-900 dark:text-architect-100';
+    
     if (event.eventType === 'field_change' && event.metadata) {
       const { field, oldValue, newValue } = event.metadata;
       // Заменяем английское название поля на русское в тексте события
@@ -102,31 +114,32 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
         }
       }
       
+      // Не основное действие - всё в одну строку
       return (
-        <div>
-          <div className="text-xs text-architect-900 dark:text-architect-100">{content}</div>
-          <div className="text-xs text-architect-600 dark:text-architect-400 mt-1">
-            <span className="line-through">{displayOldValue}</span>
-            {' → '}
-            <span className="font-normal">{displayNewValue}</span>
-          </div>
+        <div className={`${secondaryTextClass} inline-flex items-center gap-1`}>
+          <span>{content}</span>
+          <span className="line-through">{displayOldValue}</span>
+          <span>→</span>
+          <span>{displayNewValue}</span>
         </div>
       );
     }
 
     if (event.eventType === 'stage_change' && event.metadata) {
       const { oldStageName, newStageName } = event.metadata;
+      // Не основное действие - всё в одну строку
       return (
-        <div>
-          <div className="text-xs text-architect-900 dark:text-architect-100">{event.content}</div>
-          <div className="text-xs text-architect-600 dark:text-architect-400 mt-1">
-            {oldStageName} → {newStageName}
-          </div>
+        <div className={`${secondaryTextClass} inline-flex items-center gap-1`}>
+          <span>{event.content}</span>
+          <span>{oldStageName}</span>
+          <span>→</span>
+          <span>{newStageName}</span>
         </div>
       );
     }
 
-    return <div className="text-xs text-architect-900 dark:text-architect-100">{event.content}</div>;
+    // Для остальных событий используем соответствующий стиль
+    return <div className={isSecondary ? secondaryTextClass : primaryTextClass}>{event.content}</div>;
   };
 
   return (
