@@ -177,26 +177,39 @@ export const DealModal: React.FC<DealModalProps> = ({
     type?: 'text' | 'number' | 'select' | 'date';
     options?: { value: string; label: string }[];
     render?: (value: any) => string;
-  }> = ({ label, field, value, type = 'text', options, render }) => {
+    users?: User[];
+  }> = ({ label, field, value, type = 'text', options, render, users }) => {
     const isEditing = editingField === field;
     const displayValue = render ? render(value) : (value || (value === 0 ? '0' : '...'));
     const selectRef = useRef<HTMLSelectElement>(null);
     
     // Open select dropdown when editing is activated for select fields
     useEffect(() => {
-      if (isEditing && type === 'select' && selectRef.current) {
-        // Use setTimeout to ensure the select is rendered before trying to open it
-        setTimeout(() => {
-          const select = selectRef.current;
-          if (select) {
-            select.focus();
-            // Try to open dropdown by dispatching mousedown event
-            const event = new MouseEvent('mousedown', { bubbles: true });
-            select.dispatchEvent(event);
-            // Also try click event as fallback
-            select.click();
-          }
-        }, 10);
+      if (isEditing && type === 'select') {
+        // Use requestAnimationFrame to ensure DOM is updated
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (selectRef.current) {
+              const select = selectRef.current;
+              select.focus();
+              // Try to open dropdown using multiple approaches
+              // Method 1: Create and dispatch mousedown event
+              const mouseDownEvent = new MouseEvent('mousedown', {
+                bubbles: true,
+                cancelable: true,
+                view: window
+              });
+              select.dispatchEvent(mouseDownEvent);
+              
+              // Method 2: Direct click after small delay
+              setTimeout(() => {
+                if (selectRef.current) {
+                  selectRef.current.click();
+                }
+              }, 50);
+            }
+          });
+        });
       }
     }, [isEditing, type]);
     
@@ -245,7 +258,27 @@ export const DealModal: React.FC<DealModalProps> = ({
                   onChange={async (e) => {
                     const newValue = e.target.value || null;
                     // Update local state immediately for visual feedback
-                    setLocalDeal({ ...localDeal, [field]: newValue });
+                    const updatedDeal: any = { ...localDeal, [field]: newValue };
+                    
+                    // If updating responsibleManagerId, also update responsibleManager object
+                    if (field === 'responsibleManagerId' && users) {
+                      if (newValue) {
+                        const user = users.find(u => u.id === newValue);
+                        if (user) {
+                          updatedDeal.responsibleManager = {
+                            id: user.id,
+                            name: user.name || '',
+                            email: user.email
+                          };
+                        } else {
+                          updatedDeal.responsibleManager = undefined;
+                        }
+                      } else {
+                        updatedDeal.responsibleManager = undefined;
+                      }
+                    }
+                    
+                    setLocalDeal(updatedDeal);
                     // Save to backend without closing the field (will close on blur)
                     try {
                       const normalizedNew = newValue === '' ? null : newValue;
@@ -319,23 +352,8 @@ export const DealModal: React.FC<DealModalProps> = ({
                   if (type === 'select') {
                     // For select fields, prevent default to avoid losing focus
                     e.preventDefault();
-                    setEditingField(field);
-                    // Open select dropdown immediately after state update
-                    setTimeout(() => {
-                      if (selectRef.current) {
-                        selectRef.current.focus();
-                        // Dispatch mousedown event to open dropdown
-                        const mouseEvent = new MouseEvent('mousedown', {
-                          bubbles: true,
-                          cancelable: true,
-                          view: window
-                        });
-                        selectRef.current.dispatchEvent(mouseEvent);
-                      }
-                    }, 0);
-                  } else {
-                    setEditingField(field);
                   }
+                  setEditingField(field);
                 }
               }}
               onClick={() => {
@@ -434,6 +452,7 @@ export const DealModal: React.FC<DealModalProps> = ({
                     }))
                   ]}
                   render={(v) => localDeal.responsibleManager ? (localDeal.responsibleManager.name || localDeal.responsibleManager.email) : 'Не назначен'}
+                  users={users}
                 />
                 <EditableField
                   label="Имя"
