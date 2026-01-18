@@ -62,6 +62,24 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
   const startX = useRef(0);
   const scrollLeft = useRef(0);
 
+  const startDragToScroll = useCallback((clientX: number) => {
+    const container = scrollContainerRef.current;
+    if (!container) return false;
+
+    const rect = container.getBoundingClientRect();
+    startX.current = clientX - rect.left;
+    scrollLeft.current = container.scrollLeft;
+    isDragging.current = true;
+    container.style.cursor = 'grabbing';
+    container.style.userSelect = 'none';
+    // Также устанавливаем курсор для всех дочерних элементов заголовков этапов
+    const stageHeaders = container.querySelectorAll('[data-stage-header]');
+    stageHeaders.forEach((el) => {
+      (el as HTMLElement).style.cursor = 'grabbing';
+    });
+    return true;
+  }, []);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     // Не начинаем drag-to-scroll, если клик на карточке сделки или интерактивном элементе
     const target = e.target as HTMLElement;
@@ -69,16 +87,8 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
       return;
     }
 
-    isDragging.current = true;
-    const container = scrollContainerRef.current;
-    if (container) {
-      const rect = container.getBoundingClientRect();
-      startX.current = e.pageX - rect.left;
-      scrollLeft.current = container.scrollLeft;
-      container.style.cursor = 'grabbing';
-      container.style.userSelect = 'none';
-    }
-  }, []);
+    startDragToScroll(e.pageX);
+  }, [startDragToScroll]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging.current || !scrollContainerRef.current) return;
@@ -91,11 +101,20 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
     container.scrollLeft = scrollLeft.current - walk;
   }, []);
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e?: MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     isDragging.current = false;
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.cursor = 'grab';
-      scrollContainerRef.current.style.userSelect = '';
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.style.cursor = 'grab';
+      container.style.userSelect = '';
+      // Возвращаем курсор для всех дочерних элементов заголовков этапов
+      const stageHeaders = container.querySelectorAll('[data-stage-header]');
+      stageHeaders.forEach((el) => {
+        (el as HTMLElement).style.cursor = '';
+      });
     }
   }, []);
 
@@ -105,14 +124,8 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
       return;
     }
 
-    isDragging.current = true;
-    const container = scrollContainerRef.current;
-    if (container) {
-      const rect = container.getBoundingClientRect();
-      startX.current = e.touches[0].pageX - rect.left;
-      scrollLeft.current = container.scrollLeft;
-    }
-  }, []);
+    startDragToScroll(e.touches[0].pageX);
+  }, [startDragToScroll]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!isDragging.current || !scrollContainerRef.current) return;
@@ -125,24 +138,40 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
     container.scrollLeft = scrollLeft.current - walk;
   }, []);
 
-  const handleTouchEnd = useCallback(() => {
+  const handleTouchEnd = useCallback((e?: TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     isDragging.current = false;
   }, []);
 
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    const handleDocumentMouseMove = (e: MouseEvent) => {
+      handleMouseMove(e);
+    };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchmove', handleTouchMove as any, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
+    const handleDocumentMouseUp = (e: MouseEvent) => {
+      handleMouseUp(e);
+    };
+
+    const handleDocumentTouchMove = (e: TouchEvent) => {
+      handleTouchMove(e);
+    };
+
+    const handleDocumentTouchEnd = (e: TouchEvent) => {
+      handleTouchEnd(e);
+    };
+
+    document.addEventListener('mousemove', handleDocumentMouseMove);
+    document.addEventListener('mouseup', handleDocumentMouseUp);
+    document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false });
+    document.addEventListener('touchend', handleDocumentTouchEnd);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleTouchMove as any);
-      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('mousemove', handleDocumentMouseMove);
+      document.removeEventListener('mouseup', handleDocumentMouseUp);
+      document.removeEventListener('touchmove', handleDocumentTouchMove);
+      document.removeEventListener('touchend', handleDocumentTouchEnd);
     };
   }, [handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
@@ -357,7 +386,8 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
         ) : (
           <div 
             ref={scrollContainerRef}
-            className="flex gap-4 overflow-x-auto overflow-y-auto h-full cursor-grab active:cursor-grabbing"
+            className="flex gap-4 overflow-x-auto overflow-y-auto h-full"
+            style={{ cursor: 'grab' }}
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
           >
@@ -401,25 +431,15 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
                 isFirstStage={isFirstStage}
                 onDragStart={(e) => {
                   // Обработчик для drag-to-scroll из заголовков этапов и свободного пространства
-                  // Здесь проверка на карточки уже не нужна, т.к. мы знаем, что это заголовок или свободное пространство
                   e.stopPropagation();
-                  const container = scrollContainerRef.current;
-                  if (!container) return;
+                  e.preventDefault();
                   
                   if (e.type === 'mousedown') {
                     const mouseEvent = e as React.MouseEvent;
-                    isDragging.current = true;
-                    const rect = container.getBoundingClientRect();
-                    startX.current = mouseEvent.pageX - rect.left;
-                    scrollLeft.current = container.scrollLeft;
-                    container.style.cursor = 'grabbing';
-                    container.style.userSelect = 'none';
+                    startDragToScroll(mouseEvent.pageX);
                   } else if (e.type === 'touchstart') {
                     const touchEvent = e as React.TouchEvent;
-                    isDragging.current = true;
-                    const rect = container.getBoundingClientRect();
-                    startX.current = touchEvent.touches[0].pageX - rect.left;
-                    scrollLeft.current = container.scrollLeft;
+                    startDragToScroll(touchEvent.touches[0].pageX);
                   }
                 }}
               />

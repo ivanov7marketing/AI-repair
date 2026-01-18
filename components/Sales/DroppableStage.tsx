@@ -62,7 +62,8 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
     >
       {/* Stage Header */}
       <div 
-        className="mb-3 cursor-grab active:cursor-grabbing"
+        className="mb-3"
+        data-stage-header
         onMouseDown={onDragStart as any}
         onTouchStart={onDragStart as any}
       >
@@ -107,7 +108,7 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
           ))}
           {deals.length === 0 && (
             <div 
-              className="text-center py-8 text-architect-400 dark:text-architect-500 text-sm cursor-grab active:cursor-grabbing"
+              className="text-center py-8 text-architect-400 dark:text-architect-500 text-sm"
               onMouseDown={onDragStart as any}
               onTouchStart={onDragStart as any}
             >
