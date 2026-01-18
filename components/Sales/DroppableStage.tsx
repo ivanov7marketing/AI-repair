@@ -89,7 +89,7 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
         items={deals.map(d => d.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto min-h-[100px]">
+        <div className="space-y-2">
           {deals.map((deal) => (
             <DraggableDealCard
               key={deal.id}
