@@ -101,14 +101,15 @@ export const DealModal: React.FC<DealModalProps> = ({
     render?: (value: any) => string;
   }> = ({ label, field, value, type = 'text', options, render }) => {
     const isEditing = editingField === field;
-    const [tempValue, setTempValue] = useState<string>(value?.toString() || '');
     const displayValue = render ? render(value) : (value || (value === 0 ? '0' : '...'));
-
-    useEffect(() => {
-      if (isEditing) {
-        setTempValue(value?.toString() || '');
+    
+    // Get current value for editing
+    const getEditValue = () => {
+      if (type === 'date' && value) {
+        return new Date(value).toISOString().split('T')[0];
       }
-    }, [isEditing, value]);
+      return value?.toString() || '';
+    };
 
     return (
       <div className="flex justify-between items-start">
@@ -133,8 +134,7 @@ export const DealModal: React.FC<DealModalProps> = ({
                 <input
                   autoFocus
                   type="number"
-                  value={tempValue}
-                  onChange={(e) => setTempValue(e.target.value)}
+                  defaultValue={value || ''}
                   onBlur={(e) => {
                     const newValue = e.target.value ? parseFloat(e.target.value) : null;
                     handleFieldUpdate(field, newValue);
@@ -151,8 +151,7 @@ export const DealModal: React.FC<DealModalProps> = ({
                 <input
                   autoFocus
                   type="date"
-                  value={tempValue || (value ? new Date(value).toISOString().split('T')[0] : '')}
-                  onChange={(e) => setTempValue(e.target.value)}
+                  defaultValue={getEditValue()}
                   onBlur={(e) => {
                     handleFieldUpdate(field, e.target.value || null);
                     setEditingField(null);
@@ -163,8 +162,7 @@ export const DealModal: React.FC<DealModalProps> = ({
                 <input
                   autoFocus
                   type="text"
-                  value={tempValue}
-                  onChange={(e) => setTempValue(e.target.value)}
+                  defaultValue={getEditValue()}
                   onBlur={(e) => {
                     handleFieldUpdate(field, e.target.value || null);
                     setEditingField(null);
@@ -255,9 +253,9 @@ export const DealModal: React.FC<DealModalProps> = ({
         <div className="flex-1 flex overflow-hidden">
           {/* Left panel - Deal details */}
           <div className="w-[35%] border-r border-architect-200 dark:border-architect-700 overflow-y-auto p-4">
-            <div className="space-y-6">
+            <div className="space-y-3">
               {/* Block 1: Contact information */}
-              <div className="space-y-3">
+              <div className="space-y-1.5">
                 <EditableField
                   label="Отв-ный"
                   field="responsibleManagerId"
@@ -303,7 +301,7 @@ export const DealModal: React.FC<DealModalProps> = ({
               </div>
 
               {/* Block 2: Deal parameters */}
-              <div className="space-y-3 pt-4 border-t border-architect-200 dark:border-architect-700">
+              <div className="space-y-1.5 pt-4 border-t border-architect-200 dark:border-architect-700">
                 <EditableField
                   label="Бюджет"
                   field="budgetFrom"
