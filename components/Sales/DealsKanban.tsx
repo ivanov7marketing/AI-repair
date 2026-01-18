@@ -262,7 +262,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
           </p>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto overflow-y-auto pb-4 max-h-[calc(100vh-300px)]">
+        <div className="flex gap-4 overflow-x-auto overflow-y-auto max-h-[calc(100vh-300px)]">
           {stages.map((stage, index) => {
             const stageDeals = getDealsForStage(stage.id);
             const isFirstStage = stage.orderIndex === 1 || index === 0;
