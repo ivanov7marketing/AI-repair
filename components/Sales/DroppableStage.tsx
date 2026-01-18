@@ -73,15 +73,9 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
               onMoveStage={onMoveStage}
             />
           ))}
-          {deals.length === 0 && !isFirstStage && (
+          {deals.length === 0 && (
             <div className="text-center py-8 text-architect-400 dark:text-architect-500 text-sm">
-              <div className="mb-2">Нет сделок</div>
-              <button
-                onClick={onCreateDeal}
-                className="text-xs text-architect-600 dark:text-architect-400 hover:text-architect-900 dark:hover:text-architect-100 underline"
-              >
-                Создать сделку
-              </button>
+              Нет сделок
             </div>
           )}
           {/* Add deal button at the bottom of first stage */}
@@ -89,7 +83,7 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
             <div className="mt-3 pt-3 border-t border-architect-200 dark:border-architect-700">
               <button
                 onClick={onCreateDeal}
-                className="w-full px-4 py-2 bg-architect-900 dark:bg-white text-white dark:text-architect-900 rounded-lg hover:bg-architect-800 dark:hover:bg-architect-100 flex items-center justify-center gap-2 font-medium shadow-sm text-sm"
+                className="w-full px-4 py-2 border border-architect-200 dark:border-architect-700 rounded-lg hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center justify-center gap-2 text-sm font-medium"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
