@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Edit, Trash2, FileText, Link2, Activity, MessageSquare } from 'lucide-react';
 import { Deal, PipelineStage, User, DealSource } from '../../types';
 import { api } from '../../services/api';
@@ -27,6 +27,13 @@ export const DealModal: React.FC<DealModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'timeline' | 'files' | 'related' | 'activity'>('info');
   const [deleting, setDeleting] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [localDeal, setLocalDeal] = useState<Deal>(deal);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setLocalDeal(deal);
+  }, [deal]);
 
   const handleDelete = async () => {
     if (!confirm('Вы уверены, что хотите удалить эту сделку?')) return;
