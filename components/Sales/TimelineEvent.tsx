@@ -6,6 +6,27 @@ interface TimelineEventProps {
   event: DealTimelineEvent;
 }
 
+// Маппинг английских названий полей на русские (как в левом блоке карточки сделки)
+const FIELD_LABELS: Record<string, string> = {
+  'responsibleManagerId': 'Отв-ный',
+  'leadName': 'Имя',
+  'phone': 'Телефон',
+  'email': 'E-mail',
+  'address': 'Адрес',
+  'budgetFrom': 'Бюджет',
+  'area': 'Площадь',
+  'repairType': 'Тип ремонта',
+  'objectCondition': 'Состояние',
+  'roomsCount': 'Комнаты',
+  'bathroomType': 'Санузел',
+  'telegram': 'Электрика',
+  'whatsapp': 'Сантехника',
+  'measurementNotes': 'Доп.работы',
+  'materialPurchaseType': 'Подарок',
+  'desiredStartDate': 'Удобное время',
+  'measurementDate': 'День замера',
+};
+
 export const TimelineEvent: React.FC<TimelineEventProps> = ({ event }) => {
   const getEventIcon = () => {
     switch (event.eventType) {
@@ -57,9 +78,12 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event }) => {
   const renderContent = () => {
     if (event.eventType === 'field_change' && event.metadata) {
       const { field, oldValue, newValue } = event.metadata;
+      // Заменяем английское название поля на русское в тексте события
+      const fieldLabel = FIELD_LABELS[field] || field;
+      const content = event.content?.replace(field, fieldLabel) || `Изменено поле: ${fieldLabel}`;
       return (
         <div>
-          <div className="font-medium">{event.content}</div>
+          <div className="font-medium">{content}</div>
           <div className="text-sm text-architect-600 dark:text-architect-400 mt-1">
             <span className="line-through">{oldValue || 'пусто'}</span>
             {' → '}
