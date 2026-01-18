@@ -99,7 +99,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate, us
 
       {/* Timeline - scrollable area */}
       <div ref={timelineScrollRef} className="flex-1 overflow-y-auto min-h-0">
-        <div>
+        <div className="bg-architect-50 dark:bg-architect-900 p-4 rounded-lg">
           {events.length === 0 ? (
             <div className="text-center py-8 text-architect-500 dark:text-architect-400">
               Нет событий в истории

@@ -214,22 +214,24 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
     );
   }
   
-  // Для основных действий используем обычную структуру
+  // Для основных действий используем обычную структуру с белым фоном
   return (
-    <div className="flex gap-3 pb-4 last:pb-0">
-      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getEventColor()}`}>
-        {getEventIcon('normal')}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-medium text-sm text-architect-900 dark:text-architect-100">
-            {event.user?.name || 'Система'}
-          </span>
-          <span className="text-xs text-architect-500 dark:text-architect-400">
-            {formatDate(event.createdAt)}
-          </span>
+    <div className="bg-white dark:bg-architect-800 rounded-lg p-3 mb-2 last:mb-0">
+      <div className="flex gap-3">
+        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getEventColor()}`}>
+          {getEventIcon('normal')}
         </div>
-        {renderContent()}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-medium text-sm text-architect-900 dark:text-architect-100">
+              {event.user?.name || 'Система'}
+            </span>
+            <span className="text-xs text-architect-500 dark:text-architect-400">
+              {formatDate(event.createdAt)}
+            </span>
+          </div>
+          {renderContent()}
+        </div>
       </div>
     </div>
   );
