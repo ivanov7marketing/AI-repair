@@ -262,8 +262,9 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
         </div>
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4 min-h-[500px]">
-          {stages.map((stage) => {
+          {stages.map((stage, index) => {
             const stageDeals = getDealsForStage(stage.id);
+            const isFirstStage = stage.orderIndex === 1 || index === 0;
             return (
               <DroppableStage
                 key={stage.id}
@@ -276,6 +277,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
                   setShowDealForm(true);
                 }}
                 stages={stages}
+                isFirstStage={isFirstStage}
               />
             );
           })}
