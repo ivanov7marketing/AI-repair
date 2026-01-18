@@ -33,6 +33,7 @@ const createDealSchema = z.object({
   materialPurchaseType: z.string().optional().nullable(),
   desiredStartDate: z.string().optional().nullable(),
   urgency: z.string().optional().nullable(),
+  measurementNotes: z.string().optional().nullable(),
 });
 
 const updateDealSchema = createDealSchema.partial();
@@ -450,6 +451,7 @@ router.put('/:id', authMiddleware, requirePermission(PERMISSIONS.EDIT_DEALS), as
       materialPurchaseType: 'material_purchase_type',
       desiredStartDate: 'desired_start_date',
       urgency: 'urgency',
+      measurementNotes: 'measurement_notes',
     };
 
     for (const [key, value] of Object.entries(validatedData)) {
