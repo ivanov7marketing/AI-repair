@@ -213,7 +213,7 @@ export const DealModal: React.FC<DealModalProps> = ({
     };
 
     return (
-      <div className="flex items-start">
+      <div className="flex items-center">
         <label className="text-xs font-medium text-architect-500 dark:text-architect-400 w-28 shrink-0">{label}:</label>
         <div className="text-left w-48">
           {isEditing && hasPermission('edit_deals') ? (
