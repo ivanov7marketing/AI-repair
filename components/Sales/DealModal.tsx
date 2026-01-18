@@ -85,7 +85,8 @@ export const DealModal: React.FC<DealModalProps> = ({
       'address', 'buildingType', 'area', 'roomsCount', 'bathroomType',
       'ceilingHeight', 'hasElevator', 'repairType', 'objectCondition',
       'budgetFrom', 'budgetTo', 'needsDesign', 'needsDemolition',
-      'materialPurchaseType', 'desiredStartDate', 'urgency', 'measurementNotes'
+      'materialPurchaseType', 'desiredStartDate', 'urgency', 'measurementNotes',
+      'measurementDate', 'measurementTime'
     ];
     
     // Skip if field is not supported by backend
@@ -157,6 +158,16 @@ export const DealModal: React.FC<DealModalProps> = ({
     const getEditValue = () => {
       if (type === 'date' && value) {
         return new Date(value).toISOString().split('T')[0];
+      }
+      // For text fields, if value is a Date object or ISO string, convert to readable format
+      if (type === 'text' && value) {
+        if (value instanceof Date) {
+          return value.toISOString();
+        }
+        // If it's an ISO date string, keep as is (user can edit it)
+        if (typeof value === 'string' && value.includes('T') && value.includes('Z')) {
+          return value;
+        }
       }
       return value?.toString() || '';
     };

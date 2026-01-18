@@ -34,6 +34,8 @@ const createDealSchema = z.object({
   desiredStartDate: z.string().optional().nullable(),
   urgency: z.string().optional().nullable(),
   measurementNotes: z.string().optional().nullable(),
+  measurementDate: z.string().optional().nullable(),
+  measurementTime: z.string().optional().nullable(),
 });
 
 const updateDealSchema = createDealSchema.partial();
@@ -452,6 +454,8 @@ router.put('/:id', authMiddleware, requirePermission(PERMISSIONS.EDIT_DEALS), as
       desiredStartDate: 'desired_start_date',
       urgency: 'urgency',
       measurementNotes: 'measurement_notes',
+      measurementDate: 'measurement_date',
+      measurementTime: 'measurement_time',
     };
 
     for (const [key, value] of Object.entries(validatedData)) {
