@@ -242,7 +242,22 @@ export const DealModal: React.FC<DealModalProps> = ({
                   ref={selectRef}
                   autoFocus
                   value={value || ''}
-                  onChange={(e) => handleFieldUpdate(field, e.target.value || null)}
+                  onChange={async (e) => {
+                    const newValue = e.target.value || null;
+                    // Update local state immediately for visual feedback
+                    setLocalDeal({ ...localDeal, [field]: newValue });
+                    // Save to backend without closing the field (will close on blur)
+                    try {
+                      const normalizedNew = newValue === '' ? null : newValue;
+                      await api.updateDeal(localDeal.id, { [field]: normalizedNew });
+                      onUpdate();
+                    } catch (error) {
+                      console.error('Failed to update deal:', error);
+                      alert('Ошибка при обновлении поля');
+                      // Revert local state on error
+                      setLocalDeal({ ...localDeal, [field]: value });
+                    }
+                  }}
                   onBlur={() => setEditingField(null)}
                   className="text-xs text-left bg-transparent border-0 border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 dark:text-architect-100 w-full"
                 >
@@ -299,7 +314,36 @@ export const DealModal: React.FC<DealModalProps> = ({
             </div>
           ) : (
             <div
-              onClick={() => hasPermission('edit_deals') && setEditingField(field)}
+              onMouseDown={(e) => {
+                if (hasPermission('edit_deals')) {
+                  if (type === 'select') {
+                    // For select fields, prevent default to avoid losing focus
+                    e.preventDefault();
+                    setEditingField(field);
+                    // Open select dropdown immediately after state update
+                    setTimeout(() => {
+                      if (selectRef.current) {
+                        selectRef.current.focus();
+                        // Dispatch mousedown event to open dropdown
+                        const mouseEvent = new MouseEvent('mousedown', {
+                          bubbles: true,
+                          cancelable: true,
+                          view: window
+                        });
+                        selectRef.current.dispatchEvent(mouseEvent);
+                      }
+                    }, 0);
+                  } else {
+                    setEditingField(field);
+                  }
+                }
+              }}
+              onClick={() => {
+                // Keep onClick for non-select fields
+                if (hasPermission('edit_deals') && type !== 'select') {
+                  setEditingField(field);
+                }
+              }}
               className={`text-xs text-architect-900 dark:text-architect-100 cursor-pointer hover:bg-architect-50 dark:hover:bg-architect-700 px-1 py-0.5 rounded text-left ${hasPermission('edit_deals') ? '' : 'cursor-default'}`}
             >
               {displayValue}
