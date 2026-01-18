@@ -210,6 +210,9 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
   }
   
   // Для основных действий используем обычную структуру с белым фоном
+  const { date, time } = formatDateAndTime(event.createdAt);
+  const userName = event.user?.name || 'Система';
+  
   return (
     <div className="bg-white dark:bg-architect-800 rounded-lg p-3 my-2 first:mt-0 last:mb-0 border border-architect-200 dark:border-architect-700">
       <div className="flex gap-3">
@@ -217,13 +220,10 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
           {getEventIcon('normal')}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-sm text-architect-900 dark:text-architect-100">
-              {event.user?.name || 'Система'}
-            </span>
-            <span className="text-xs text-architect-500 dark:text-architect-400">
-              {formatDate(event.createdAt)}
-            </span>
+          <div className="text-[12px] text-architect-900 dark:text-architect-100 mb-1 inline-flex items-center gap-1">
+            <span>{date}</span>
+            <span>{time}</span>
+            <span>{userName}</span>
           </div>
           {renderContent()}
         </div>
