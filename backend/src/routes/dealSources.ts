@@ -35,12 +35,37 @@ router.get('/', authMiddleware, requirePermission(PERMISSIONS.VIEW_SALES), async
       return;
     }
 
-    const result = await pool.query(
+    let result = await pool.query(
       `SELECT * FROM deal_sources 
        WHERE organization_id = $1 
        ORDER BY created_at ASC`,
       [req.user.organizationId]
     );
+
+    // If no sources exist, create default ones
+    if (result.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO deal_sources (organization_id, name, icon, is_active) VALUES
+         ($1, 'Сайт', '🌐', true),
+         ($1, 'Телеграм', '✈️', true),
+         ($1, 'Email', '📧', true),
+         ($1, 'Телефония', '☎️', true),
+         ($1, 'Instagram', '📱', true),
+         ($1, 'Рекомендации', '👥', true),
+         ($1, 'Повторное обращение', '🔄', true),
+         ($1, 'Контекстная реклама', '🎯', true),
+         ($1, 'Другое', '❓', true)`,
+        [req.user.organizationId]
+      );
+
+      // Fetch again after creation
+      result = await pool.query(
+        `SELECT * FROM deal_sources 
+         WHERE organization_id = $1 
+         ORDER BY created_at ASC`,
+        [req.user.organizationId]
+      );
+    }
 
     const sources = result.rows.map(mapSourceRow);
     res.json(sources);

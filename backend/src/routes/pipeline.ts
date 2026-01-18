@@ -37,12 +37,36 @@ router.get('/stages', authMiddleware, requirePermission(PERMISSIONS.VIEW_SALES),
       return;
     }
 
-    const result = await pool.query(
+    let result = await pool.query(
       `SELECT * FROM pipeline_stages 
        WHERE organization_id = $1 
        ORDER BY order_index ASC`,
       [req.user.organizationId]
     );
+
+    // If no stages exist, create default ones
+    if (result.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO pipeline_stages (organization_id, name, order_index, color, stage_type, is_default) VALUES
+         ($1, 'Квалифицировать', 1, '#3B82F6', 'active', true),
+         ($1, 'Записать на замер', 2, '#06B6D4', 'active', true),
+         ($1, 'Провести замер', 3, '#14B8A6', 'active', true),
+         ($1, 'Подготовить смету', 4, '#10B981', 'active', true),
+         ($1, 'Презентовать КП', 5, '#84CC16', 'active', true),
+         ($1, 'Дожать в договор', 6, '#F59E0B', 'active', true),
+         ($1, 'Договор подписан', 7, '#059669', 'won', true),
+         ($1, 'Нереализованные', 8, '#6B7280', 'lost', true)`,
+        [req.user.organizationId]
+      );
+
+      // Fetch again after creation
+      result = await pool.query(
+        `SELECT * FROM pipeline_stages 
+         WHERE organization_id = $1 
+         ORDER BY order_index ASC`,
+        [req.user.organizationId]
+      );
+    }
 
     const stages = result.rows.map(mapStageRow);
     res.json(stages);
