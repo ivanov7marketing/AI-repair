@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Edit, Trash2, FileText, Link2, Activity, MessageSquare } from 'lucide-react';
 import { Deal, PipelineStage, User, DealSource } from '../../types';
 import { api } from '../../services/api';
@@ -180,6 +180,25 @@ export const DealModal: React.FC<DealModalProps> = ({
   }> = ({ label, field, value, type = 'text', options, render }) => {
     const isEditing = editingField === field;
     const displayValue = render ? render(value) : (value || (value === 0 ? '0' : '...'));
+    const selectRef = useRef<HTMLSelectElement>(null);
+    
+    // Open select dropdown when editing is activated for select fields
+    useEffect(() => {
+      if (isEditing && type === 'select' && selectRef.current) {
+        // Use setTimeout to ensure the select is rendered before trying to open it
+        setTimeout(() => {
+          const select = selectRef.current;
+          if (select) {
+            select.focus();
+            // Try to open dropdown by dispatching mousedown event
+            const event = new MouseEvent('mousedown', { bubbles: true });
+            select.dispatchEvent(event);
+            // Also try click event as fallback
+            select.click();
+          }
+        }, 10);
+      }
+    }, [isEditing, type]);
     
     // Get current value for editing
     const getEditValue = () => {
@@ -220,6 +239,7 @@ export const DealModal: React.FC<DealModalProps> = ({
             <div className="flex justify-start">
               {type === 'select' && options ? (
                 <select
+                  ref={selectRef}
                   autoFocus
                   value={value || ''}
                   onChange={(e) => handleFieldUpdate(field, e.target.value || null)}
