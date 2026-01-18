@@ -574,8 +574,10 @@ export const DealModal: React.FC<DealModalProps> = ({
           </div>
 
           {/* Right panel - Timeline and comments */}
-          <div className="w-[65%] p-4 flex flex-col overflow-hidden">
-            <TimelineView dealId={localDeal.id} onUpdate={onUpdate} users={users} />
+          <div className="w-[65%] bg-architect-50 dark:bg-architect-900 flex flex-col overflow-hidden">
+            <div className="p-4 flex-1 flex flex-col min-h-0">
+              <TimelineView dealId={localDeal.id} onUpdate={onUpdate} users={users} />
+            </div>
           </div>
         </div>
       </div>

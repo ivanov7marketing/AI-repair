@@ -81,40 +81,37 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate, us
 
   return (
     <div className="flex flex-col h-full">
-      {/* Filter and Timeline - with gray background */}
-      <div className="bg-architect-50 dark:bg-architect-900 p-4 rounded-lg flex-1 flex flex-col min-h-0">
-        {/* Filter */}
-        <div className="flex items-center gap-2 mb-4 shrink-0">
-          <Filter className="w-4 h-4 text-architect-500" />
-          <select
-            value={eventTypeFilter}
-            onChange={(e) => setEventTypeFilter(e.target.value as TimelineEventType | 'all')}
-            className="px-3 py-1.5 bg-white dark:bg-architect-700 border border-architect-200 dark:border-architect-600 rounded-lg outline-none dark:text-white text-sm"
-          >
-            <option value="all">Все события</option>
-            <option value="comment">Комментарии</option>
-            <option value="stage_change">Изменения этапов</option>
-            <option value="field_change">Изменения полей</option>
-            <option value="deal_created">Создание сделки</option>
-          </select>
-        </div>
+      {/* Filter */}
+      <div className="flex items-center gap-2 mb-4 shrink-0">
+        <Filter className="w-4 h-4 text-architect-500" />
+        <select
+          value={eventTypeFilter}
+          onChange={(e) => setEventTypeFilter(e.target.value as TimelineEventType | 'all')}
+          className="px-3 py-1.5 bg-white dark:bg-architect-700 border border-architect-200 dark:border-architect-600 rounded-lg outline-none dark:text-white text-sm"
+        >
+          <option value="all">Все события</option>
+          <option value="comment">Комментарии</option>
+          <option value="stage_change">Изменения этапов</option>
+          <option value="field_change">Изменения полей</option>
+          <option value="deal_created">Создание сделки</option>
+        </select>
+      </div>
 
-        {/* Timeline - scrollable area */}
-        <div ref={timelineScrollRef} className="flex-1 overflow-y-auto min-h-0">
-          <div>
-            {events.length === 0 ? (
-              <div className="text-center py-8 text-architect-500 dark:text-architect-400">
-                Нет событий в истории
-              </div>
-            ) : (
-              events.map((event) => <TimelineEvent key={event.id} event={event} users={users} />)
-            )}
-          </div>
+      {/* Timeline - scrollable area */}
+      <div ref={timelineScrollRef} className="flex-1 overflow-y-auto min-h-0">
+        <div>
+          {events.length === 0 ? (
+            <div className="text-center py-8 text-architect-500 dark:text-architect-400">
+              Нет событий в истории
+            </div>
+          ) : (
+            events.map((event) => <TimelineEvent key={event.id} event={event} users={users} />)
+          )}
         </div>
       </div>
 
-      {/* Comment form - fixed at bottom, outside gray background */}
-      <div className="border-t border-architect-200 dark:border-architect-700 pt-4 mt-4 shrink-0">
+      {/* Comment form - fixed at bottom, with white background */}
+      <div className="bg-white dark:bg-architect-800 border-t border-architect-200 dark:border-architect-700 pt-4 mt-4 shrink-0 -mx-4 px-4">
         <div className="flex gap-2">
           <textarea
             value={comment}
