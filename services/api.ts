@@ -686,6 +686,137 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Sales - Deals endpoints
+  async getDeals(params?: {
+    stage_id?: string;
+    manager_id?: string;
+    source_id?: string;
+    search?: string;
+    lead_temperature?: string;
+    budget_from?: number;
+    budget_to?: number;
+    limit?: number;
+    offset?: number;
+  }) {
+    const query = new URLSearchParams();
+    if (params?.stage_id) query.append('stage_id', params.stage_id);
+    if (params?.manager_id) query.append('manager_id', params.manager_id);
+    if (params?.source_id) query.append('source_id', params.source_id);
+    if (params?.search) query.append('search', params.search);
+    if (params?.lead_temperature) query.append('lead_temperature', params.lead_temperature);
+    if (params?.budget_from) query.append('budget_from', params.budget_from.toString());
+    if (params?.budget_to) query.append('budget_to', params.budget_to.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+    if (params?.offset) query.append('offset', params.offset.toString());
+    return this.request(`/api/deals${query.toString() ? '?' + query.toString() : ''}`);
+  }
+
+  async getDeal(id: string) {
+    return this.request(`/api/deals/${id}`);
+  }
+
+  async createDeal(data: any) {
+    return this.request('/api/deals', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDeal(id: string, data: any) {
+    return this.request(`/api/deals/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDeal(id: string) {
+    return this.request(`/api/deals/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async moveDeal(id: string, stageId: string) {
+    return this.request(`/api/deals/${id}/move`, {
+      method: 'POST',
+      body: JSON.stringify({ stageId }),
+    });
+  }
+
+  async getDealTimeline(id: string, eventType?: string) {
+    const query = eventType ? `?event_type=${eventType}` : '';
+    return this.request(`/api/deals/${id}/timeline${query}`);
+  }
+
+  async addDealComment(id: string, content: string) {
+    return this.request(`/api/deals/${id}/timeline`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  // Sales - Pipeline endpoints
+  async getPipelineStages() {
+    return this.request('/api/pipeline/stages');
+  }
+
+  async createPipelineStage(data: any) {
+    return this.request('/api/pipeline/stages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePipelineStage(id: string, data: any) {
+    return this.request(`/api/pipeline/stages/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async reorderPipelineStages(stageOrders: Array<{ id: string; orderIndex: number }>) {
+    return this.request('/api/pipeline/stages/reorder', {
+      method: 'PUT',
+      body: JSON.stringify({ stageOrders }),
+    });
+  }
+
+  async deletePipelineStage(id: string) {
+    return this.request(`/api/pipeline/stages/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async resetPipelineStages() {
+    return this.request('/api/pipeline/stages/reset-defaults', {
+      method: 'POST',
+    });
+  }
+
+  // Sales - Deal Sources endpoints
+  async getDealSources() {
+    return this.request('/api/deal-sources');
+  }
+
+  async createDealSource(data: any) {
+    return this.request('/api/deal-sources', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDealSource(id: string, data: any) {
+    return this.request(`/api/deal-sources/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDealSource(id: string) {
+    return this.request(`/api/deal-sources/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiClient();

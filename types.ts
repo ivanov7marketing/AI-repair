@@ -121,6 +121,13 @@ export const PERMISSIONS = {
   APPROVE_PURCHASE_REQUESTS: 'approve_purchase_requests',
   MANAGE_WAREHOUSE: 'manage_warehouse',
   MANAGE_TOOLS: 'manage_tools',
+  // Sales permissions
+  VIEW_SALES: 'view_sales',
+  CREATE_DEALS: 'create_deals',
+  EDIT_DEALS: 'edit_deals',
+  DELETE_DEALS: 'delete_deals',
+  MANAGE_PIPELINE: 'manage_pipeline',
+  VIEW_ALL_DEALS: 'view_all_deals',
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -340,4 +347,174 @@ export interface WarehouseStock {
   material?: Material;
   quantity: number;
   lastUpdated: string;
+}
+
+// Sales types
+export interface PipelineStage {
+  id: string;
+  organizationId: string;
+  name: string;
+  orderIndex: number;
+  color: string;
+  stageType: 'active' | 'won' | 'lost' | 'system';
+  isDefault: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface DealSource {
+  id: string;
+  organizationId: string;
+  name: string;
+  icon: string | null;
+  isActive: boolean;
+  leadCost: number | null;
+  createdAt: Date | string;
+}
+
+export type TimelineEventType = 
+  | 'comment' 
+  | 'stage_change' 
+  | 'call' 
+  | 'email' 
+  | 'task' 
+  | 'file_upload' 
+  | 'field_change' 
+  | 'deal_created';
+
+export interface DealTimelineEvent {
+  id: string;
+  dealId: string;
+  eventType: TimelineEventType;
+  userId: string;
+  content: string | null;
+  metadata: Record<string, any> | null;
+  createdAt: Date | string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface DealFile {
+  id: string;
+  dealId: string;
+  fileType: 'photo' | 'drawing' | 'document' | 'reference';
+  fileUrl: string;
+  fileName: string;
+  fileSize: number | null;
+  uploadedBy: string;
+  createdAt: Date | string;
+  uploadedByUser?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface DealTask {
+  id: string;
+  dealId: string;
+  title: string;
+  description: string | null;
+  assignedTo: string;
+  dueDate: Date | string | null;
+  completed: boolean;
+  completedAt: Date | string | null;
+  createdBy: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  assignedToUser?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  createdByUser?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface Deal {
+  id: string;
+  organizationId: string;
+  stageId: string;
+  sourceId: string | null;
+  projectId: string | null;
+  objectId: string | null;
+  
+  // Contact information
+  leadName: string;
+  phone: string;
+  email: string | null;
+  telegram: string | null;
+  whatsapp: string | null;
+  
+  // Object information
+  address: string | null;
+  buildingType: string | null;
+  area: number | null;
+  roomsCount: string | null;
+  bathroomType: string | null;
+  ceilingHeight: number | null;
+  hasElevator: boolean;
+  
+  // Repair parameters
+  repairType: string | null;
+  objectCondition: string | null;
+  budgetFrom: number | null;
+  budgetTo: number | null;
+  needsDesign: boolean;
+  needsDemolition: boolean;
+  materialPurchaseType: string | null;
+  desiredStartDate: Date | string | null;
+  urgency: string | null;
+  
+  // Sales process
+  responsibleManagerId: string | null;
+  leadTemperature: 'hot' | 'warm' | 'cold';
+  daysOnStage: number;
+  stageEnteredAt: Date | string;
+  
+  // Measurement
+  measurerId: string | null;
+  measurementDate: Date | string | null;
+  measurementTime: string | null;
+  measurementCompleted: boolean;
+  measurementNotes: string | null;
+  
+  // Documents
+  contractFileUrl: string | null;
+  contractSignedDate: Date | string | null;
+  prepaymentAmount: number | null;
+  prepaymentDate: Date | string | null;
+  
+  // Metadata
+  isRealized: boolean;
+  isClosed: boolean;
+  closedReason: string | null;
+  closedAt: Date | string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  deletedAt: Date | string | null;
+  
+  // Joined data (optional, populated when needed)
+  stage?: PipelineStage;
+  source?: DealSource;
+  responsibleManager?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  measurer?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  project?: {
+    id: string;
+    name: string;
+  };
 }

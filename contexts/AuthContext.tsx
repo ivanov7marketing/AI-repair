@@ -45,11 +45,19 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'approve_purchase_requests',
     'manage_warehouse',
     'manage_tools',
+    // Sales permissions
+    'view_sales',
+    'create_deals',
+    'edit_deals',
+    'view_all_deals',
   ],
   measurer: [
     'create_projects',
     'view_estimates',
     'use_ai_generation',
+    // Sales permissions
+    'view_sales',
+    'edit_deals',
   ],
   foreman: [
     'view_estimates',

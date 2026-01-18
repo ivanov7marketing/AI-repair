@@ -35,6 +35,9 @@ import warehouseRoutes from './routes/warehouse';
 import toolsRoutes from './routes/tools';
 import materialReturnsRoutes from './routes/materialReturns';
 import warehouseOperationsRoutes from './routes/warehouseOperations';
+import dealsRoutes from './routes/deals';
+import pipelineRoutes from './routes/pipeline';
+import dealSourcesRoutes from './routes/dealSources';
 
 dotenv.config();
 
@@ -104,6 +107,10 @@ app.use('/warehouse', warehouseRoutes);
 app.use('/tools', toolsRoutes);
 app.use('/returns', materialReturnsRoutes);
 app.use('/warehouse-operations', warehouseOperationsRoutes);
+// Sales routes
+app.use('/api/deals', dealsRoutes);
+app.use('/api/pipeline', pipelineRoutes);
+app.use('/api/deal-sources', dealSourcesRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: express.NextFunction): void => {

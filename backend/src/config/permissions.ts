@@ -17,6 +17,13 @@ export const PERMISSIONS = {
   APPROVE_PURCHASE_REQUESTS: 'approve_purchase_requests',
   MANAGE_WAREHOUSE: 'manage_warehouse',
   MANAGE_TOOLS: 'manage_tools',
+  // Sales permissions
+  VIEW_SALES: 'view_sales',
+  CREATE_DEALS: 'create_deals',
+  EDIT_DEALS: 'edit_deals',
+  DELETE_DEALS: 'delete_deals',
+  MANAGE_PIPELINE: 'manage_pipeline',
+  VIEW_ALL_DEALS: 'view_all_deals',
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -40,6 +47,13 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.APPROVE_PURCHASE_REQUESTS,
     PERMISSIONS.MANAGE_WAREHOUSE,
     PERMISSIONS.MANAGE_TOOLS,
+    // Sales - full access
+    PERMISSIONS.VIEW_SALES,
+    PERMISSIONS.CREATE_DEALS,
+    PERMISSIONS.EDIT_DEALS,
+    PERMISSIONS.DELETE_DEALS,
+    PERMISSIONS.MANAGE_PIPELINE,
+    PERMISSIONS.VIEW_ALL_DEALS,
   ],
   manager: [
     PERMISSIONS.VIEW_ALL_PROJECTS,
@@ -52,11 +66,19 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.APPROVE_PURCHASE_REQUESTS,
     PERMISSIONS.MANAGE_WAREHOUSE,
     PERMISSIONS.MANAGE_TOOLS,
+    // Sales - view and create deals
+    PERMISSIONS.VIEW_SALES,
+    PERMISSIONS.CREATE_DEALS,
+    PERMISSIONS.EDIT_DEALS,
+    PERMISSIONS.VIEW_ALL_DEALS,
   ],
   measurer: [
     PERMISSIONS.CREATE_PROJECTS,
     PERMISSIONS.VIEW_ESTIMATES,
     PERMISSIONS.USE_AI_GENERATION,
+    // Sales - view deals where assigned as measurer
+    PERMISSIONS.VIEW_SALES,
+    PERMISSIONS.EDIT_DEALS,
   ],
   foreman: [
     PERMISSIONS.VIEW_ESTIMATES,

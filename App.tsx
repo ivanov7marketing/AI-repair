@@ -29,6 +29,7 @@ import { ToolForm } from './components/Warehouse/ToolForm.tsx';
 import { ReturnsList } from './components/Warehouse/ReturnsList.tsx';
 import { ReturnForm } from './components/Warehouse/ReturnForm.tsx';
 import { OperationsList } from './components/Warehouse/OperationsList.tsx';
+import { DealsKanban } from './components/Sales/DealsKanban.tsx';
 import { exportEstimateToXLSX } from './services/estimateExporter.ts';
 import { ExportOptions } from './types.ts';
 import { analyzeFloorPlan, generateIsometricView, generateRoomInterior, fileToGenerativePart, identifyStyleFromImage, parseVoiceEstimation, VoiceEstimationItem } from './services/routeraiService.ts';
@@ -490,6 +491,30 @@ const App: React.FC = () => {
       }
       // Если токен есть, но user еще не загружен, не меняем state - ждем загрузки
     }
+    
+    // Handle navigation from Sales to Projects
+    const handleNavigateToProjects = () => {
+      setActiveTab('projects');
+      // Check if we need to create project from deal
+      const dealId = sessionStorage.getItem('createProjectFromDeal');
+      if (dealId) {
+        const dealDataStr = sessionStorage.getItem('projectFromDealData');
+        if (dealDataStr) {
+          try {
+            const dealData = JSON.parse(dealDataStr);
+            // Set project name from deal data
+            setProjectName(dealData.name || '');
+            // Store dealId for later use when project is created
+            sessionStorage.setItem('pendingDealId', dealId);
+          } catch (e) {
+            console.error('Failed to parse deal data:', e);
+          }
+        }
+      }
+    };
+    
+    window.addEventListener('navigateToProjects', handleNavigateToProjects);
+    return () => window.removeEventListener('navigateToProjects', handleNavigateToProjects);
   }, [user, isLoading]);
 
   const loadProjects = async () => {
@@ -698,6 +723,20 @@ const App: React.FC = () => {
       // Create project in backend
       const projectName = file.name.split('.')[0] || 'Новый проект';
       const backendProject = await api.createProject({ name: projectName });
+      
+      // If project was created from deal, link them
+      const dealId = sessionStorage.getItem('pendingDealId');
+      if (dealId) {
+        try {
+          await api.updateDeal(dealId, { projectId: backendProject.id });
+          await api.addDealComment(dealId, `Создана смета/проект #${backendProject.id}`);
+          sessionStorage.removeItem('pendingDealId');
+          sessionStorage.removeItem('createProjectFromDeal');
+          sessionStorage.removeItem('projectFromDealData');
+        } catch (error) {
+          console.error('Failed to link deal with project:', error);
+        }
+      }
       
       // Upload plan image to server
       const uploadResult = await api.uploadProjectImage(backendProject.id, file, 'planPreview');
@@ -3312,36 +3351,8 @@ const App: React.FC = () => {
                 </div>
             )}
             {activeTab === 'sales' && (
-                <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
-                    <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl">
-                                <TrendingUp className="w-8 h-8 text-white dark:text-architect-900" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-architect-900 dark:text-white">Продажи</h1>
-                                <p className="text-architect-500 dark:text-architect-400 text-sm">Управление сделками и лидами</p>
-                            </div>
-                        </div>
-                        <div className="space-y-4 text-architect-700 dark:text-architect-300">
-                            <p className="text-lg font-semibold text-architect-900 dark:text-white mb-4">В этом разделе будет реализовано:</p>
-                            <ul className="space-y-3 list-disc list-inside">
-                                <li><strong>Канбан со сделками</strong> - классическая воронка продаж с этапами от нового лида до подписания договора</li>
-                                <li><strong>Автоматическое создание лидов</strong> - новые лиды с сайта будут автоматически попадать в раздел</li>
-                                <li><strong>Карточки клиентов</strong> - полная информация о клиенте:
-                                    <ul className="ml-6 mt-2 space-y-2 list-disc">
-                                        <li>Контактные данные</li>
-                                        <li>История взаимодействий</li>
-                                        <li>Замеры и встречи</li>
-                                        <li>Коммерческие предложения</li>
-                                        <li>Договоры и документы</li>
-                                    </ul>
-                                </li>
-                                <li><strong>Перемещение карточек</strong> - между этапами воронки продаж</li>
-                                <li><strong>Аналитика продаж</strong> - конверсии по этапам, средний чек, воронка продаж</li>
-                            </ul>
-                        </div>
-                    </div>
+                <div className="animate-in fade-in duration-300">
+                    <DealsKanban hasPermission={hasPermission} />
                 </div>
             )}
             {activeTab === 'objects' && (
