@@ -78,10 +78,22 @@ export const DealModal: React.FC<DealModalProps> = ({
   const currentStage = stages.find(s => s.id === localDeal.stageId);
 
   const handleFieldUpdate = async (field: string, value: any) => {
+    // Don't update if value hasn't changed (normalize for comparison)
+    const currentValue = localDeal[field as keyof Deal];
+    const normalizedCurrent = currentValue === null || currentValue === '' ? null : currentValue;
+    const normalizedNew = value === null || value === '' ? null : value;
+    
+    if (normalizedCurrent === normalizedNew) {
+      setEditingField(null);
+      return;
+    }
+
     try {
       setSaving(true);
-      await api.updateDeal(localDeal.id, { [field]: value });
-      setLocalDeal({ ...localDeal, [field]: value });
+      // Convert empty string to null for database
+      const updateValue = value === '' ? null : value;
+      await api.updateDeal(localDeal.id, { [field]: updateValue });
+      setLocalDeal({ ...localDeal, [field]: updateValue });
       setEditingField(null);
       onUpdate();
     } catch (error) {
@@ -327,54 +339,29 @@ export const DealModal: React.FC<DealModalProps> = ({
                 label="Тип ремонта"
                 field="repairType"
                 value={localDeal.repairType}
-                type="select"
-                options={[
-                  { value: '', label: '...' },
-                  { value: 'designer', label: 'Дизайнерский' },
-                  { value: 'major', label: 'Капитальный' },
-                  { value: 'cosmetic', label: 'Косметический' },
-                  { value: 'partial', label: 'Частичный' },
-                ]}
+                type="text"
+                render={(v) => v || '...'}
               />
               <EditableField
                 label="Состояние"
                 field="objectCondition"
                 value={localDeal.objectCondition}
-                type="select"
-                options={[
-                  { value: '', label: '...' },
-                  { value: 'rough_finish', label: 'Черновая отделка' },
-                  { value: 'secondary_old_repair', label: 'Вторичка со старым ремонтом' },
-                  { value: 'after_dismantling', label: 'После демонтажа' },
-                  { value: 'partially_repaired', label: 'Частично отремонтирован' },
-                ]}
+                type="text"
+                render={(v) => v || '...'}
               />
               <EditableField
                 label="Комнаты"
                 field="roomsCount"
                 value={localDeal.roomsCount}
-                type="select"
-                options={[
-                  { value: '', label: '...' },
-                  { value: '1', label: '1' },
-                  { value: '2', label: '2' },
-                  { value: '3', label: '3' },
-                  { value: '4+', label: '4+' },
-                  { value: 'studio', label: 'Студия' },
-                ]}
+                type="text"
+                render={(v) => v || '...'}
               />
               <EditableField
                 label="Санузел"
                 field="bathroomType"
                 value={localDeal.bathroomType}
-                type="select"
-                options={[
-                  { value: '', label: '...' },
-                  { value: 'separate', label: 'Раздельный' },
-                  { value: 'combined', label: 'Совмещенный' },
-                  { value: 'two_bathrooms', label: '2 санузла' },
-                  { value: 'no_bathroom', label: 'Без санузла' },
-                ]}
+                type="text"
+                render={(v) => v || '...'}
               />
               <EditableField label="Электрика" field="electricity" value={null} />
               <EditableField label="Сантехника" field="plumbing" value={null} />
@@ -393,19 +380,6 @@ export const DealModal: React.FC<DealModalProps> = ({
                 value={localDeal.measurementDate}
                 type="date"
                 render={(v) => v ? new Date(v).toLocaleDateString('ru-RU') : '...'}
-              />
-              <EditableField
-                label="Способ связи"
-                field="contactMethod"
-                value={localDeal.telegram || localDeal.whatsapp ? (localDeal.telegram ? 'telegram' : 'whatsapp') : null}
-                type="select"
-                options={[
-                  { value: '', label: '...' },
-                  { value: 'telegram', label: 'Telegram' },
-                  { value: 'whatsapp', label: 'WhatsApp' },
-                  { value: 'phone', label: 'Телефон' },
-                  { value: 'email', label: 'Email' },
-                ]}
               />
               </div>
             </div>
