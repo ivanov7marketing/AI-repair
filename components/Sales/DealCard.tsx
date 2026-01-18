@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { Phone, MapPin, Home, DollarSign, Clock, ChevronDown } from 'lucide-react';
-import { Deal, PipelineStage } from '../../types';
+import { ChevronDown } from 'lucide-react';
+import { Deal, PipelineStage, DealTask } from '../../types';
 
 interface DealCardProps {
   deal: Deal;
   onClick: () => void;
   stages?: PipelineStage[];
   onMoveStage?: (dealId: string, newStageId: string) => void;
+  tasks?: DealTask[];
 }
 
-export const DealCard: React.FC<DealCardProps> = ({ deal, onClick, stages, onMoveStage }) => {
+export const DealCard: React.FC<DealCardProps> = ({ deal, onClick, stages, onMoveStage, tasks = [] }) => {
   const [showStageMenu, setShowStageMenu] = useState(false);
   const getTemperatureColor = () => {
     switch (deal.leadTemperature) {
@@ -22,25 +23,6 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, onClick, stages, onMov
       default:
         return 'border-l-4 border-gray-300';
     }
-  };
-
-  const getTemperatureIcon = () => {
-    switch (deal.leadTemperature) {
-      case 'hot':
-        return '🔥';
-      case 'warm':
-        return '🌡️';
-      case 'cold':
-        return '❄️';
-      default:
-        return '';
-    }
-  };
-
-  const getDaysColor = () => {
-    if (deal.daysOnStage <= 3) return 'text-green-600 dark:text-green-400';
-    if (deal.daysOnStage <= 7) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
   };
 
   const formatBudget = () => {
@@ -56,9 +38,54 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, onClick, stages, onMov
     return 'Не указан';
   };
 
-  const truncateText = (text: string | null, maxLength: number) => {
-    if (!text) return '';
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  const formatDate = (date: Date | string | null) => {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+  };
+
+  const getDealName = () => {
+    if (deal.address) {
+      return deal.address;
+    }
+    // Формируем номер сделки из id (берем все цифры из id)
+    const digits = deal.id.replace(/[^0-9]/g, '');
+    // Если есть цифры, берем последние 3, иначе используем хэш от id
+    let dealNum = '001';
+    if (digits.length >= 3) {
+      dealNum = digits.slice(-3);
+    } else if (digits.length > 0) {
+      dealNum = digits.padStart(3, '0');
+    } else {
+      // Если нет цифр в id (маловероятно), используем хэш от строки
+      let hash = 0;
+      for (let i = 0; i < deal.id.length; i++) {
+        hash = ((hash << 5) - hash) + deal.id.charCodeAt(i);
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      dealNum = String(Math.abs(hash) % 1000).padStart(3, '0');
+    }
+    return `Сделка ${dealNum}`;
+  };
+
+  const getTaskIndicator = () => {
+    // Красный кружок - если есть просроченные задачи
+    const hasOverdue = tasks.some(task => 
+      task.dueDate && 
+      !task.completed && 
+      new Date(task.dueDate) < new Date()
+    );
+    if (hasOverdue) {
+      return 'bg-red-500';
+    }
+
+    // Зеленый кружок - если есть задачи
+    if (tasks.length > 0) {
+      return 'bg-green-500';
+    }
+
+    // Оранжевый кружок - если задач нет
+    return 'bg-orange-500';
   };
 
   const handleStageSelect = (e: React.MouseEvent, newStageId: string) => {
@@ -74,92 +101,70 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, onClick, stages, onMov
       className={`bg-white dark:bg-architect-800 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3 ${getTemperatureColor()} relative`}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <span className="text-sm">{getTemperatureIcon()}</span>
-          <span className="font-semibold text-sm text-architect-900 dark:text-architect-100 truncate">
-            {deal.leadName}
-          </span>
-        </div>
+      {/* Первая строка: Имя (слева) + Дата (справа) */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-semibold text-architect-900 dark:text-architect-100 truncate">
+          {deal.leadName}
+        </span>
+        <span className="text-xs text-architect-600 dark:text-architect-400 shrink-0 ml-2">
+          {formatDate(deal.createdAt)}
+        </span>
       </div>
 
-      <div className="space-y-1.5 text-xs text-architect-600 dark:text-architect-400">
-        <div className="flex items-center gap-1.5">
-          <Phone className="w-3 h-3 shrink-0" />
-          <span className="truncate">{deal.phone}</span>
-        </div>
+      {/* Вторая строка: Название сделки (слева) */}
+      <div className="mb-2">
+        <span className="text-xs text-architect-600 dark:text-architect-400 truncate block">
+          {getDealName()}
+        </span>
+      </div>
 
-        {deal.address && (
-          <div className="flex items-center gap-1.5">
-            <MapPin className="w-3 h-3 shrink-0" />
-            <span className="truncate">{truncateText(deal.address, 30)}</span>
-          </div>
-        )}
+      {/* Третья строка: Бюджет (слева) + Индикатор задач (справа) */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-architect-600 dark:text-architect-400 truncate">
+          {formatBudget()}
+        </span>
+        <div className={`w-2 h-2 rounded-full shrink-0 ml-2 ${getTaskIndicator()}`} />
+      </div>
 
-        <div className="flex items-center gap-1.5">
-          <Home className="w-3 h-3 shrink-0" />
-          <span>
-            {deal.repairType || 'Не указан'}
-            {deal.area && ` • ${deal.area}м²`}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <DollarSign className="w-3 h-3 shrink-0" />
-          <span>{formatBudget()}</span>
-        </div>
-
-        <div className="flex items-center justify-between pt-1 border-t border-architect-100 dark:border-architect-700">
-          <div className="flex items-center gap-1">
-            {deal.source?.icon && <span>{deal.source.icon}</span>}
-            <span className="text-xs">{deal.source?.name || 'Не указан'}</span>
-          </div>
-          <div className={`flex items-center gap-1 ${getDaysColor()}`}>
-            <Clock className="w-3 h-3" />
-            <span className="text-xs font-medium">{deal.daysOnStage} дн.</span>
-          </div>
-        </div>
-
-        {/* Stage selector */}
-        {stages && onMoveStage && stages.length > 0 && (
-          <div className="absolute top-2 right-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowStageMenu(!showStageMenu);
-              }}
-              className="p-1 hover:bg-architect-100 dark:hover:bg-architect-700 rounded"
+      {/* Stage selector */}
+      {stages && onMoveStage && stages.length > 0 && (
+        <div className="absolute top-2 right-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowStageMenu(!showStageMenu);
+            }}
+            className="p-1 hover:bg-architect-100 dark:hover:bg-architect-700 rounded"
+          >
+            <ChevronDown className="w-3 h-3 text-architect-500" />
+          </button>
+          {showStageMenu && (
+            <div
+              className="absolute right-0 top-6 z-50 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-lg shadow-lg min-w-[200px] max-h-[300px] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
             >
-              <ChevronDown className="w-3 h-3 text-architect-500" />
-            </button>
-            {showStageMenu && (
-              <div
-                className="absolute right-0 top-6 z-50 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-lg shadow-lg min-w-[200px] max-h-[300px] overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-2 text-xs font-medium text-architect-500 dark:text-architect-400 border-b border-architect-200 dark:border-architect-700">
-                  Переместить на этап:
-                </div>
-                {stages
-                  .filter(s => s.id !== deal.stageId)
-                  .map((stage) => (
-                    <button
-                      key={stage.id}
-                      onClick={(e) => handleStageSelect(e, stage.id)}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2"
-                    >
-                      <div
-                        className="w-3 h-3 rounded"
-                        style={{ backgroundColor: stage.color }}
-                      />
-                      <span>{stage.name}</span>
-                    </button>
-                  ))}
+              <div className="p-2 text-xs font-medium text-architect-500 dark:text-architect-400 border-b border-architect-200 dark:border-architect-700">
+                Переместить на этап:
               </div>
-            )}
-          </div>
-        )}
-      </div>
+              {stages
+                .filter(s => s.id !== deal.stageId)
+                .map((stage) => (
+                  <button
+                    key={stage.id}
+                    onClick={(e) => handleStageSelect(e, stage.id)}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2"
+                  >
+                    <div
+                      className="w-3 h-3 rounded"
+                      style={{ backgroundColor: stage.color }}
+                    />
+                    <span>{stage.name}</span>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
