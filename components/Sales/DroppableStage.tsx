@@ -12,6 +12,7 @@ interface DroppableStageProps {
   onCreateDeal: () => void;
   stages: PipelineStage[];
   isFirstStage?: boolean;
+  onDragStart?: (e: React.MouseEvent | React.TouchEvent) => void;
 }
 
 export const DroppableStage: React.FC<DroppableStageProps> = ({
@@ -22,6 +23,7 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
   onCreateDeal,
   stages,
   isFirstStage = false,
+  onDragStart,
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: `stage-${stage.id}`,
@@ -59,7 +61,11 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
       className={`flex-shrink-0 w-80 bg-architect-50 dark:bg-architect-900 rounded-lg p-3 ${isOver ? 'ring-2 ring-architect-500' : ''}`}
     >
       {/* Stage Header */}
-      <div className="mb-3">
+      <div 
+        className="mb-3 cursor-grab active:cursor-grabbing"
+        onMouseDown={onDragStart as any}
+        onTouchStart={onDragStart as any}
+      >
         {/* Первая строка: Название этапа */}
         <h3 className="text-[16px] font-semibold uppercase text-architect-900 dark:text-architect-100 mb-1">
           {stage.name}
@@ -100,7 +106,11 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
             />
           ))}
           {deals.length === 0 && (
-            <div className="text-center py-8 text-architect-400 dark:text-architect-500 text-sm">
+            <div 
+              className="text-center py-8 text-architect-400 dark:text-architect-500 text-sm cursor-grab active:cursor-grabbing"
+              onMouseDown={onDragStart as any}
+              onTouchStart={onDragStart as any}
+            >
               Нет сделок
             </div>
           )}

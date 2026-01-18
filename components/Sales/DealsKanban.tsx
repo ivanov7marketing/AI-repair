@@ -70,12 +70,13 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
     }
 
     isDragging.current = true;
-    startX.current = e.pageX - (scrollContainerRef.current?.offsetLeft || 0);
-    scrollLeft.current = scrollContainerRef.current?.scrollLeft || 0;
-    
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.cursor = 'grabbing';
-      scrollContainerRef.current.style.userSelect = 'none';
+    const container = scrollContainerRef.current;
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      startX.current = e.pageX - rect.left;
+      scrollLeft.current = container.scrollLeft;
+      container.style.cursor = 'grabbing';
+      container.style.userSelect = 'none';
     }
   }, []);
 
@@ -83,9 +84,11 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
     if (!isDragging.current || !scrollContainerRef.current) return;
     
     e.preventDefault();
-    const x = e.pageX - (scrollContainerRef.current.offsetLeft || 0);
+    const container = scrollContainerRef.current;
+    const rect = container.getBoundingClientRect();
+    const x = e.pageX - rect.left;
     const walk = (x - startX.current) * 1.5; // Скорость скролла
-    scrollContainerRef.current.scrollLeft = scrollLeft.current - walk;
+    container.scrollLeft = scrollLeft.current - walk;
   }, []);
 
   const handleMouseUp = useCallback(() => {
@@ -103,17 +106,23 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
     }
 
     isDragging.current = true;
-    startX.current = e.touches[0].pageX - (scrollContainerRef.current?.offsetLeft || 0);
-    scrollLeft.current = scrollContainerRef.current?.scrollLeft || 0;
+    const container = scrollContainerRef.current;
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      startX.current = e.touches[0].pageX - rect.left;
+      scrollLeft.current = container.scrollLeft;
+    }
   }, []);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!isDragging.current || !scrollContainerRef.current) return;
     
     e.preventDefault();
-    const x = e.touches[0].pageX - (scrollContainerRef.current.offsetLeft || 0);
+    const container = scrollContainerRef.current;
+    const rect = container.getBoundingClientRect();
+    const x = e.touches[0].pageX - rect.left;
     const walk = (x - startX.current) * 1.5;
-    scrollContainerRef.current.scrollLeft = scrollLeft.current - walk;
+    container.scrollLeft = scrollLeft.current - walk;
   }, []);
 
   const handleTouchEnd = useCallback(() => {
@@ -390,6 +399,29 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
                 }}
                 stages={stages}
                 isFirstStage={isFirstStage}
+                onDragStart={(e) => {
+                  // Обработчик для drag-to-scroll из заголовков этапов и свободного пространства
+                  // Здесь проверка на карточки уже не нужна, т.к. мы знаем, что это заголовок или свободное пространство
+                  e.stopPropagation();
+                  const container = scrollContainerRef.current;
+                  if (!container) return;
+                  
+                  if (e.type === 'mousedown') {
+                    const mouseEvent = e as React.MouseEvent;
+                    isDragging.current = true;
+                    const rect = container.getBoundingClientRect();
+                    startX.current = mouseEvent.pageX - rect.left;
+                    scrollLeft.current = container.scrollLeft;
+                    container.style.cursor = 'grabbing';
+                    container.style.userSelect = 'none';
+                  } else if (e.type === 'touchstart') {
+                    const touchEvent = e as React.TouchEvent;
+                    isDragging.current = true;
+                    const rect = container.getBoundingClientRect();
+                    startX.current = touchEvent.touches[0].pageX - rect.left;
+                    scrollLeft.current = container.scrollLeft;
+                  }
+                }}
               />
             );
           })}
