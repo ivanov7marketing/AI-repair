@@ -183,6 +183,40 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Create default pipeline stages and sources for all existing organizations
+DO $$
+DECLARE
+  org_record RECORD;
+BEGIN
+  FOR org_record IN SELECT id FROM organizations LOOP
+    -- Create default pipeline stages
+    INSERT INTO pipeline_stages (organization_id, name, order_index, color, stage_type, is_default) VALUES
+      (org_record.id, 'Квалифицировать', 1, '#3B82F6', 'active', true),
+      (org_record.id, 'Записать на замер', 2, '#06B6D4', 'active', true),
+      (org_record.id, 'Провести замер', 3, '#14B8A6', 'active', true),
+      (org_record.id, 'Подготовить смету', 4, '#10B981', 'active', true),
+      (org_record.id, 'Презентовать КП', 5, '#84CC16', 'active', true),
+      (org_record.id, 'Дожать в договор', 6, '#F59E0B', 'active', true),
+      (org_record.id, 'Договор подписан', 7, '#059669', 'won', true),
+      (org_record.id, 'Нереализованные', 8, '#6B7280', 'lost', true)
+    ON CONFLICT DO NOTHING;
+    
+    -- Create default deal sources
+    INSERT INTO deal_sources (organization_id, name, icon, is_active) VALUES
+      (org_record.id, 'Сайт', '🌐', true),
+      (org_record.id, 'Телеграм', '✈️', true),
+      (org_record.id, 'Email', '📧', true),
+      (org_record.id, 'Телефония', '☎️', true),
+      (org_record.id, 'Instagram', '📱', true),
+      (org_record.id, 'Рекомендации', '👥', true),
+      (org_record.id, 'Повторное обращение', '🔄', true),
+      (org_record.id, 'Контекстная реклама', '🎯', true),
+      (org_record.id, 'Другое', '❓', true)
+    ON CONFLICT DO NOTHING;
+  END LOOP;
+END $$;
+
 -- Trigger to create default stages and sources when organization is created
--- Note: This will be called manually or via application logic when organization is created
--- as we can't easily detect new organization insertions in a migration
+-- Note: For now, stages and sources are created manually via application logic
+-- when a new organization is created. Functions create_default_pipeline_stages and
+-- create_default_deal_sources can be called from application code.
