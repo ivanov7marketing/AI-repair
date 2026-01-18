@@ -393,6 +393,34 @@ export const DealModal: React.FC<DealModalProps> = ({
                 render={(v) => v || '...'}
               />
               <EditableField
+                label="Электрика"
+                field="telegram"
+                value={localDeal.telegram}
+                type="text"
+                render={(v) => v || '...'}
+              />
+              <EditableField
+                label="Сантехника"
+                field="whatsapp"
+                value={localDeal.whatsapp}
+                type="text"
+                render={(v) => v || '...'}
+              />
+              <EditableField
+                label="Доп.работы"
+                field="measurementNotes"
+                value={localDeal.measurementNotes}
+                type="text"
+                render={(v) => v || '...'}
+              />
+              <EditableField
+                label="Подарок"
+                field="materialPurchaseType"
+                value={localDeal.materialPurchaseType}
+                type="text"
+                render={(v) => v || '...'}
+              />
+              <EditableField
                 label="Удобное время"
                 field="desiredStartDate"
                 value={localDeal.desiredStartDate}
