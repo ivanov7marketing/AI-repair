@@ -216,7 +216,7 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
   
   // Для основных действий используем обычную структуру с белым фоном
   return (
-    <div className="bg-white dark:bg-architect-800 rounded-lg p-3 mb-2 last:mb-0">
+    <div className="bg-white dark:bg-architect-800 rounded-lg p-3 mb-1 last:mb-0 border border-architect-200 dark:border-architect-700">
       <div className="flex gap-3">
         <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getEventColor()}`}>
           {getEventIcon('normal')}
