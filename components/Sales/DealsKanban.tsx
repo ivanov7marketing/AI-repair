@@ -211,39 +211,39 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
 
   return (
     <div className="space-y-4 flex flex-col h-full overflow-hidden p-4 md:p-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 shrink-0">
-        <h1 className="text-2xl font-bold text-architect-900 dark:text-architect-100">Продажи</h1>
+      {/* Header with funnel name, search and settings button */}
+      <div className="flex items-center gap-4 mb-4 shrink-0">
+        <span className="text-lg font-semibold text-architect-900 dark:text-architect-100 whitespace-nowrap shrink-0">
+          Ремонты
+        </span>
+        <div className="flex-1 min-w-0">
+          <DealsFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedManagers={selectedManagers}
+            onManagersChange={setSelectedManagers}
+            selectedSources={selectedSources}
+            onSourcesChange={setSelectedSources}
+            leadTemperature={leadTemperature}
+            onTemperatureChange={setLeadTemperature}
+            budgetFrom={budgetFrom}
+            budgetTo={budgetTo}
+            onBudgetChange={(from, to) => {
+              setBudgetFrom(from);
+              setBudgetTo(to);
+            }}
+            managers={users.filter(u => u.role === 'manager' || u.role === 'admin')}
+            sources={sources}
+            onReset={resetFilters}
+          />
+        </div>
         <button
           onClick={() => setShowPipelineSettings(true)}
-          className="px-4 py-2 border border-architect-200 dark:border-architect-700 rounded-lg hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2 text-sm font-medium"
+          className="px-4 py-2 border border-architect-200 dark:border-architect-700 rounded-lg hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2 text-sm font-medium shrink-0"
         >
           <Settings className="w-4 h-4" />
           Настройки воронки
         </button>
-      </div>
-
-      {/* Filters */}
-      <div className="shrink-0">
-      <DealsFilters
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        selectedManagers={selectedManagers}
-        onManagersChange={setSelectedManagers}
-        selectedSources={selectedSources}
-        onSourcesChange={setSelectedSources}
-        leadTemperature={leadTemperature}
-        onTemperatureChange={setLeadTemperature}
-        budgetFrom={budgetFrom}
-        budgetTo={budgetTo}
-        onBudgetChange={(from, to) => {
-          setBudgetFrom(from);
-          setBudgetTo(to);
-        }}
-        managers={users.filter(u => u.role === 'manager' || u.role === 'admin')}
-        sources={sources}
-        onReset={resetFilters}
-      />
       </div>
 
       {/* Kanban Board */}
