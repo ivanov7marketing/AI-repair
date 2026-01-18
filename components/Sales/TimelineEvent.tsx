@@ -29,26 +29,27 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] }) => {
-  const getEventIcon = () => {
+  const getEventIcon = (size: 'normal' | 'small' = 'normal') => {
+    const iconSize = size === 'small' ? 'w-2 h-2' : 'w-4 h-4';
     switch (event.eventType) {
       case 'comment':
-        return <MessageSquare className="w-4 h-4" />;
+        return <MessageSquare className={iconSize} />;
       case 'stage_change':
-        return <ArrowRight className="w-4 h-4" />;
+        return <ArrowRight className={iconSize} />;
       case 'call':
-        return <Phone className="w-4 h-4" />;
+        return <Phone className={iconSize} />;
       case 'email':
-        return <Mail className="w-4 h-4" />;
+        return <Mail className={iconSize} />;
       case 'task':
-        return <CheckSquare className="w-4 h-4" />;
+        return <CheckSquare className={iconSize} />;
       case 'file_upload':
-        return <FileText className="w-4 h-4" />;
+        return <FileText className={iconSize} />;
       case 'field_change':
-        return <Edit className="w-4 h-4" />;
+        return <Edit className={iconSize} />;
       case 'deal_created':
-        return <Plus className="w-4 h-4" />;
+        return <Plus className={iconSize} />;
       default:
-        return <MessageSquare className="w-4 h-4" />;
+        return <MessageSquare className={iconSize} />;
     }
   };
 
@@ -197,9 +198,9 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
     }
     
     return (
-      <div className="flex gap-3 pb-4 last:pb-0">
-        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getEventColor()}`}>
-          {getEventIcon()}
+      <div className="flex gap-3 pb-1.5 last:pb-0">
+        <div className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center bg-architect-200 dark:bg-architect-700 text-architect-500 dark:text-architect-400">
+          {getEventIcon('small')}
         </div>
         <div className="flex-1 min-w-0">
           <div className={`${secondaryTextClass} inline-flex items-center gap-1`}>
@@ -217,7 +218,7 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
   return (
     <div className="flex gap-3 pb-4 last:pb-0">
       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getEventColor()}`}>
-        {getEventIcon()}
+        {getEventIcon('normal')}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
