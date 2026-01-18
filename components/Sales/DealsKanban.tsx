@@ -147,7 +147,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-architect-900 dark:text-architect-100">Продажи</h1>
         <div className="flex gap-2">
           {hasPermission('manage_pipeline') && (
@@ -193,8 +193,18 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
       />
 
       {/* Kanban Board */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {stages.map((stage) => {
+      {stages.length === 0 ? (
+        <div className="bg-white dark:bg-architect-800 rounded-lg border border-architect-200 dark:border-architect-700 p-8 text-center">
+          <p className="text-architect-600 dark:text-architect-400 mb-4">
+            Воронка продаж не настроена. Нужно создать этапы воронки.
+          </p>
+          <p className="text-sm text-architect-500 dark:text-architect-500">
+            Этапы воронки должны быть созданы автоматически при настройке организации.
+          </p>
+        </div>
+      ) : (
+        <div className="flex gap-4 overflow-x-auto pb-4 min-h-[500px]">
+          {stages.map((stage) => {
           const stageDeals = getDealsForStage(stage.id);
           const stats = calculateStageStats(stage.id);
 
@@ -270,7 +280,8 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Modals */}
       {showDealForm && (
