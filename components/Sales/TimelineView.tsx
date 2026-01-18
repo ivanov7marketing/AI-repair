@@ -110,8 +110,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate, us
         </div>
       </div>
 
-      {/* Comment form - fixed at bottom, with white background */}
-      <div className="bg-white dark:bg-architect-800 border-t border-architect-200 dark:border-architect-700 pt-4 mt-4 shrink-0 -mx-4 px-4">
+      {/* Comment form - fixed at bottom */}
+      <div className="border-t border-architect-200 dark:border-architect-700 pt-4 mt-4 shrink-0 -mx-4 px-4">
         <div className="flex gap-2">
           <textarea
             value={comment}
