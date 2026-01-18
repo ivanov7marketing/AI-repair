@@ -47,7 +47,11 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
   // Drag & Drop
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Drag starts only after moving 8px
+      },
+    }),
     useSensor(KeyboardSensor)
   );
 
