@@ -76,6 +76,20 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
     }).format(d);
   };
 
+  const formatDateAndTime = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const dateStr = new Intl.DateTimeFormat('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(d);
+    const timeStr = new Intl.DateTimeFormat('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(d);
+    return { date: dateStr, time: timeStr };
+  };
+
   // Определяем, является ли событие "не основным" действием
   const isSecondaryAction = (eventType: string) => {
     return ['deal_created', 'stage_change', 'field_change'].includes(eventType);
@@ -84,8 +98,8 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
   const renderContent = () => {
     const isSecondary = isSecondaryAction(event.eventType);
     
-    // Стили для "не основных" действий: меньший шрифт (на 30% меньше text-xs) и более светлый цвет
-    const secondaryTextClass = 'text-[8.5px] text-architect-500 dark:text-architect-400';
+    // Стили для "не основных" действий: шрифт 12px и более светлый цвет
+    const secondaryTextClass = 'text-[12px] text-architect-500 dark:text-architect-400';
     // Стили для основных действий: текущий размер и цвет
     const primaryTextClass = 'text-xs text-architect-900 dark:text-architect-100';
     
@@ -142,6 +156,64 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
     return <div className={isSecondary ? secondaryTextClass : primaryTextClass}>{event.content}</div>;
   };
 
+  const isSecondary = isSecondaryAction(event.eventType);
+  
+  // Для "не основных" действий объединяем дату, время, имя и действие в одну строку
+  if (isSecondary) {
+    const { date, time } = formatDateAndTime(event.createdAt);
+    const userName = event.user?.name || 'Система';
+    const secondaryTextClass = 'text-[12px] text-architect-500 dark:text-architect-400';
+    
+    let actionText = '';
+    if (event.eventType === 'field_change' && event.metadata) {
+      const { field, oldValue, newValue } = event.metadata;
+      const fieldLabel = FIELD_LABELS[field] || field;
+      const content = event.content?.replace(field, fieldLabel) || `Изменено поле: ${fieldLabel}`;
+      
+      let displayOldValue = oldValue || 'пусто';
+      let displayNewValue = newValue || 'пусто';
+      
+      if (field === 'responsibleManagerId') {
+        if (oldValue && typeof oldValue === 'string' && oldValue.trim() !== '') {
+          const oldUser = users.find(u => u.id === oldValue);
+          displayOldValue = oldUser ? (oldUser.name || oldUser.email) : 'пусто';
+        } else {
+          displayOldValue = 'пусто';
+        }
+        if (newValue && typeof newValue === 'string' && newValue.trim() !== '') {
+          const newUser = users.find(u => u.id === newValue);
+          displayNewValue = newUser ? (newUser.name || newUser.email) : 'пусто';
+        } else {
+          displayNewValue = 'пусто';
+        }
+      }
+      
+      actionText = `${content} ${displayOldValue} → ${displayNewValue}`;
+    } else if (event.eventType === 'stage_change' && event.metadata) {
+      const { oldStageName, newStageName } = event.metadata;
+      actionText = `${event.content} ${oldStageName} → ${newStageName}`;
+    } else {
+      actionText = event.content || '';
+    }
+    
+    return (
+      <div className="flex gap-3 pb-4 last:pb-0">
+        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getEventColor()}`}>
+          {getEventIcon()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className={`${secondaryTextClass} inline-flex items-center gap-1`}>
+            <span>{date}</span>
+            <span>{time}</span>
+            <span>{userName}</span>
+            <span>{actionText}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Для основных действий используем обычную структуру
   return (
     <div className="flex gap-3 pb-4 last:pb-0">
       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getEventColor()}`}>
