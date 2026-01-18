@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Settings } from 'lucide-react';
 import {
   DndContext,
@@ -55,6 +55,87 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
     }),
     useSensor(KeyboardSensor)
   );
+
+  // Drag to scroll
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Не начинаем drag-to-scroll, если клик на карточке сделки или интерактивном элементе
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-deal-card]') || target.closest('button') || target.closest('select') || target.closest('input')) {
+      return;
+    }
+
+    isDragging.current = true;
+    startX.current = e.pageX - (scrollContainerRef.current?.offsetLeft || 0);
+    scrollLeft.current = scrollContainerRef.current?.scrollLeft || 0;
+    
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.cursor = 'grabbing';
+      scrollContainerRef.current.style.userSelect = 'none';
+    }
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging.current || !scrollContainerRef.current) return;
+    
+    e.preventDefault();
+    const x = e.pageX - (scrollContainerRef.current.offsetLeft || 0);
+    const walk = (x - startX.current) * 1.5; // Скорость скролла
+    scrollContainerRef.current.scrollLeft = scrollLeft.current - walk;
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false;
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.cursor = 'grab';
+      scrollContainerRef.current.style.userSelect = '';
+    }
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-deal-card]') || target.closest('button') || target.closest('select') || target.closest('input')) {
+      return;
+    }
+
+    isDragging.current = true;
+    startX.current = e.touches[0].pageX - (scrollContainerRef.current?.offsetLeft || 0);
+    scrollLeft.current = scrollContainerRef.current?.scrollLeft || 0;
+  }, []);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!isDragging.current || !scrollContainerRef.current) return;
+    
+    e.preventDefault();
+    const x = e.touches[0].pageX - (scrollContainerRef.current.offsetLeft || 0);
+    const walk = (x - startX.current) * 1.5;
+    scrollContainerRef.current.scrollLeft = scrollLeft.current - walk;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    isDragging.current = false;
+  }, []);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove as any, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove as any);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
   useEffect(() => {
     loadData();
@@ -265,7 +346,12 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
             </p>
           </div>
         ) : (
-          <div className="flex gap-4 overflow-x-auto overflow-y-auto h-full">
+          <div 
+            ref={scrollContainerRef}
+            className="flex gap-4 overflow-x-auto overflow-y-auto h-full cursor-grab active:cursor-grabbing"
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+          >
           {stages.map((stage, index) => {
             const stageDeals = getDealsForStage(stage.id);
             const isFirstStage = stage.orderIndex === 1 || index === 0;

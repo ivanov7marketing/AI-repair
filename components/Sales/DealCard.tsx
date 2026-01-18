@@ -98,6 +98,7 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, onClick, stages, onMov
 
   return (
     <div
+      data-deal-card
       className={`bg-white dark:bg-architect-800 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3 ${getTemperatureColor()} relative`}
       onClick={onClick}
     >
