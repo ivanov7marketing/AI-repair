@@ -292,13 +292,15 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
 
         <DragOverlay>
           {activeDeal ? (
-            <div className="opacity-50 rotate-3">
-              <DealCard
-                deal={activeDeal}
-                onClick={() => {}}
-                stages={stages}
-                onMoveStage={handleMoveDeal}
-              />
+            <div className="opacity-50 rotate-3 w-80">
+              <div className="bg-white dark:bg-architect-800 rounded-lg shadow-lg p-3 border-l-4 border-architect-500">
+                <div className="font-semibold text-sm text-architect-900 dark:text-architect-100 mb-2">
+                  {activeDeal.leadName}
+                </div>
+                <div className="text-xs text-architect-600 dark:text-architect-400">
+                  {activeDeal.phone}
+                </div>
+              </div>
             </div>
           ) : null}
         </DragOverlay>
