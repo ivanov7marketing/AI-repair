@@ -104,7 +104,7 @@ export const DealModal: React.FC<DealModalProps> = ({
     const [tempValue, setTempValue] = useState<string>(value?.toString() || '');
     const displayValue = render ? render(value) : (value || (value === 0 ? '0' : '...'));
 
-    React.useEffect(() => {
+    useEffect(() => {
       if (isEditing) {
         setTempValue(value?.toString() || '');
       }
