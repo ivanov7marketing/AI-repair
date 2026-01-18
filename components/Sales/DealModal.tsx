@@ -409,12 +409,8 @@ export const DealModal: React.FC<DealModalProps> = ({
                   value={localDeal.budgetFrom}
                   type="number"
                   render={(v) => {
-                    const from = localDeal.budgetFrom;
-                    const to = localDeal.budgetTo;
-                    if (from && to) return `${(from / 1000).toFixed(0)}K - ${(to / 1000).toFixed(0)}K ₽`;
-                    if (from) return `от ${(from / 1000).toFixed(0)}K ₽`;
-                    if (to) return `до ${(to / 1000).toFixed(0)}K ₽`;
-                    return '0 ₽';
+                    if (v) return `${v} ₽`;
+                    return '...';
                   }}
                 />
                 <EditableField
