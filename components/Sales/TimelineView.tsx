@@ -6,9 +6,10 @@ import { TimelineEvent } from './TimelineEvent';
 
 interface TimelineViewProps {
   dealId: string;
+  onUpdate?: () => void;
 }
 
-export const TimelineView: React.FC<TimelineViewProps> = ({ dealId }) => {
+export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate }) => {
   const [events, setEvents] = useState<DealTimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
@@ -40,6 +41,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId }) => {
       const newEvent = await api.addDealComment(dealId, comment);
       setEvents([newEvent, ...events]);
       setComment('');
+      if (onUpdate) onUpdate();
     } catch (error) {
       console.error('Failed to add comment:', error);
       alert('Ошибка при добавлении комментария');
