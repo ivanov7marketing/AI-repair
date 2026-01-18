@@ -43,6 +43,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [editingDeal, setEditingDeal] = useState<Deal | undefined>();
   const [showPipelineSettings, setShowPipelineSettings] = useState(false);
+  const [newDealIds, setNewDealIds] = useState<Set<string>>(new Set());
   
   // Drag & Drop
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
@@ -272,9 +273,31 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
                 deals={stageDeals}
                 onDealClick={handleDealClick}
                 onMoveStage={handleMoveDeal}
-                onCreateDeal={() => {
-                  setEditingDeal(undefined);
-                  setShowDealForm(true);
+                onCreateDeal={async () => {
+                  // Создаем пустую сделку с минимальными данными
+                  try {
+                    const firstStage = stages.find(s => s.orderIndex === 1) || stages[0];
+                    if (!firstStage) {
+                      alert('Нет доступных этапов для создания сделки');
+                      return;
+                    }
+                    
+                    const newDeal = await api.createDeal({
+                      leadName: '',
+                      phone: '',
+                      stageId: firstStage.id,
+                      leadTemperature: 'warm',
+                    });
+                    
+                    // Помечаем как новую сделку
+                    setNewDealIds(prev => new Set(prev).add(newDeal.id));
+                    
+                    // Открываем карточку сделки
+                    setSelectedDeal(newDeal);
+                  } catch (error: any) {
+                    console.error('Failed to create deal:', error);
+                    alert(error.message || 'Ошибка при создании сделки');
+                  }
                 }}
                 stages={stages}
                 isFirstStage={isFirstStage}
@@ -317,13 +340,49 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
       {selectedDeal && (
         <DealModal
           deal={selectedDeal}
-          onClose={() => setSelectedDeal(null)}
+          onClose={async () => {
+            // Если это новая сделка и она пустая, удаляем её
+            if (newDealIds.has(selectedDeal.id)) {
+              const isEmpty = !selectedDeal.leadName?.trim() && !selectedDeal.phone?.trim();
+              if (isEmpty) {
+                try {
+                  await api.deleteDeal(selectedDeal.id);
+                  await loadDeals();
+                } catch (error) {
+                  console.error('Failed to delete empty deal:', error);
+                }
+              }
+              setNewDealIds(prev => {
+                const next = new Set(prev);
+                next.delete(selectedDeal.id);
+                return next;
+              });
+            }
+            setSelectedDeal(null);
+          }}
           onEdit={(deal) => {
             setEditingDeal(deal);
             setSelectedDeal(null);
             setShowDealForm(true);
           }}
-          onUpdate={loadDeals}
+          onUpdate={async () => {
+            // При обновлении убираем из списка новых сделок
+            if (newDealIds.has(selectedDeal.id)) {
+              setNewDealIds(prev => {
+                const next = new Set(prev);
+                next.delete(selectedDeal.id);
+                return next;
+              });
+            }
+            await loadDeals();
+            // Обновляем выбранную сделку, чтобы получить актуальные данные
+            try {
+              const updatedDeal = await api.getDeal(selectedDeal.id);
+              setSelectedDeal(updatedDeal);
+            } catch (error) {
+              console.error('Failed to reload deal:', error);
+            }
+          }}
           stages={stages}
           users={users}
           sources={sources}
