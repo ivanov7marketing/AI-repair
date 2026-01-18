@@ -211,7 +211,7 @@ export const DealModal: React.FC<DealModalProps> = ({
                   </div>
                 )}
               </div>
-
+            </div>
           </div>
 
           {/* Right panel - Timeline and comments */}
