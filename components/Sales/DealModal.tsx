@@ -409,6 +409,7 @@ export const DealModal: React.FC<DealModalProps> = ({
                   { value: 'email', label: 'Email' },
                 ]}
               />
+              </div>
             </div>
           </div>
 
