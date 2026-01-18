@@ -198,7 +198,7 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
     }
     
     return (
-      <div className="flex gap-3 pb-[3px] last:pb-0">
+      <div className="flex gap-2 items-center pb-[2px] last:pb-0">
         <div className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center bg-architect-200 dark:bg-architect-700 text-architect-500 dark:text-architect-400">
           {getEventIcon('small')}
         </div>
