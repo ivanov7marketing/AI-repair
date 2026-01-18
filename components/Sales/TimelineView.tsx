@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, Filter } from 'lucide-react';
 import { api } from '../../services/api';
 import { DealTimelineEvent, TimelineEventType } from '../../types';
@@ -15,10 +15,23 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate }) 
   const [comment, setComment] = useState('');
   const [sending, setSending] = useState(false);
   const [eventTypeFilter, setEventTypeFilter] = useState<TimelineEventType | 'all'>('all');
+  const timelineScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadTimeline();
   }, [dealId, eventTypeFilter]);
+
+  // Auto-scroll to bottom when events are loaded or updated
+  useEffect(() => {
+    if (!loading && timelineScrollRef.current && events.length > 0) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        if (timelineScrollRef.current) {
+          timelineScrollRef.current.scrollTop = timelineScrollRef.current.scrollHeight;
+        }
+      }, 0);
+    }
+  }, [loading, events]);
 
   const loadTimeline = async () => {
     try {
@@ -42,6 +55,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate }) 
       const newEvent = await api.addDealComment(dealId, comment);
       setEvents([...events, newEvent]);
       setComment('');
+      // Auto-scroll to bottom after adding comment
+      setTimeout(() => {
+        if (timelineScrollRef.current) {
+          timelineScrollRef.current.scrollTop = timelineScrollRef.current.scrollHeight;
+        }
+      }, 0);
       if (onUpdate) onUpdate();
     } catch (error) {
       console.error('Failed to add comment:', error);
@@ -78,7 +97,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate }) 
       </div>
 
       {/* Timeline - scrollable area */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div ref={timelineScrollRef} className="flex-1 overflow-y-auto min-h-0">
         <div className="space-y-4">
           {events.length === 0 ? (
             <div className="text-center py-8 text-architect-500 dark:text-architect-400">
