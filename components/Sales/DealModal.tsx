@@ -127,17 +127,33 @@ export const DealModal: React.FC<DealModalProps> = ({
                   autoFocus
                   type="number"
                   value={value || ''}
-                  onChange={(e) => handleFieldUpdate(field, e.target.value ? parseFloat(e.target.value) : null)}
-                  onBlur={() => setEditingField(null)}
-                  className="text-sm px-2 py-1 border border-architect-300 dark:border-architect-600 rounded bg-white dark:bg-architect-700 dark:text-white w-24"
+                  onChange={(e) => {
+                    // Don't update immediately, wait for blur
+                  }}
+                  onBlur={(e) => {
+                    const newValue = e.target.value ? parseFloat(e.target.value) : null;
+                    handleFieldUpdate(field, newValue);
+                    setEditingField(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="text-sm px-2 py-1 border border-architect-300 dark:border-architect-600 rounded bg-white dark:bg-architect-700 dark:text-white w-32"
                 />
               ) : type === 'date' ? (
                 <input
                   autoFocus
                   type="date"
                   value={value ? new Date(value).toISOString().split('T')[0] : ''}
-                  onChange={(e) => handleFieldUpdate(field, e.target.value || null)}
-                  onBlur={() => setEditingField(null)}
+                  onChange={(e) => {
+                    // Don't update immediately, wait for blur
+                  }}
+                  onBlur={(e) => {
+                    handleFieldUpdate(field, e.target.value || null);
+                    setEditingField(null);
+                  }}
                   className="text-sm px-2 py-1 border border-architect-300 dark:border-architect-600 rounded bg-white dark:bg-architect-700 dark:text-white"
                 />
               ) : (
@@ -145,8 +161,18 @@ export const DealModal: React.FC<DealModalProps> = ({
                   autoFocus
                   type="text"
                   value={value || ''}
-                  onChange={(e) => handleFieldUpdate(field, e.target.value || null)}
-                  onBlur={() => setEditingField(null)}
+                  onChange={(e) => {
+                    // Don't update immediately, wait for blur
+                  }}
+                  onBlur={(e) => {
+                    handleFieldUpdate(field, e.target.value || null);
+                    setEditingField(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
                   className="text-sm px-2 py-1 border border-architect-300 dark:border-architect-600 rounded bg-white dark:bg-architect-700 dark:text-white"
                 />
               )}
@@ -228,42 +254,76 @@ export const DealModal: React.FC<DealModalProps> = ({
         <div className="flex-1 flex overflow-hidden">
           {/* Left panel - Deal details */}
           <div className="w-[35%] border-r border-architect-200 dark:border-architect-700 overflow-y-auto p-4">
-            <div className="space-y-3">
-              <EditableField
-                label="Отв-ный"
-                field="responsibleManagerId"
-                value={localDeal.responsibleManagerId}
-                type="select"
-                options={[
-                  { value: '', label: 'Не назначен' },
-                  ...users.filter(u => u.role === 'manager' || u.role === 'admin').map(u => ({
-                    value: u.id,
-                    label: u.name || u.email
-                  }))
-                ]}
-                render={(v) => localDeal.responsibleManager ? (localDeal.responsibleManager.name || localDeal.responsibleManager.email) : 'Не назначен'}
-              />
-              <EditableField
-                label="Бюджет"
-                field="budgetFrom"
-                value={localDeal.budgetFrom}
-                type="number"
-                render={(v) => {
-                  const from = localDeal.budgetFrom;
-                  const to = localDeal.budgetTo;
-                  if (from && to) return `${(from / 1000).toFixed(0)}K - ${(to / 1000).toFixed(0)}K ₽`;
-                  if (from) return `от ${(from / 1000).toFixed(0)}K ₽`;
-                  if (to) return `до ${(to / 1000).toFixed(0)}K ₽`;
-                  return '0 ₽';
-                }}
-              />
-              <EditableField
-                label="Площадь"
-                field="area"
-                value={localDeal.area}
-                type="number"
-                render={(v) => v ? `${v}` : '...'}
-              />
+            <div className="space-y-6">
+              {/* Block 1: Contact information */}
+              <div className="space-y-3">
+                <EditableField
+                  label="Отв-ный"
+                  field="responsibleManagerId"
+                  value={localDeal.responsibleManagerId || ''}
+                  type="select"
+                  options={[
+                    { value: '', label: 'Не назначен' },
+                    ...users.filter(u => u.role === 'manager' || u.role === 'admin').map(u => ({
+                      value: u.id,
+                      label: u.name || u.email
+                    }))
+                  ]}
+                  render={(v) => localDeal.responsibleManager ? (localDeal.responsibleManager.name || localDeal.responsibleManager.email) : 'Не назначен'}
+                />
+                <EditableField
+                  label="Имя"
+                  field="leadName"
+                  value={localDeal.leadName}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="Телефон"
+                  field="phone"
+                  value={localDeal.phone}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="E-mail"
+                  field="email"
+                  value={localDeal.email}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="Адрес"
+                  field="address"
+                  value={localDeal.address}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+              </div>
+
+              {/* Block 2: Deal parameters */}
+              <div className="space-y-3 pt-4 border-t border-architect-200 dark:border-architect-700">
+                <EditableField
+                  label="Бюджет"
+                  field="budgetFrom"
+                  value={localDeal.budgetFrom}
+                  type="number"
+                  render={(v) => {
+                    const from = localDeal.budgetFrom;
+                    const to = localDeal.budgetTo;
+                    if (from && to) return `${(from / 1000).toFixed(0)}K - ${(to / 1000).toFixed(0)}K ₽`;
+                    if (from) return `от ${(from / 1000).toFixed(0)}K ₽`;
+                    if (to) return `до ${(to / 1000).toFixed(0)}K ₽`;
+                    return '0 ₽';
+                  }}
+                />
+                <EditableField
+                  label="Площадь"
+                  field="area"
+                  value={localDeal.area}
+                  type="number"
+                  render={(v) => v ? `${v}` : '...'}
+                />
               <EditableField
                 label="Тип ремонта"
                 field="repairType"
