@@ -433,15 +433,15 @@ export const DealModal: React.FC<DealModalProps> = ({
                 label="Удобное время"
                 field="desiredStartDate"
                 value={localDeal.desiredStartDate}
-                type="date"
-                render={(v) => v ? new Date(v).toLocaleDateString('ru-RU') : '...'}
+                type="text"
+                render={(v) => v || '...'}
               />
               <EditableField
                 label="День замера"
                 field="measurementDate"
                 value={localDeal.measurementDate}
-                type="date"
-                render={(v) => v ? new Date(v).toLocaleDateString('ru-RU') : '...'}
+                type="text"
+                render={(v) => v || '...'}
               />
               </div>
             </div>
