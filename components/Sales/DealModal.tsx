@@ -294,7 +294,6 @@ export const DealModal: React.FC<DealModalProps> = ({
                   onBlur={() => setEditingField(null)}
                   className="text-xs text-left bg-transparent border-0 border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 dark:text-architect-100 w-full"
                 >
-                  <option value="">...</option>
                   {options.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
