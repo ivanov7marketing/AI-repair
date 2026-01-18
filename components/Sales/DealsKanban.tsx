@@ -210,9 +210,9 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
   }
 
   return (
-    <div className="space-y-4 h-[calc(100vh-10px)] flex flex-col">
+    <div className="space-y-4 flex flex-col" style={{ height: 'calc(100vh - 10px)', overflow: 'hidden' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 shrink-0">
         <h1 className="text-2xl font-bold text-architect-900 dark:text-architect-100">Продажи</h1>
         <button
           onClick={() => setShowPipelineSettings(true)}
@@ -224,6 +224,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
       </div>
 
       {/* Filters */}
+      <div className="shrink-0">
       <DealsFilters
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -243,6 +244,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
         sources={sources}
         onReset={resetFilters}
       />
+      </div>
 
       {/* Kanban Board */}
       <div className="flex-1 min-h-0 mb-[10px]">
