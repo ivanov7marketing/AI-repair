@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Filter } from 'lucide-react';
 import { api } from '../../services/api';
-import { DealTimelineEvent, TimelineEventType } from '../../types';
+import { DealTimelineEvent, TimelineEventType, User } from '../../types';
 import { TimelineEvent } from './TimelineEvent';
 
 interface TimelineViewProps {
   dealId: string;
   onUpdate?: () => void;
+  users?: User[];
 }
 
-export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate }) => {
+export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate, users = [] }) => {
   const [events, setEvents] = useState<DealTimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
@@ -104,7 +105,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate }) 
               Нет событий в истории
             </div>
           ) : (
-            events.map((event) => <TimelineEvent key={event.id} event={event} />)
+            events.map((event) => <TimelineEvent key={event.id} event={event} users={users} />)
           )}
         </div>
       </div>

@@ -1,9 +1,10 @@
 import React from 'react';
 import { MessageSquare, ArrowRight, Phone, Mail, CheckSquare, FileText, Edit, Plus } from 'lucide-react';
-import { DealTimelineEvent } from '../../types';
+import { DealTimelineEvent, User } from '../../types';
 
 interface TimelineEventProps {
   event: DealTimelineEvent;
+  users?: User[];
 }
 
 // Маппинг английских названий полей на русские (как в левом блоке карточки сделки)
@@ -27,7 +28,7 @@ const FIELD_LABELS: Record<string, string> = {
   'measurementDate': 'День замера',
 };
 
-export const TimelineEvent: React.FC<TimelineEventProps> = ({ event }) => {
+export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] }) => {
   const getEventIcon = () => {
     switch (event.eventType) {
       case 'comment':
@@ -81,13 +82,33 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event }) => {
       // Заменяем английское название поля на русское в тексте события
       const fieldLabel = FIELD_LABELS[field] || field;
       const content = event.content?.replace(field, fieldLabel) || `Изменено поле: ${fieldLabel}`;
+      
+      // Для поля responsibleManagerId преобразуем UUID в имя пользователя
+      let displayOldValue = oldValue || 'пусто';
+      let displayNewValue = newValue || 'пусто';
+      
+      if (field === 'responsibleManagerId') {
+        if (oldValue && typeof oldValue === 'string' && oldValue.trim() !== '') {
+          const oldUser = users.find(u => u.id === oldValue);
+          displayOldValue = oldUser ? (oldUser.name || oldUser.email) : 'пусто';
+        } else {
+          displayOldValue = 'пусто';
+        }
+        if (newValue && typeof newValue === 'string' && newValue.trim() !== '') {
+          const newUser = users.find(u => u.id === newValue);
+          displayNewValue = newUser ? (newUser.name || newUser.email) : 'пусто';
+        } else {
+          displayNewValue = 'пусто';
+        }
+      }
+      
       return (
         <div>
           <div className="font-medium">{content}</div>
           <div className="text-sm text-architect-600 dark:text-architect-400 mt-1">
-            <span className="line-through">{oldValue || 'пусто'}</span>
+            <span className="line-through">{displayOldValue}</span>
             {' → '}
-            <span className="font-medium">{newValue || 'пусто'}</span>
+            <span className="font-medium">{displayNewValue}</span>
           </div>
         </div>
       );
