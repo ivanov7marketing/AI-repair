@@ -210,7 +210,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
   }
 
   return (
-    <div className="space-y-4 flex flex-col" style={{ height: 'calc(100vh - 10px)', overflow: 'hidden' }}>
+    <div className="space-y-4 flex flex-col h-full overflow-hidden p-4 md:p-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 shrink-0">
         <h1 className="text-2xl font-bold text-architect-900 dark:text-architect-100">Продажи</h1>

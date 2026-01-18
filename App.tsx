@@ -3290,7 +3290,7 @@ const App: React.FC = () => {
             )}
         </header>
 
-        <section className="flex-1 overflow-y-auto p-4 md:p-8 text-left">
+        <section className={`flex-1 ${activeTab === 'sales' ? 'overflow-hidden p-0' : 'overflow-y-auto p-4 md:p-8'} text-left`}>
             {activeTab === 'dashboard' && (
                 <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
                     <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
@@ -3351,7 +3351,7 @@ const App: React.FC = () => {
                 </div>
             )}
             {activeTab === 'sales' && (
-                <div className="animate-in fade-in duration-300">
+                <div className="animate-in fade-in duration-300 h-full overflow-hidden flex flex-col">
                     <DealsKanban hasPermission={hasPermission} />
                 </div>
             )}
