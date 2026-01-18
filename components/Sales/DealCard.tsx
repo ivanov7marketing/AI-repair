@@ -102,25 +102,25 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, onClick, stages, onMov
       onClick={onClick}
     >
       {/* Первая строка: Имя (слева) + Дата (справа) */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-semibold text-architect-900 dark:text-architect-100 truncate">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[12px] font-normal text-architect-900 dark:text-architect-100 truncate">
           {deal.leadName}
         </span>
-        <span className="text-xs text-architect-600 dark:text-architect-400 shrink-0 ml-2">
+        <span className="text-[12px] font-normal text-architect-600 dark:text-architect-400 shrink-0 ml-2">
           {formatDate(deal.createdAt)}
         </span>
       </div>
 
       {/* Вторая строка: Название сделки (слева) */}
-      <div className="mb-2">
-        <span className="text-xs text-architect-600 dark:text-architect-400 truncate block">
+      <div className="mb-1">
+        <span className="text-[14px] font-semibold text-architect-600 dark:text-architect-400 truncate block">
           {getDealName()}
         </span>
       </div>
 
       {/* Третья строка: Бюджет (слева) + Индикатор задач (справа) */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-architect-600 dark:text-architect-400 truncate">
+        <span className="text-[12px] font-normal text-architect-600 dark:text-architect-400 truncate">
           {formatBudget()}
         </span>
         <div className={`w-2 h-2 rounded-full shrink-0 ml-2 ${getTaskIndicator()}`} />
