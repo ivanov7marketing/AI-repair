@@ -61,7 +61,7 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
       {/* Stage Header */}
       <div className="mb-3">
         {/* Первая строка: Название этапа */}
-        <h3 className="text-[16px] font-semibold text-architect-900 dark:text-architect-100 mb-1">
+        <h3 className="text-[16px] font-semibold uppercase text-architect-900 dark:text-architect-100 mb-1">
           {stage.name}
         </h3>
         
