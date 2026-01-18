@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, X, ChevronDown } from 'lucide-react';
 import { User, DealSource } from '../../types';
 
 interface DealsFiltersProps {
@@ -35,6 +35,10 @@ export const DealsFilters: React.FC<DealsFiltersProps> = ({
   sources,
   onReset,
 }) => {
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const filtersRef = useRef<HTMLDivElement>(null);
+
   const hasActiveFilters = 
     searchQuery ||
     selectedManagers.length > 0 ||
@@ -43,32 +47,70 @@ export const DealsFilters: React.FC<DealsFiltersProps> = ({
     budgetFrom !== null ||
     budgetTo !== null;
 
-  return (
-    <div className="bg-white dark:bg-architect-800 rounded-lg border border-architect-200 dark:border-architect-700 p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-architect-900 dark:text-architect-100">Фильтры</h3>
-        {hasActiveFilters && (
-          <button
-            onClick={onReset}
-            className="text-xs text-architect-500 hover:text-architect-700 dark:hover:text-architect-300 flex items-center gap-1"
-          >
-            <X className="w-3 h-3" />
-            Сбросить
-          </button>
-        )}
-      </div>
+  // Close filters when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        filtersRef.current &&
+        !filtersRef.current.contains(event.target as Node) &&
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
+        setIsFiltersOpen(false);
+      }
+    };
 
-      {/* Search */}
+    if (isFiltersOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isFiltersOpen]);
+
+  return (
+    <div className="relative">
+      {/* Search input - always visible */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-architect-400" />
         <input
+          ref={searchRef}
           type="text"
           placeholder="Поиск по ФИО, телефону, адресу..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 bg-white dark:bg-architect-700 border border-architect-200 dark:border-architect-600 rounded-lg outline-none dark:text-white text-sm"
+          onFocus={() => setIsFiltersOpen(true)}
+          className="w-full pl-10 pr-10 py-2 bg-white dark:bg-architect-700 border border-architect-200 dark:border-architect-600 rounded-lg outline-none dark:text-white text-sm focus:border-architect-400 dark:focus:border-architect-500"
         />
+        {hasActiveFilters && (
+          <button
+            onClick={onReset}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-architect-100 dark:hover:bg-architect-600 rounded"
+          >
+            <X className="w-4 h-4 text-architect-500" />
+          </button>
+        )}
       </div>
+
+      {/* Filters dropdown - appears below search */}
+      {isFiltersOpen && (
+        <div
+          ref={filtersRef}
+          className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-architect-800 rounded-lg border border-architect-200 dark:border-architect-700 shadow-lg z-50 p-4 space-y-4 max-h-[70vh] overflow-y-auto"
+        >
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-architect-900 dark:text-architect-100">Фильтры</h3>
+            {hasActiveFilters && (
+              <button
+                onClick={() => {
+                  onReset();
+                  setIsFiltersOpen(false);
+                }}
+                className="text-xs text-architect-500 hover:text-architect-700 dark:hover:text-architect-300 flex items-center gap-1"
+              >
+                <X className="w-3 h-3" />
+                Сбросить
+              </button>
+            )}
+          </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Managers filter */}
@@ -158,6 +200,8 @@ export const DealsFilters: React.FC<DealsFiltersProps> = ({
           />
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 };
