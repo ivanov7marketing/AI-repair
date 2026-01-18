@@ -10,19 +10,9 @@ import {
   useSensors,
   DragEndEvent,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable';
-import {
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { api } from '../../services/api';
 import { Deal, PipelineStage, DealSource, User } from '../../types';
-import { DealCard } from './DealCard';
-import { DraggableDealCard } from './DraggableDealCard';
+import { DroppableStage } from './DroppableStage';
 import { DealsFilters } from './DealsFilters';
 import { DealForm } from './DealForm';
 import { DealModal } from './DealModal';
@@ -146,22 +136,27 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
     const { active, over } = event;
     setActiveDeal(null);
 
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
     const dealId = active.id as string;
     const overId = over.id as string;
 
-    // Check if dragging to a stage
-    const targetStage = stages.find(s => s.id === overId);
-    if (targetStage) {
-      // Dropped on a stage column
-      await handleMoveDeal(dealId, targetStage.id);
+    // If dropped on same position, do nothing
+    const currentDeal = deals.find(d => d.id === dealId);
+    if (!currentDeal) return;
+
+    // Check if dragging to a stage (droppable zone)
+    if (overId.startsWith('stage-')) {
+      const targetStageId = overId.replace('stage-', '');
+      if (targetStageId !== currentDeal.stageId) {
+        await handleMoveDeal(dealId, targetStageId);
+      }
       return;
     }
 
     // Check if dragging over another deal (move to same stage as that deal)
     const targetDeal = deals.find(d => d.id === overId);
-    if (targetDeal && targetDeal.stageId) {
+    if (targetDeal && targetDeal.stageId !== currentDeal.stageId) {
       await handleMoveDeal(dealId, targetDeal.stageId);
       return;
     }
