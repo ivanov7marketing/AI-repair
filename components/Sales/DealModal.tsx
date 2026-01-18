@@ -100,13 +100,40 @@ export const DealModal: React.FC<DealModalProps> = ({
     // Normalize and compare values
     const normalizeValue = (val: any): any => {
       if (val === null || val === undefined || val === '') return null;
+      // For date fields (only contractSignedDate and prepaymentDate are actual dates)
+      const dateFields = ['contractSignedDate', 'prepaymentDate'];
+      if (dateFields.includes(field)) {
+        if (typeof val === 'string') {
+          const trimmed = val.trim();
+          if (trimmed === '' || trimmed === '...') return null;
+          // If it's a date string (YYYY-MM-DD), keep it
+          if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+            return trimmed;
+          }
+          // If it's an ISO date string, extract date part
+          if (trimmed.includes('T')) {
+            return trimmed.split('T')[0];
+          }
+          // If it's a valid Date string, try to parse
+          const date = new Date(trimmed);
+          if (!isNaN(date.getTime())) {
+            return date.toISOString().split('T')[0];
+          }
+          // Invalid date string - return null to prevent error
+          return null;
+        }
+        if (val instanceof Date) {
+          return val.toISOString().split('T')[0];
+        }
+        return null;
+      }
       // For numbers, convert to number type
       const numericFields = ['area', 'budgetFrom', 'budgetTo', 'ceilingHeight', 'prepaymentAmount'];
       if (numericFields.includes(field)) {
         const numVal = typeof val === 'number' ? val : Number(val);
         return isNaN(numVal) ? null : numVal;
       }
-      // For strings, trim and convert empty to null
+      // For strings (including desiredStartDate and measurementDate which are now text), trim and convert empty to null
       if (typeof val === 'string') {
         const trimmed = val.trim();
         return trimmed === '' ? null : trimmed;
@@ -157,18 +184,31 @@ export const DealModal: React.FC<DealModalProps> = ({
     // Get current value for editing
     const getEditValue = () => {
       if (type === 'date' && value) {
-        return new Date(value).toISOString().split('T')[0];
-      }
-      // For text fields, if value is a Date object or ISO string, convert to readable format
-      if (type === 'text' && value) {
-        if (value instanceof Date) {
-          return value.toISOString();
+        try {
+          // If it's already a valid date string (YYYY-MM-DD), return it
+          if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return value;
+          }
+          // If it's a Date object, convert to YYYY-MM-DD
+          if (value instanceof Date) {
+            if (!isNaN(value.getTime())) {
+              return value.toISOString().split('T')[0];
+            }
+            return '';
+          }
+          // Try to parse as date
+          const date = new Date(value);
+          if (!isNaN(date.getTime())) {
+            return date.toISOString().split('T')[0];
+          }
+          // Invalid date - return empty string
+          return '';
+        } catch (e) {
+          // Invalid date value - return empty string
+          return '';
         }
-        // If it's an ISO date string, keep as is (user can edit it)
-        if (typeof value === 'string' && value.includes('T') && value.includes('Z')) {
-          return value;
-        }
       }
+      // For text fields, just return the string value
       return value?.toString() || '';
     };
 

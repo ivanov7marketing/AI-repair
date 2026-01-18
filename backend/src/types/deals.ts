@@ -52,7 +52,7 @@ export interface Deal {
   needsDesign: boolean;
   needsDemolition: boolean;
   materialPurchaseType: string | null;
-  desiredStartDate: Date | null;
+  desiredStartDate: string | null;
   urgency: string | null;
   
   // Sales process
@@ -63,7 +63,7 @@ export interface Deal {
   
   // Measurement
   measurerId: string | null;
-  measurementDate: Date | null;
+  measurementDate: string | null;
   measurementTime: string | null;
   measurementCompleted: boolean;
   measurementNotes: string | null;
