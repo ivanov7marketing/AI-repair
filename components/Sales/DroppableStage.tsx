@@ -32,6 +32,27 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
     totalBudget: deals.reduce((sum, deal) => sum + (deal.budgetTo || deal.budgetFrom || 0), 0),
   };
 
+  // Форматируем бюджет с пробелами: "1 655 333 ₽"
+  const formatBudget = (amount: number) => {
+    return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';
+  };
+
+  // Определяем правильное склонение слова "сделка"
+  const getDealWord = (count: number) => {
+    const lastDigit = count % 10;
+    const lastTwoDigits = count % 100;
+    if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
+      return 'сделок';
+    }
+    if (lastDigit === 1) {
+      return 'сделка';
+    }
+    if (lastDigit >= 2 && lastDigit <= 4) {
+      return 'сделки';
+    }
+    return 'сделок';
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -39,23 +60,28 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
     >
       {/* Stage Header */}
       <div className="mb-3">
+        {/* Первая строка: Название этапа */}
+        <h3 className="text-[16px] font-semibold text-architect-900 dark:text-architect-100 mb-1">
+          {stage.name}
+        </h3>
+        
+        {/* Вторая строка: Количество сделок слева, бюджет справа */}
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[14px] font-normal text-architect-500 dark:text-architect-400">
+            {stats.count} {getDealWord(stats.count)}
+          </span>
+          {stats.totalBudget > 0 && (
+            <span className="text-[14px] font-normal text-architect-500 dark:text-architect-400">
+              {formatBudget(stats.totalBudget)}
+            </span>
+          )}
+        </div>
+        
+        {/* Цветная линия под заголовком */}
         <div
-          className="h-1 rounded mb-2"
+          className="h-1 rounded"
           style={{ backgroundColor: stage.color }}
         />
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-architect-900 dark:text-architect-100">
-            {stage.name}
-          </h3>
-          <span className="text-sm text-architect-500 dark:text-architect-400">
-            {stats.count}
-          </span>
-        </div>
-        {stats.totalBudget > 0 && (
-          <div className="text-xs text-architect-500 dark:text-architect-400 mt-1">
-            {(stats.totalBudget / 1000).toFixed(0)}K ₽
-          </div>
-        )}
       </div>
 
       {/* Stage Deals */}
