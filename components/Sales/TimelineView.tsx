@@ -24,7 +24,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate }) 
     try {
       setLoading(true);
       const data = await api.getDealTimeline(dealId, eventTypeFilter !== 'all' ? eventTypeFilter : undefined);
-      setEvents(data);
+      // Reverse to show newest events at the bottom
+      setEvents([...data].reverse());
     } catch (error) {
       console.error('Failed to load timeline:', error);
       alert('Ошибка при загрузке истории');
@@ -39,7 +40,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate }) 
     try {
       setSending(true);
       const newEvent = await api.addDealComment(dealId, comment);
-      setEvents([newEvent, ...events]);
+      setEvents([...events, newEvent]);
       setComment('');
       if (onUpdate) onUpdate();
     } catch (error) {
@@ -59,9 +60,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate }) 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full">
       {/* Filter */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-4 shrink-0">
         <Filter className="w-4 h-4 text-architect-500" />
         <select
           value={eventTypeFilter}
@@ -76,19 +77,21 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ dealId, onUpdate }) 
         </select>
       </div>
 
-      {/* Timeline */}
-      <div className="space-y-4">
-        {events.length === 0 ? (
-          <div className="text-center py-8 text-architect-500 dark:text-architect-400">
-            Нет событий в истории
-          </div>
-        ) : (
-          events.map((event) => <TimelineEvent key={event.id} event={event} />)
-        )}
+      {/* Timeline - scrollable area */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="space-y-4">
+          {events.length === 0 ? (
+            <div className="text-center py-8 text-architect-500 dark:text-architect-400">
+              Нет событий в истории
+            </div>
+          ) : (
+            events.map((event) => <TimelineEvent key={event.id} event={event} />)
+          )}
+        </div>
       </div>
 
-      {/* Comment form */}
-      <div className="border-t border-architect-200 dark:border-architect-700 pt-4">
+      {/* Comment form - fixed at bottom */}
+      <div className="border-t border-architect-200 dark:border-architect-700 pt-4 mt-4 shrink-0">
         <div className="flex gap-2">
           <textarea
             value={comment}
