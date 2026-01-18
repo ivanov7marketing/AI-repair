@@ -17,6 +17,7 @@ import { DealsFilters } from './DealsFilters';
 import { DealForm } from './DealForm';
 import { DealModal } from './DealModal';
 import { PipelineSettings } from './PipelineSettings';
+import { DealCard } from './DealCard';
 
 interface DealsKanbanProps {
   hasPermission: (permission: string) => boolean;
