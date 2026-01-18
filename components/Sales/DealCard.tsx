@@ -1,13 +1,16 @@
-import React from 'react';
-import { Phone, MapPin, Home, DollarSign, Clock } from 'lucide-react';
-import { Deal } from '../../types';
+import React, { useState } from 'react';
+import { Phone, MapPin, Home, DollarSign, Clock, ChevronDown } from 'lucide-react';
+import { Deal, PipelineStage } from '../../types';
 
 interface DealCardProps {
   deal: Deal;
   onClick: () => void;
+  stages?: PipelineStage[];
+  onMoveStage?: (dealId: string, newStageId: string) => void;
 }
 
-export const DealCard: React.FC<DealCardProps> = ({ deal, onClick }) => {
+export const DealCard: React.FC<DealCardProps> = ({ deal, onClick, stages, onMoveStage }) => {
+  const [showStageMenu, setShowStageMenu] = useState(false);
   const getTemperatureColor = () => {
     switch (deal.leadTemperature) {
       case 'hot':
@@ -58,9 +61,17 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, onClick }) => {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
+  const handleStageSelect = (e: React.MouseEvent, newStageId: string) => {
+    e.stopPropagation();
+    if (onMoveStage && newStageId !== deal.stageId) {
+      onMoveStage(deal.id, newStageId);
+    }
+    setShowStageMenu(false);
+  };
+
   return (
     <div
-      className={`bg-white dark:bg-architect-800 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3 ${getTemperatureColor()}`}
+      className={`bg-white dark:bg-architect-800 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3 ${getTemperatureColor()} relative`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-2">
@@ -108,6 +119,46 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, onClick }) => {
             <span className="text-xs font-medium">{deal.daysOnStage} дн.</span>
           </div>
         </div>
+
+        {/* Stage selector */}
+        {stages && onMoveStage && stages.length > 0 && (
+          <div className="absolute top-2 right-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowStageMenu(!showStageMenu);
+              }}
+              className="p-1 hover:bg-architect-100 dark:hover:bg-architect-700 rounded"
+            >
+              <ChevronDown className="w-3 h-3 text-architect-500" />
+            </button>
+            {showStageMenu && (
+              <div
+                className="absolute right-0 top-6 z-50 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-lg shadow-lg min-w-[200px] max-h-[300px] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-2 text-xs font-medium text-architect-500 dark:text-architect-400 border-b border-architect-200 dark:border-architect-700">
+                  Переместить на этап:
+                </div>
+                {stages
+                  .filter(s => s.id !== deal.stageId)
+                  .map((stage) => (
+                    <button
+                      key={stage.id}
+                      onClick={(e) => handleStageSelect(e, stage.id)}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2"
+                    >
+                      <div
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: stage.color }}
+                      />
+                      <span>{stage.name}</span>
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

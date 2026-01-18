@@ -1,8 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Settings } from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { api } from '../../services/api';
 import { Deal, PipelineStage, DealSource, User } from '../../types';
 import { DealCard } from './DealCard';
+import { DraggableDealCard } from './DraggableDealCard';
 import { DealsFilters } from './DealsFilters';
 import { DealForm } from './DealForm';
 import { DealModal } from './DealModal';
@@ -116,6 +136,41 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
     }
   };
 
+  const handleDragStart = (event: any) => {
+    const { active } = event;
+    const deal = deals.find(d => d.id === active.id);
+    setActiveDeal(deal || null);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDeal(null);
+
+    if (!over || active.id === over.id) return;
+
+    const dealId = active.id as string;
+    const overId = over.id as string;
+
+    // Check if dragging to a stage
+    const targetStage = stages.find(s => s.id === overId);
+    if (targetStage) {
+      // Dropped on a stage column
+      await handleMoveDeal(dealId, targetStage.id);
+      return;
+    }
+
+    // Check if dragging over another deal (move to same stage as that deal)
+    const targetDeal = deals.find(d => d.id === overId);
+    if (targetDeal && targetDeal.stageId) {
+      await handleMoveDeal(dealId, targetDeal.stageId);
+      return;
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveDeal(null);
+  };
+
   const getDealsForStage = (stageId: string) => {
     return deals.filter(deal => deal.stageId === stageId);
   };
@@ -194,7 +249,14 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
       />
 
       {/* Kanban Board */}
-      {stages.length === 0 ? (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        {stages.length === 0 ? (
         <div className="bg-white dark:bg-architect-800 rounded-lg border border-architect-200 dark:border-architect-700 p-8 text-center">
           <p className="text-architect-600 dark:text-architect-400 mb-4">
             Воронка продаж не настроена. Нужно создать этапы воронки.
@@ -213,6 +275,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
             <div
               key={stage.id}
               className="flex-shrink-0 w-80 bg-architect-50 dark:bg-architect-900 rounded-lg p-3"
+              data-stage-id={stage.id}
             >
               {/* Stage Header */}
               <div className="mb-3">
@@ -236,14 +299,23 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
               </div>
 
               {/* Stage Deals */}
-              <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
-                {stageDeals.map((deal) => (
-                  <DealCard
-                    key={deal.id}
-                    deal={deal}
-                    onClick={() => handleDealClick(deal)}
-                  />
-                ))}
+              <SortableContext
+                items={stageDeals.map(d => d.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div
+                  className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto"
+                  data-stage-id={stage.id}
+                >
+                  {stageDeals.map((deal) => (
+                    <DraggableDealCard
+                      key={deal.id}
+                      deal={deal}
+                      onClick={() => handleDealClick(deal)}
+                      stages={stages}
+                      onMoveStage={handleMoveDeal}
+                    />
+                  ))}
                 {stageDeals.length === 0 && (
                   <div className="text-center py-8 text-architect-400 dark:text-architect-500 text-sm">
                     <div className="mb-2">Нет сделок</div>
@@ -258,40 +330,28 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
                     </button>
                   </div>
                 )}
-              </div>
-
-              {/* Move to stage dropdown (simplified - can be enhanced with drag & drop) */}
-              {stageDeals.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-architect-200 dark:border-architect-700">
-                  <select
-                    onChange={(e) => {
-                      if (e.target.value && e.target.value !== stage.id) {
-                        const dealId = e.target.value.split('_')[0];
-                        const newStageId = e.target.value.split('_')[1];
-                        handleMoveDeal(dealId, newStageId);
-                        e.target.value = '';
-                      }
-                    }}
-                    className="w-full px-2 py-1 text-xs border rounded dark:bg-architect-800 dark:text-white"
-                  >
-                    <option value="">Переместить сделку...</option>
-                    {stageDeals.map((deal) =>
-                      stages
-                        .filter(s => s.id !== stage.id)
-                        .map((targetStage) => (
-                          <option key={`${deal.id}_${targetStage.id}`} value={`${deal.id}_${targetStage.id}`}>
-                            {deal.leadName} → {targetStage.name}
-                          </option>
-                        ))
-                    )}
-                  </select>
                 </div>
-              )}
+              </SortableContext>
+
             </div>
           );
         })}
         </div>
-      )}
+        )}
+
+        <DragOverlay>
+          {activeDeal ? (
+            <div className="opacity-50 rotate-3">
+              <DealCard
+                deal={activeDeal}
+                onClick={() => {}}
+                stages={stages}
+                onMoveStage={handleMoveDeal}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Modals */}
       {showDealForm && (
