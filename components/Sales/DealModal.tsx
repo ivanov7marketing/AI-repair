@@ -347,16 +347,13 @@ export const DealModal: React.FC<DealModalProps> = ({
           ) : (
             <div
               onMouseDown={(e) => {
-                if (hasPermission('edit_deals')) {
-                  if (type === 'select') {
-                    // For select fields, prevent default to avoid losing focus
-                    e.preventDefault();
-                  }
+                if (hasPermission('edit_deals') && type === 'select') {
+                  // For select fields, prevent default to avoid losing focus
+                  e.preventDefault();
                   setEditingField(field);
                 }
               }}
               onClick={() => {
-                // Keep onClick for non-select fields
                 if (hasPermission('edit_deals') && type !== 'select') {
                   setEditingField(field);
                 }
