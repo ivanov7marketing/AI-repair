@@ -6,6 +6,7 @@ import { DealCard } from './DealCard';
 import { DealsFilters } from './DealsFilters';
 import { DealForm } from './DealForm';
 import { DealModal } from './DealModal';
+import { PipelineSettings } from './PipelineSettings';
 
 interface DealsKanbanProps {
   hasPermission: (permission: string) => boolean;
@@ -30,6 +31,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
   const [showDealForm, setShowDealForm] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [editingDeal, setEditingDeal] = useState<Deal | undefined>();
+  const [showPipelineSettings, setShowPipelineSettings] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -150,24 +152,23 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <h1 className="text-2xl font-bold text-architect-900 dark:text-architect-100">Продажи</h1>
         <div className="flex gap-2">
-          {hasPermission('manage_pipeline') && (
-            <button className="px-4 py-2 border border-architect-200 dark:border-architect-700 rounded-lg hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2 text-sm font-medium">
-              <Settings className="w-4 h-4" />
-              Настройки воронки
-            </button>
-          )}
-          {hasPermission('create_deals') && (
-            <button
-              onClick={() => {
-                setEditingDeal(undefined);
-                setShowDealForm(true);
-              }}
-              className="px-4 py-2 bg-architect-900 dark:bg-white text-white dark:text-architect-900 rounded-lg hover:bg-architect-800 dark:hover:bg-architect-100 flex items-center gap-2 font-medium shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Новая сделка
-            </button>
-          )}
+          <button
+            onClick={() => setShowPipelineSettings(true)}
+            className="px-4 py-2 border border-architect-200 dark:border-architect-700 rounded-lg hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2 text-sm font-medium"
+          >
+            <Settings className="w-4 h-4" />
+            Настройки воронки
+          </button>
+          <button
+            onClick={() => {
+              setEditingDeal(undefined);
+              setShowDealForm(true);
+            }}
+            className="px-4 py-2 bg-architect-900 dark:bg-white text-white dark:text-architect-900 rounded-lg hover:bg-architect-800 dark:hover:bg-architect-100 flex items-center gap-2 font-medium shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Новая сделка
+          </button>
         </div>
       </div>
 
@@ -245,7 +246,16 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
                 ))}
                 {stageDeals.length === 0 && (
                   <div className="text-center py-8 text-architect-400 dark:text-architect-500 text-sm">
-                    Нет сделок
+                    <div className="mb-2">Нет сделок</div>
+                    <button
+                      onClick={() => {
+                        setEditingDeal(undefined);
+                        setShowDealForm(true);
+                      }}
+                      className="text-xs text-architect-600 dark:text-architect-400 hover:text-architect-900 dark:hover:text-architect-100 underline"
+                    >
+                      Создать сделку
+                    </button>
                   </div>
                 )}
               </div>
@@ -311,6 +321,16 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
           users={users}
           sources={sources}
           hasPermission={hasPermission}
+        />
+      )}
+
+      {showPipelineSettings && (
+        <PipelineSettings
+          onClose={() => setShowPipelineSettings(false)}
+          onUpdate={() => {
+            loadData();
+            setShowPipelineSettings(false);
+          }}
         />
       )}
     </div>
