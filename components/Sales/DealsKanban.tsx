@@ -274,7 +274,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
                 onDealClick={handleDealClick}
                 onMoveStage={handleMoveDeal}
                 onCreateDeal={async () => {
-                  // Создаем пустую сделку с минимальными данными
+                  // Создаем сделку с временными значениями (обязательные поля не могут быть пустыми)
                   try {
                     const firstStage = stages.find(s => s.orderIndex === 1) || stages[0];
                     if (!firstStage) {
@@ -283,13 +283,13 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
                     }
                     
                     const newDeal = await api.createDeal({
-                      leadName: '',
-                      phone: '',
+                      leadName: 'Новая сделка',
+                      phone: '+7',
                       stageId: firstStage.id,
                       leadTemperature: 'warm',
                     });
                     
-                    // Помечаем как новую сделку
+                    // Помечаем как новую сделку (с временными значениями)
                     setNewDealIds(prev => new Set(prev).add(newDeal.id));
                     
                     // Открываем карточку сделки
@@ -341,10 +341,10 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
         <DealModal
           deal={selectedDeal}
           onClose={async () => {
-            // Если это новая сделка и она пустая, удаляем её
+            // Если это новая сделка и она не была заполнена (остались временные значения), удаляем её
             if (newDealIds.has(selectedDeal.id)) {
-              const isEmpty = !selectedDeal.leadName?.trim() && !selectedDeal.phone?.trim();
-              if (isEmpty) {
+              const hasDefaultValues = selectedDeal.leadName === 'Новая сделка' && selectedDeal.phone === '+7';
+              if (hasDefaultValues) {
                 try {
                   await api.deleteDeal(selectedDeal.id);
                   await loadDeals();
