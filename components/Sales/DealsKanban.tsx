@@ -213,25 +213,13 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <h1 className="text-2xl font-bold text-architect-900 dark:text-architect-100">Продажи</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowPipelineSettings(true)}
-            className="px-4 py-2 border border-architect-200 dark:border-architect-700 rounded-lg hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2 text-sm font-medium"
-          >
-            <Settings className="w-4 h-4" />
-            Настройки воронки
-          </button>
-          <button
-            onClick={() => {
-              setEditingDeal(undefined);
-              setShowDealForm(true);
-            }}
-            className="px-4 py-2 bg-architect-900 dark:bg-white text-white dark:text-architect-900 rounded-lg hover:bg-architect-800 dark:hover:bg-architect-100 flex items-center gap-2 font-medium shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Новая сделка
-          </button>
-        </div>
+        <button
+          onClick={() => setShowPipelineSettings(true)}
+          className="px-4 py-2 border border-architect-200 dark:border-architect-700 rounded-lg hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2 text-sm font-medium"
+        >
+          <Settings className="w-4 h-4" />
+          Настройки воронки
+        </button>
       </div>
 
       {/* Filters */}

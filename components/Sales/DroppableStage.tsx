@@ -11,6 +11,7 @@ interface DroppableStageProps {
   onMoveStage: (dealId: string, newStageId: string) => void;
   onCreateDeal: () => void;
   stages: PipelineStage[];
+  isFirstStage?: boolean;
 }
 
 export const DroppableStage: React.FC<DroppableStageProps> = ({
@@ -20,6 +21,7 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
   onMoveStage,
   onCreateDeal,
   stages,
+  isFirstStage = false,
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: `stage-${stage.id}`,
@@ -71,7 +73,7 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
               onMoveStage={onMoveStage}
             />
           ))}
-          {deals.length === 0 && (
+          {deals.length === 0 && !isFirstStage && (
             <div className="text-center py-8 text-architect-400 dark:text-architect-500 text-sm">
               <div className="mb-2">Нет сделок</div>
               <button
@@ -79,6 +81,20 @@ export const DroppableStage: React.FC<DroppableStageProps> = ({
                 className="text-xs text-architect-600 dark:text-architect-400 hover:text-architect-900 dark:hover:text-architect-100 underline"
               >
                 Создать сделку
+              </button>
+            </div>
+          )}
+          {/* Add deal button at the bottom of first stage */}
+          {isFirstStage && (
+            <div className="mt-3 pt-3 border-t border-architect-200 dark:border-architect-700">
+              <button
+                onClick={onCreateDeal}
+                className="w-full px-4 py-2 bg-architect-900 dark:bg-white text-white dark:text-architect-900 rounded-lg hover:bg-architect-800 dark:hover:bg-architect-100 flex items-center justify-center gap-2 font-medium shadow-sm text-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Новая сделка
               </button>
             </div>
           )}
