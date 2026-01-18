@@ -32,6 +32,13 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'approve_purchase_requests',
     'manage_warehouse',
     'manage_tools',
+    // Sales permissions - admin has all permissions
+    'view_sales',
+    'create_deals',
+    'edit_deals',
+    'delete_deals',
+    'view_all_deals',
+    'manage_pipeline',
   ],
   manager: [
     'view_all_projects',
