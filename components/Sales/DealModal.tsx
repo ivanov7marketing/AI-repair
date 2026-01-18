@@ -213,18 +213,18 @@ export const DealModal: React.FC<DealModalProps> = ({
     };
 
     return (
-      <div className="flex justify-between items-start">
-        <label className="text-xs font-medium text-architect-500 dark:text-architect-400">{label}:</label>
-        <div className="text-right flex-1 ml-4">
+      <div className="flex items-start">
+        <label className="text-xs font-medium text-architect-500 dark:text-architect-400 w-28 shrink-0">{label}:</label>
+        <div className="text-left w-48">
           {isEditing && hasPermission('edit_deals') ? (
-            <div className="flex justify-end">
+            <div className="flex justify-start">
               {type === 'select' && options ? (
                 <select
                   autoFocus
                   value={value || ''}
                   onChange={(e) => handleFieldUpdate(field, e.target.value || null)}
                   onBlur={() => setEditingField(null)}
-                  className="text-sm text-right bg-transparent border-0 border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 dark:text-architect-100"
+                  className="text-sm text-left bg-transparent border-0 border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 dark:text-architect-100 w-full"
                 >
                   <option value="">...</option>
                   {options.map(opt => (
@@ -246,7 +246,7 @@ export const DealModal: React.FC<DealModalProps> = ({
                       e.currentTarget.blur();
                     }
                   }}
-                  className="text-sm text-right bg-transparent border-0 border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 dark:text-architect-100 w-32"
+                  className="text-sm text-left bg-transparent border-0 border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 dark:text-architect-100 w-full"
                 />
               ) : type === 'date' ? (
                 <input
@@ -257,7 +257,7 @@ export const DealModal: React.FC<DealModalProps> = ({
                     handleFieldUpdate(field, e.target.value || null);
                     setEditingField(null);
                   }}
-                  className="text-sm text-right bg-transparent border-0 border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 dark:text-architect-100"
+                  className="text-sm text-left bg-transparent border-0 border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 dark:text-architect-100 w-full"
                 />
               ) : (
                 <input
@@ -273,14 +273,14 @@ export const DealModal: React.FC<DealModalProps> = ({
                       e.currentTarget.blur();
                     }
                   }}
-                  className="text-sm text-right bg-transparent border-0 border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 dark:text-architect-100"
+                  className="text-sm text-left bg-transparent border-0 border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 dark:text-architect-100 w-full"
                 />
               )}
             </div>
           ) : (
             <div
               onClick={() => hasPermission('edit_deals') && setEditingField(field)}
-              className={`text-sm text-architect-900 dark:text-architect-100 cursor-pointer hover:bg-architect-50 dark:hover:bg-architect-700 px-1 py-0.5 rounded text-right ${hasPermission('edit_deals') ? '' : 'cursor-default'}`}
+              className={`text-sm text-architect-900 dark:text-architect-100 cursor-pointer hover:bg-architect-50 dark:hover:bg-architect-700 px-1 py-0.5 rounded text-left ${hasPermission('edit_deals') ? '' : 'cursor-default'}`}
             >
               {displayValue}
             </div>
