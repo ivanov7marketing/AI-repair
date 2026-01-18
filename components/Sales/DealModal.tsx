@@ -78,14 +78,23 @@ export const DealModal: React.FC<DealModalProps> = ({
   const currentStage = stages.find(s => s.id === localDeal.stageId);
 
   const handleFieldUpdate = async (field: string, value: any) => {
-    // Skip if field doesn't exist in Deal type - prevents "No fields to update" error
-    const dealFields = Object.keys(localDeal) as Array<keyof Deal>;
-    if (!dealFields.includes(field as keyof Deal)) {
+    // List of fields that backend supports for updates
+    const supportedFields = [
+      'leadName', 'phone', 'email', 'telegram', 'whatsapp',
+      'sourceId', 'responsibleManagerId', 'leadTemperature',
+      'address', 'buildingType', 'area', 'roomsCount', 'bathroomType',
+      'ceilingHeight', 'hasElevator', 'repairType', 'objectCondition',
+      'budgetFrom', 'budgetTo', 'needsDesign', 'needsDemolition',
+      'materialPurchaseType', 'desiredStartDate', 'urgency', 'measurementNotes'
+    ];
+    
+    // Skip if field is not supported by backend
+    if (!supportedFields.includes(field)) {
       setEditingField(null);
       return;
     }
 
-    const currentValue = localDeal[field as keyof Deal];
+    const currentValue = localDeal[field as keyof Deal] ?? null;
     
     // Normalize and compare values
     const normalizeValue = (val: any): any => {
