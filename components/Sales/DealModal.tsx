@@ -101,7 +101,14 @@ export const DealModal: React.FC<DealModalProps> = ({
     render?: (value: any) => string;
   }> = ({ label, field, value, type = 'text', options, render }) => {
     const isEditing = editingField === field;
+    const [tempValue, setTempValue] = useState<string>(value?.toString() || '');
     const displayValue = render ? render(value) : (value || (value === 0 ? '0' : '...'));
+
+    React.useEffect(() => {
+      if (isEditing) {
+        setTempValue(value?.toString() || '');
+      }
+    }, [isEditing, value]);
 
     return (
       <div className="flex justify-between items-start">
@@ -126,10 +133,8 @@ export const DealModal: React.FC<DealModalProps> = ({
                 <input
                   autoFocus
                   type="number"
-                  value={value || ''}
-                  onChange={(e) => {
-                    // Don't update immediately, wait for blur
-                  }}
+                  value={tempValue}
+                  onChange={(e) => setTempValue(e.target.value)}
                   onBlur={(e) => {
                     const newValue = e.target.value ? parseFloat(e.target.value) : null;
                     handleFieldUpdate(field, newValue);
@@ -146,10 +151,8 @@ export const DealModal: React.FC<DealModalProps> = ({
                 <input
                   autoFocus
                   type="date"
-                  value={value ? new Date(value).toISOString().split('T')[0] : ''}
-                  onChange={(e) => {
-                    // Don't update immediately, wait for blur
-                  }}
+                  value={tempValue || (value ? new Date(value).toISOString().split('T')[0] : '')}
+                  onChange={(e) => setTempValue(e.target.value)}
                   onBlur={(e) => {
                     handleFieldUpdate(field, e.target.value || null);
                     setEditingField(null);
@@ -160,10 +163,8 @@ export const DealModal: React.FC<DealModalProps> = ({
                 <input
                   autoFocus
                   type="text"
-                  value={value || ''}
-                  onChange={(e) => {
-                    // Don't update immediately, wait for blur
-                  }}
+                  value={tempValue}
+                  onChange={(e) => setTempValue(e.target.value)}
                   onBlur={(e) => {
                     handleFieldUpdate(field, e.target.value || null);
                     setEditingField(null);
