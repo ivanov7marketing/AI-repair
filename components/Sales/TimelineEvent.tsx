@@ -104,11 +104,11 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
       
       return (
         <div>
-          <div className="font-medium">{content}</div>
-          <div className="text-sm text-architect-600 dark:text-architect-400 mt-1">
+          <div className="text-xs text-architect-900 dark:text-architect-100">{content}</div>
+          <div className="text-xs text-architect-600 dark:text-architect-400 mt-1">
             <span className="line-through">{displayOldValue}</span>
             {' → '}
-            <span className="font-medium">{displayNewValue}</span>
+            <span className="font-normal">{displayNewValue}</span>
           </div>
         </div>
       );
@@ -118,15 +118,15 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, users = [] 
       const { oldStageName, newStageName } = event.metadata;
       return (
         <div>
-          <div className="font-medium">{event.content}</div>
-          <div className="text-sm text-architect-600 dark:text-architect-400 mt-1">
+          <div className="text-xs text-architect-900 dark:text-architect-100">{event.content}</div>
+          <div className="text-xs text-architect-600 dark:text-architect-400 mt-1">
             {oldStageName} → {newStageName}
           </div>
         </div>
       );
     }
 
-    return <div className="font-medium">{event.content}</div>;
+    return <div className="text-xs text-architect-900 dark:text-architect-100">{event.content}</div>;
   };
 
   return (
