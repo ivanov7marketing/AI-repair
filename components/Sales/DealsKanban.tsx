@@ -210,7 +210,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-[calc(100vh-10px)] flex flex-col">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <h1 className="text-2xl font-bold text-architect-900 dark:text-architect-100">Продажи</h1>
@@ -245,24 +245,25 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
       />
 
       {/* Kanban Board */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-        {stages.length === 0 ? (
-        <div className="bg-white dark:bg-architect-800 rounded-lg border border-architect-200 dark:border-architect-700 p-8 text-center">
-          <p className="text-architect-600 dark:text-architect-400 mb-4">
-            Воронка продаж не настроена. Нужно создать этапы воронки.
-          </p>
-          <p className="text-sm text-architect-500 dark:text-architect-500">
-            Этапы воронки должны быть созданы автоматически при настройке организации.
-          </p>
-        </div>
-      ) : (
-        <div className="flex gap-4 overflow-x-auto overflow-y-auto max-h-[calc(100vh-300px)]">
+      <div className="flex-1 min-h-0 mb-[10px]">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          {stages.length === 0 ? (
+          <div className="bg-white dark:bg-architect-800 rounded-lg border border-architect-200 dark:border-architect-700 p-8 text-center">
+            <p className="text-architect-600 dark:text-architect-400 mb-4">
+              Воронка продаж не настроена. Нужно создать этапы воронки.
+            </p>
+            <p className="text-sm text-architect-500 dark:text-architect-500">
+              Этапы воронки должны быть созданы автоматически при настройке организации.
+            </p>
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto overflow-y-auto h-full">
           {stages.map((stage, index) => {
             const stageDeals = getDealsForStage(stage.id);
             const isFirstStage = stage.orderIndex === 1 || index === 0;
@@ -307,7 +308,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
         </div>
         )}
 
-        <DragOverlay>
+          <DragOverlay>
           {activeDeal ? (
             <div className="opacity-50 rotate-3 w-80">
               <div className="bg-white dark:bg-architect-800 rounded-lg shadow-lg p-3 border-l-4 border-architect-500">
@@ -320,8 +321,9 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
               </div>
             </div>
           ) : null}
-        </DragOverlay>
-      </DndContext>
+          </DragOverlay>
+        </DndContext>
+      </div>
 
       {/* Modals */}
       {showDealForm && (
