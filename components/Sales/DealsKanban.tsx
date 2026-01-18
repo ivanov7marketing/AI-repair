@@ -42,6 +42,13 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [editingDeal, setEditingDeal] = useState<Deal | undefined>();
   const [showPipelineSettings, setShowPipelineSettings] = useState(false);
+  
+  // Drag & Drop
+  const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor)
+  );
 
   useEffect(() => {
     loadData();
