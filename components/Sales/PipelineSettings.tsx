@@ -284,21 +284,6 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
             <h2 className="text-sm font-semibold uppercase text-architect-700 dark:text-architect-300 mb-3">
               ИСТОЧНИКИ СДЕЛОК
             </h2>
-            
-            {/* Карточка "Неразобранное" */}
-            <div className="bg-white dark:bg-architect-900 rounded-lg border border-architect-200 dark:border-architect-700 p-4 mb-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium text-architect-900 dark:text-architect-100">
-                  Неразобранное
-                </h3>
-                <div className="relative inline-block w-10 h-5 bg-blue-500 rounded-full">
-                  <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full"></div>
-                </div>
-              </div>
-              <p className="text-xs text-architect-600 dark:text-architect-400">
-                Поступившие запросы в виде заявок в статусе "Неразобранное"
-              </p>
-            </div>
 
             {/* Карточки источников */}
             {sources.map((source) => (
@@ -390,21 +375,6 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
               >
                 Настроить правила
-              </button>
-            </div>
-          </div>
-
-          {/* СКОРИНГ */}
-          <div>
-            <h2 className="text-sm font-semibold uppercase text-architect-700 dark:text-architect-300 mb-3">
-              СКОРИНГ
-            </h2>
-            <div className="bg-white dark:bg-architect-900 rounded-lg border border-architect-200 dark:border-architect-700 p-4">
-              <p className="text-xs text-architect-600 dark:text-architect-400 mb-2">
-                Скоринг позволяет присвоить каждой сделке балл, показывающий вероятность успешного ее закрытия
-              </p>
-              <button className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
-                Настроить
               </button>
             </div>
           </div>
