@@ -437,6 +437,9 @@ export const DealModal: React.FC<DealModalProps> = ({
             <div className="space-y-3">
               {/* Block 1: Contact information */}
               <div className="space-y-1.5">
+                <div className="text-xs font-medium text-architect-700 dark:text-architect-300 mb-2">
+                  Основное
+                </div>
                 <EditableField
                   label="Отв-ный"
                   field="responsibleManagerId"
@@ -484,6 +487,9 @@ export const DealModal: React.FC<DealModalProps> = ({
 
               {/* Block 2: Deal parameters */}
               <div className="space-y-1.5 pt-4 border-t border-architect-200 dark:border-architect-700">
+                <div className="text-xs font-medium text-architect-700 dark:text-architect-300 mb-2">
+                  Данные объекта
+                </div>
                 <EditableField
                   label="Бюджет"
                   field="budgetFrom"
