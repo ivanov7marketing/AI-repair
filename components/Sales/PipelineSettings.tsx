@@ -17,6 +17,8 @@ import { PipelineStageColumn } from './PipelineStageColumn';
 import { DraggableStageColumn } from './DraggableStageColumn';
 import { DuplicateControlModal } from './DuplicateControlModal';
 import { TriggerSettingsModal } from './TriggerSettingsModal';
+import { SelectSourceModal } from './SelectSourceModal';
+import { SourceSettingsModal } from './SourceSettingsModal';
 
 interface PipelineSettingsProps {
   onClose: () => void;
@@ -38,6 +40,9 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
   const [showDuplicateControlModal, setShowDuplicateControlModal] = useState(false);
   const [showTriggerModal, setShowTriggerModal] = useState(false);
   const [selectedStageForTrigger, setSelectedStageForTrigger] = useState<PipelineStage | null>(null);
+  const [showSelectSourceModal, setShowSelectSourceModal] = useState(false);
+  const [showSourceSettingsModal, setShowSourceSettingsModal] = useState(false);
+  const [selectedSourceName, setSelectedSourceName] = useState<string | null>(null);
   const [activeStage, setActiveStage] = useState<PipelineStage | null>(null);
   const [showAddStageForm, setShowAddStageForm] = useState(false);
   const [newStage, setNewStage] = useState({
@@ -285,71 +290,69 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
               ИСТОЧНИКИ СДЕЛОК
             </h2>
 
-            {/* Карточки источников */}
-            {sources.map((source) => (
-              <div key={source.id} className="bg-white dark:bg-architect-900 rounded-lg border border-architect-200 dark:border-architect-700 p-4 mb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {source.icon && <span>{source.icon}</span>}
-                    <h3 className="font-medium text-architect-900 dark:text-architect-100">
-                      {source.name}
-                    </h3>
+            {/* Карточки подключенных источников (только Рекомендации и Повторное обращение по умолчанию) */}
+            {sources
+              .filter(source => {
+                // Показываем только Рекомендации, Повторное обращение и активные источники (добавленные через модальное окно)
+                if (source.name === 'Рекомендации' || source.name === 'Повторное обращение') {
+                  return true;
+                }
+                // Показываем остальные только если они активны (были добавлены и подключены)
+                return source.isActive;
+              })
+              .map((source) => (
+                <div key={source.id} className="bg-white dark:bg-architect-900 rounded-lg border border-architect-200 dark:border-architect-700 p-4 mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {source.icon && <span>{source.icon}</span>}
+                      <h3 className="font-medium text-architect-900 dark:text-architect-100">
+                        {source.name}
+                      </h3>
+                    </div>
+                    {hasPermission('MANAGE_PIPELINE') && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.updateDealSource(source.id, { isActive: !source.isActive });
+                            await loadData();
+                            setHasUnsavedChanges(true);
+                          } catch (error) {
+                            console.error('Failed to toggle source:', error);
+                            alert('Ошибка при изменении источника');
+                          }
+                        }}
+                        className={`relative inline-block w-10 h-5 rounded-full transition-colors ${
+                          source.isActive ? 'bg-blue-500' : 'bg-architect-300 dark:bg-architect-600'
+                        }`}
+                      >
+                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${
+                          source.isActive ? 'right-1' : 'left-1'
+                        }`}></div>
+                      </button>
+                    )}
                   </div>
                   {hasPermission('MANAGE_PIPELINE') && (
                     <button
-                      onClick={async () => {
-                        try {
-                          await api.updateDealSource(source.id, { isActive: !source.isActive });
-                          await loadData();
-                          setHasUnsavedChanges(true);
-                        } catch (error) {
-                          console.error('Failed to toggle source:', error);
-                          alert('Ошибка при изменении источника');
-                        }
+                      onClick={() => {
+                        setSelectedSourceName(source.name);
+                        setShowSourceSettingsModal(true);
                       }}
-                      className={`relative inline-block w-10 h-5 rounded-full transition-colors ${
-                        source.isActive ? 'bg-blue-500' : 'bg-architect-300 dark:bg-architect-600'
-                      }`}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${
-                        source.isActive ? 'right-1' : 'left-1'
-                      }`}></div>
+                      Настроить
                     </button>
                   )}
                 </div>
-                {(source.name === 'Сайт' || 
-                  source.name === 'Телеграм' || 
-                  source.name === 'Instagram' ||
-                  source.name === 'Email') && (
-                  <button 
-                    onClick={() => {
-                      // TODO: Реализовать подключение источника
-                      alert(`Подключение ${source.name} будет реализовано позже`);
-                    }}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    Подключить
-                  </button>
-                )}
-                {(source.name === 'ВКонтакте' || source.name.toLowerCase().includes('вк')) && (
-                  <button 
-                    onClick={() => {
-                      // TODO: Реализовать подключение источника
-                      alert(`Подключение ВКонтакте будет реализовано позже`);
-                    }}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    Подключить
-                  </button>
-                )}
-              </div>
-            ))}
+              ))}
 
-            {/* Кнопка "+ Добавить" */}
+            {/* Кнопка "Добавить источник" */}
             {hasPermission('MANAGE_PIPELINE') && (
-              <button className="w-full px-4 py-2 border border-dashed border-architect-300 dark:border-architect-600 rounded-lg hover:border-architect-400 dark:hover:border-architect-500 flex items-center justify-center gap-2 text-architect-600 dark:text-architect-400 text-sm">
+              <button 
+                onClick={() => setShowSelectSourceModal(true)}
+                className="w-full px-4 py-2 border border-dashed border-architect-300 dark:border-architect-600 rounded-lg hover:border-architect-400 dark:hover:border-architect-500 flex items-center justify-center gap-2 text-architect-600 dark:text-architect-400 text-sm"
+              >
                 <Plus className="w-4 h-4" />
-                Добавить
+                Добавить источник
               </button>
             )}
           </div>
@@ -502,6 +505,52 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
         }}
         onSave={() => {
           // TODO: Сохранение триггера
+        }}
+      />
+
+      <SelectSourceModal
+        isOpen={showSelectSourceModal}
+        onClose={() => setShowSelectSourceModal(false)}
+        onSelectSource={(sourceName) => {
+          setSelectedSourceName(sourceName);
+          setShowSourceSettingsModal(true);
+        }}
+      />
+
+      <SourceSettingsModal
+        isOpen={showSourceSettingsModal}
+        sourceName={selectedSourceName}
+        onClose={() => {
+          setShowSourceSettingsModal(false);
+          setSelectedSourceName(null);
+        }}
+        onSave={async (settings) => {
+          try {
+            // Создаем или обновляем источник
+            const existingSource = sources.find(s => s.name === settings.name);
+            if (existingSource) {
+              await api.updateDealSource(existingSource.id, {
+                name: settings.name,
+                isActive: settings.isActive,
+              });
+            } else {
+              await api.createDealSource({
+                name: settings.name,
+                icon: sourceName === 'Сайт' ? '🌐' : 
+                      sourceName === 'Авито' ? '🏠' :
+                      sourceName === 'ВКонтакте' ? '🔵' :
+                      sourceName === 'Телеграм' ? '✈️' :
+                      sourceName === 'Телефония' ? '☎️' :
+                      sourceName === 'Email' ? '📧' : '📌',
+                isActive: settings.isActive,
+              });
+            }
+            await loadData();
+            setHasUnsavedChanges(true);
+          } catch (error) {
+            console.error('Failed to save source:', error);
+            alert('Ошибка при сохранении источника');
+          }
         }}
       />
     </div>
