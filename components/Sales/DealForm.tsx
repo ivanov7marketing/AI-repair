@@ -103,10 +103,9 @@ export const DealForm: React.FC<DealFormProps> = ({ deal, onClose, onSave, users
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">ФИО клиента *</label>
+              <label className="block text-sm font-medium mb-1">ФИО клиента</label>
               <input
                 type="text"
-                required
                 value={formData.leadName}
                 onChange={(e) => setFormData({ ...formData, leadName: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"

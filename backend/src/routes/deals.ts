@@ -10,7 +10,7 @@ const router = express.Router();
 // Zod schemas for validation
 const createDealSchema = z.object({
   dealName: z.string().optional(),
-  leadName: z.string().min(1),
+  leadName: z.string().optional().nullable(),
   phone: z.string().min(1),
   email: z.string().email().optional().nullable(),
   telegram: z.string().optional().nullable(),
@@ -388,7 +388,7 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.CREATE_DEALS), as
       firstStageId,
       validatedData.sourceId || null,
       dealName,
-      validatedData.leadName,
+      validatedData.leadName || null,
       validatedData.phone,
       validatedData.email || null,
       validatedData.telegram || null,
