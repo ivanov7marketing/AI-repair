@@ -411,7 +411,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
                     }
                     
                     const newDeal = await api.createDeal({
-                      leadName: 'Новая сделка',
+                      leadName: null,
                       phone: '+7',
                       stageId: firstStage.id,
                       leadTemperature: 'warm',
@@ -485,7 +485,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
           onClose={async () => {
             // Если это новая сделка и она не была заполнена (остались временные значения), удаляем её
             if (newDealIds.has(selectedDeal.id)) {
-              const hasDefaultValues = selectedDeal.leadName === 'Новая сделка' && selectedDeal.phone === '+7';
+              const hasDefaultValues = (!selectedDeal.leadName || selectedDeal.leadName.trim() === '') && selectedDeal.phone === '+7';
               if (hasDefaultValues) {
                 try {
                   await api.deleteDeal(selectedDeal.id);
