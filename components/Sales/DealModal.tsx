@@ -478,48 +478,6 @@ export const DealModal: React.FC<DealModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-architect-200 dark:border-architect-700">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            {/* Stage selector dropdown */}
-            <div className="relative stage-selector">
-              <button
-                onClick={() => setShowStageSelect(!showStageSelect)}
-                className="px-3 py-1.5 rounded text-sm font-medium text-white flex items-center gap-2 hover:opacity-80"
-                style={{ backgroundColor: currentStage?.color || '#3B82F6' }}
-              >
-                {currentStage?.name || 'Выберите этап'}
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {showStageSelect && (
-                <div
-                  className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-lg shadow-lg min-w-[200px] max-h-[300px] overflow-y-auto stage-selector"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {stages.map((stage) => (
-                    <button
-                      key={stage.id}
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (stage.id !== localDeal.stageId) {
-                          await handleMoveStage(stage.id);
-                        }
-                        setShowStageSelect(false);
-                      }}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2 ${
-                        stage.id === localDeal.stageId ? 'bg-architect-50 dark:bg-architect-700' : ''
-                      }`}
-                    >
-                      <div
-                        className="w-3 h-3 rounded"
-                        style={{ backgroundColor: stage.color }}
-                      />
-                      <span>{stage.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Deal name - editable */}
             {editingName ? (
               <input
@@ -614,6 +572,47 @@ export const DealModal: React.FC<DealModalProps> = ({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Stage selector dropdown */}
+            <div className="relative stage-selector">
+              <button
+                onClick={() => setShowStageSelect(!showStageSelect)}
+                className="px-3 py-1.5 rounded text-sm font-medium text-white flex items-center gap-2 hover:opacity-80"
+                style={{ backgroundColor: currentStage?.color || '#3B82F6' }}
+              >
+                {currentStage?.name || 'Выберите этап'}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showStageSelect && (
+                <div
+                  className="absolute top-full right-0 mt-1 z-50 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-lg shadow-lg min-w-[200px] max-h-[300px] overflow-y-auto stage-selector"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {stages.map((stage) => (
+                    <button
+                      key={stage.id}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (stage.id !== localDeal.stageId) {
+                          await handleMoveStage(stage.id);
+                        }
+                        setShowStageSelect(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2 ${
+                        stage.id === localDeal.stageId ? 'bg-architect-50 dark:bg-architect-700' : ''
+                      }`}
+                    >
+                      <div
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: stage.color }}
+                      />
+                      <span>{stage.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {hasPermission('delete_deals') && (
               <button
                 onClick={handleDelete}
