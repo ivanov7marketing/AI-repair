@@ -215,7 +215,7 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-white dark:bg-architect-800 flex flex-col">
+    <div className="w-full h-full bg-white dark:bg-architect-800 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-architect-200 dark:border-architect-700 shrink-0">
         <div className="flex items-center gap-4">

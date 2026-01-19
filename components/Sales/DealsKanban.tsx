@@ -329,7 +329,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
   }
 
   return (
-    <div className="space-y-4 flex flex-col h-full overflow-hidden p-4 md:p-8">
+    <div className="space-y-4 flex flex-col h-full overflow-hidden p-4 md:p-8 relative">
       {/* Header with funnel name, search and settings button */}
       <div className="flex items-center gap-4 mb-4 shrink-0">
         <span className="text-lg font-semibold text-architect-900 dark:text-architect-100 whitespace-nowrap shrink-0">
@@ -533,14 +533,16 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
       )}
 
       {showPipelineSettings && (
-        <PipelineSettings
-          onClose={() => setShowPipelineSettings(false)}
-          onUpdate={() => {
-            loadData();
-            setShowPipelineSettings(false);
-          }}
-          hasPermission={hasPermission}
-        />
+        <div className="absolute inset-0 z-50">
+          <PipelineSettings
+            onClose={() => setShowPipelineSettings(false)}
+            onUpdate={() => {
+              loadData();
+              setShowPipelineSettings(false);
+            }}
+            hasPermission={hasPermission}
+          />
+        </div>
       )}
     </div>
   );
