@@ -104,10 +104,10 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, onClick, stages, onMov
       className={`bg-white dark:bg-architect-800 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3 ${getTemperatureColor()} relative`}
       onClick={onClick}
     >
-      {/* Первая строка: Имя (слева) + Дата (справа) */}
+      {/* Первая строка: Имя или Телефон (слева) + Дата (справа) */}
       <div className="flex items-center justify-between mb-1">
         <span className="text-[12px] font-normal text-architect-900 dark:text-architect-100 truncate">
-          {deal.leadName}
+          {deal.leadName && deal.leadName.trim() !== '' ? deal.leadName : deal.phone}
         </span>
         <span className="text-[12px] font-normal text-architect-600 dark:text-architect-400 shrink-0 ml-2">
           {formatDate(deal.createdAt)}
