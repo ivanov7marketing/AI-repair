@@ -45,23 +45,25 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, onClick, stages, onMov
   };
 
   const getDealName = () => {
-    if (deal.address) {
-      return deal.address;
+    // Use dealName if available, otherwise fallback to leadName or generate
+    if (deal.dealName) {
+      return deal.dealName;
     }
-    // Формируем номер сделки из id (берем все цифры из id)
+    if (deal.leadName) {
+      return deal.leadName;
+    }
+    // Fallback: generate from id
     const digits = deal.id.replace(/[^0-9]/g, '');
-    // Если есть цифры, берем последние 3, иначе используем хэш от id
     let dealNum = '001';
     if (digits.length >= 3) {
       dealNum = digits.slice(-3);
     } else if (digits.length > 0) {
       dealNum = digits.padStart(3, '0');
     } else {
-      // Если нет цифр в id (маловероятно), используем хэш от строки
       let hash = 0;
       for (let i = 0; i < deal.id.length; i++) {
         hash = ((hash << 5) - hash) + deal.id.charCodeAt(i);
-        hash = hash & hash; // Convert to 32bit integer
+        hash = hash & hash;
       }
       dealNum = String(Math.abs(hash) % 1000).padStart(3, '0');
     }

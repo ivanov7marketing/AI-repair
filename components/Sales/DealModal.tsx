@@ -140,17 +140,17 @@ export const DealModal: React.FC<DealModalProps> = ({
     }
   };
 
-  const handleNameUpdate = async (newName: string) => {
-    if (newName.trim() === localDeal.leadName) {
+  const handleDealNameUpdate = async (newName: string) => {
+    if (newName.trim() === localDeal.dealName) {
       setEditingName(false);
       return;
     }
 
     try {
-      await handleFieldUpdate('leadName', newName.trim());
+      await handleFieldUpdate('dealName', newName.trim());
       setEditingName(false);
     } catch (error) {
-      console.error('Failed to update name:', error);
+      console.error('Failed to update deal name:', error);
       setEditingName(false);
     }
   };
@@ -158,7 +158,7 @@ export const DealModal: React.FC<DealModalProps> = ({
   const handleFieldUpdate = async (field: string, value: any) => {
     // List of fields that backend supports for updates
     const supportedFields = [
-      'leadName', 'phone', 'email', 'telegram', 'whatsapp',
+      'dealName', 'leadName', 'phone', 'email', 'telegram', 'whatsapp',
       'sourceId', 'responsibleManagerId', 'leadTemperature',
       'address', 'buildingType', 'area', 'roomsCount', 'bathroomType',
       'ceilingHeight', 'hasElevator', 'repairType', 'objectCondition',
@@ -483,8 +483,8 @@ export const DealModal: React.FC<DealModalProps> = ({
               <input
                 type="text"
                 autoFocus
-                defaultValue={localDeal.leadName}
-                onBlur={(e) => handleNameUpdate(e.target.value)}
+                defaultValue={localDeal.dealName || localDeal.leadName || 'Сделка'}
+                onBlur={(e) => handleDealNameUpdate(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.currentTarget.blur();
@@ -499,7 +499,7 @@ export const DealModal: React.FC<DealModalProps> = ({
                 onClick={() => hasPermission('edit_deals') && setEditingName(true)}
                 className={`text-xl font-semibold text-architect-900 dark:text-architect-100 ${hasPermission('edit_deals') ? 'cursor-pointer hover:text-architect-600 dark:hover:text-architect-300' : ''}`}
               >
-                {localDeal.leadName}
+                {localDeal.dealName || localDeal.leadName || 'Сделка'}
               </h2>
             )}
 

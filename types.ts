@@ -445,6 +445,9 @@ export interface Deal {
   projectId: string | null;
   objectId: string | null;
   
+  // Deal name (shown in header)
+  dealName: string;
+  
   // Contact information
   leadName: string;
   phone: string;

@@ -13,6 +13,7 @@ interface DealFormProps {
 
 export const DealForm: React.FC<DealFormProps> = ({ deal, onClose, onSave, users, sources }) => {
   const [formData, setFormData] = useState({
+    dealName: deal?.dealName || '',
     leadName: deal?.leadName || '',
     phone: deal?.phone || '',
     email: deal?.email || '',
@@ -46,7 +47,7 @@ export const DealForm: React.FC<DealFormProps> = ({ deal, onClose, onSave, users
     setSaving(true);
 
     try {
-      const data = {
+      const data: any = {
         ...formData,
         area: formData.area ? parseFloat(formData.area) : null,
         budgetFrom: formData.budgetFrom ? parseFloat(formData.budgetFrom) : null,
@@ -56,6 +57,7 @@ export const DealForm: React.FC<DealFormProps> = ({ deal, onClose, onSave, users
         email: formData.email || null,
         telegram: formData.telegram || null,
         whatsapp: formData.whatsapp || null,
+        dealName: deal ? (formData.dealName || null) : undefined, // Only send for existing deals, let backend generate for new
         trafficSource: formData.trafficSource || null,
         utmSource: formData.utmSource || null,
         utmMedium: formData.utmMedium || null,

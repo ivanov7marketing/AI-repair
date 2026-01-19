@@ -9,6 +9,7 @@ const router = express.Router();
 
 // Zod schemas for validation
 const createDealSchema = z.object({
+  dealName: z.string().optional(),
   leadName: z.string().min(1),
   phone: z.string().min(1),
   email: z.string().email().optional().nullable(),
@@ -66,6 +67,7 @@ const mapDealRow = (row: any): Deal => ({
   sourceId: row.source_id,
   projectId: row.project_id,
   objectId: row.object_id,
+  dealName: row.deal_name || row.lead_name || 'Сделка',
   leadName: row.lead_name,
   phone: row.phone,
   email: row.email,
@@ -350,18 +352,34 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.CREATE_DEALS), as
 
     const firstStageId = stageResult.rows[0].id;
 
+    // Generate deal name: use provided dealName, or leadName if available, or "Сделка 001" format
+    let dealName = validatedData.dealName;
+    if (!dealName || dealName.trim() === '') {
+      if (validatedData.leadName && validatedData.leadName.trim() !== '') {
+        dealName = validatedData.leadName;
+      } else {
+        // Get next deal number for organization
+        const dealCountResult = await pool.query(
+          `SELECT COUNT(*) + 1 as next_num FROM deals WHERE organization_id = $1`,
+          [req.user.organizationId]
+        );
+        const nextNum = parseInt(dealCountResult.rows[0].next_num);
+        dealName = `Сделка ${String(nextNum).padStart(3, '0')}`;
+      }
+    }
+
     // Insert deal
     const insertQuery = `
       INSERT INTO deals (
-        organization_id, stage_id, source_id, lead_name, phone, email, telegram, whatsapp,
+        organization_id, stage_id, source_id, deal_name, lead_name, phone, email, telegram, whatsapp,
         responsible_manager_id, lead_temperature, address, building_type, area, rooms_count,
         bathroom_type, ceiling_height, has_elevator, repair_type, object_condition,
         budget_from, budget_to, needs_design, needs_demolition, material_purchase_type,
         desired_start_date, urgency, traffic_source, utm_source, utm_medium, 
         utm_campaign, utm_content, utm_term, utm_device, utm_region_name, client_id, tags, stage_entered_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-        $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+        $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, NOW()
       ) RETURNING *
     `;
 
@@ -369,6 +387,7 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.CREATE_DEALS), as
       req.user.organizationId,
       firstStageId,
       validatedData.sourceId || null,
+      dealName,
       validatedData.leadName,
       validatedData.phone,
       validatedData.email || null,
@@ -460,6 +479,7 @@ router.put('/:id', authMiddleware, requirePermission(PERMISSIONS.EDIT_DEALS), as
     let paramIndex = 1;
 
     const fieldMapping: Record<string, string> = {
+      dealName: 'deal_name',
       leadName: 'lead_name',
       phone: 'phone',
       email: 'email',
