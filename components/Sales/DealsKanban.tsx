@@ -539,6 +539,7 @@ export const DealsKanban: React.FC<DealsKanbanProps> = ({ hasPermission }) => {
             loadData();
             setShowPipelineSettings(false);
           }}
+          hasPermission={hasPermission}
         />
       )}
     </div>
