@@ -43,6 +43,7 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
   const [showSelectSourceModal, setShowSelectSourceModal] = useState(false);
   const [showSourceSettingsModal, setShowSourceSettingsModal] = useState(false);
   const [selectedSourceName, setSelectedSourceName] = useState<string | null>(null);
+  const [addedSources, setAddedSources] = useState<Set<string>>(new Set());
   const [activeStage, setActiveStage] = useState<PipelineStage | null>(null);
   const [showAddStageForm, setShowAddStageForm] = useState(false);
   const [newStage, setNewStage] = useState({
@@ -293,12 +294,20 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
             {/* Карточки подключенных источников (только Рекомендации и Повторное обращение по умолчанию) */}
             {sources
               .filter(source => {
-                // Показываем только Рекомендации, Повторное обращение и активные источники (добавленные через модальное окно)
+                // Показываем "Рекомендации" и "Повторное обращение" всегда
                 if (source.name === 'Рекомендации' || source.name === 'Повторное обращение') {
                   return true;
                 }
-                // Показываем остальные только если они активны (были добавлены и подключены)
-                return source.isActive;
+                
+                // Показываем источники, которые могут быть добавлены через модальное окно,
+                // только если они были явно добавлены пользователем (в addedSources)
+                const addableSources = ['Сайт', 'Авито', 'ВКонтакте', 'Телеграм', 'Телефония', 'Email'];
+                if (addableSources.includes(source.name) && addedSources.has(source.name)) {
+                  return true;
+                }
+                
+                // Скрываем все остальные источники
+                return false;
               })
               .map((source) => (
                 <div key={source.id} className="bg-white dark:bg-architect-900 rounded-lg border border-architect-200 dark:border-architect-700 p-4 mb-3">
@@ -346,15 +355,13 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
               ))}
 
             {/* Кнопка "Добавить источник" */}
-            {hasPermission('MANAGE_PIPELINE') && (
-              <button 
-                onClick={() => setShowSelectSourceModal(true)}
-                className="w-full px-4 py-2 border border-dashed border-architect-300 dark:border-architect-600 rounded-lg hover:border-architect-400 dark:hover:border-architect-500 flex items-center justify-center gap-2 text-architect-600 dark:text-architect-400 text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Добавить источник
-              </button>
-            )}
+            <button 
+              onClick={() => setShowSelectSourceModal(true)}
+              className="w-full px-4 py-2 border border-dashed border-architect-300 dark:border-architect-600 rounded-lg hover:border-architect-400 dark:hover:border-architect-500 flex items-center justify-center gap-2 text-architect-600 dark:text-architect-400 text-sm mt-2"
+            >
+              <Plus className="w-4 h-4" />
+              Добавить источник
+            </button>
           </div>
 
           {/* Контроль дублей */}
@@ -529,11 +536,13 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
             // Создаем или обновляем источник
             const existingSource = sources.find(s => s.name === settings.name);
             if (existingSource) {
+              // Обновляем существующий источник и делаем его активным
               await api.updateDealSource(existingSource.id, {
                 name: settings.name,
-                isActive: settings.isActive,
+                isActive: true, // Всегда активируем при сохранении через модальное окно
               });
             } else {
+              // Создаем новый источник
               await api.createDealSource({
                 name: settings.name,
                 icon: sourceName === 'Сайт' ? '🌐' : 
@@ -542,9 +551,11 @@ export const PipelineSettings: React.FC<PipelineSettingsProps> = ({
                       sourceName === 'Телеграм' ? '✈️' :
                       sourceName === 'Телефония' ? '☎️' :
                       sourceName === 'Email' ? '📧' : '📌',
-                isActive: settings.isActive,
+                isActive: true,
               });
             }
+            // Добавляем источник в список добавленных
+            setAddedSources(prev => new Set(prev).add(settings.name));
             await loadData();
             setHasUnsavedChanges(true);
           } catch (error) {
