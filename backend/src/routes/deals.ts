@@ -45,6 +45,7 @@ const createDealSchema = z.object({
   utmDevice: z.string().optional().nullable(),
   utmRegionName: z.string().optional().nullable(),
   clientId: z.string().optional().nullable(),
+  tags: z.array(z.string()).optional().nullable(),
 });
 
 const updateDealSchema = createDealSchema.partial();
@@ -104,6 +105,7 @@ const mapDealRow = (row: any): Deal => ({
   utmDevice: row.utm_device,
   utmRegionName: row.utm_region_name,
   clientId: row.client_id,
+  tags: row.tags ? (Array.isArray(row.tags) ? row.tags : JSON.parse(row.tags || '[]')) : [],
   contractFileUrl: row.contract_file_url,
   contractSignedDate: row.contract_signed_date,
   prepaymentAmount: row.prepayment_amount ? parseFloat(row.prepayment_amount) : null,
@@ -356,10 +358,10 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.CREATE_DEALS), as
         bathroom_type, ceiling_height, has_elevator, repair_type, object_condition,
         budget_from, budget_to, needs_design, needs_demolition, material_purchase_type,
         desired_start_date, urgency, traffic_source, utm_source, utm_medium, 
-        utm_campaign, utm_content, utm_term, utm_device, utm_region_name, client_id, stage_entered_at
+        utm_campaign, utm_content, utm_term, utm_device, utm_region_name, client_id, tags, stage_entered_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-        $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, NOW()
+        $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, NOW()
       ) RETURNING *
     `;
 
@@ -399,6 +401,7 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.CREATE_DEALS), as
       validatedData.utmDevice || null,
       validatedData.utmRegionName || null,
       validatedData.clientId || null,
+      validatedData.tags ? JSON.stringify(validatedData.tags) : '[]',
     ]);
 
     const deal = mapDealRow(result.rows[0]);
@@ -493,12 +496,18 @@ router.put('/:id', authMiddleware, requirePermission(PERMISSIONS.EDIT_DEALS), as
       utmDevice: 'utm_device',
       utmRegionName: 'utm_region_name',
       clientId: 'client_id',
+      tags: 'tags',
     };
 
     for (const [key, value] of Object.entries(validatedData)) {
       if (value !== undefined && fieldMapping[key]) {
         updateFields.push(`${fieldMapping[key]} = $${paramIndex}`);
-        updateValues.push(value);
+        // Convert tags array to JSON string if needed
+        if (key === 'tags' && Array.isArray(value)) {
+          updateValues.push(JSON.stringify(value));
+        } else {
+          updateValues.push(value);
+        }
         paramIndex++;
       }
     }

@@ -507,6 +507,7 @@ export interface Deal {
   isClosed: boolean;
   closedReason: string | null;
   closedAt: Date | string | null;
+  tags: string[];
   createdAt: Date | string;
   updatedAt: Date | string;
   deletedAt: Date | string | null;

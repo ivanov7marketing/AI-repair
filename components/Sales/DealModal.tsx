@@ -30,10 +30,35 @@ export const DealModal: React.FC<DealModalProps> = ({
   const [editingField, setEditingField] = useState<string | null>(null);
   const [localDeal, setLocalDeal] = useState<Deal>(deal);
   const [saving, setSaving] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [showStageSelect, setShowStageSelect] = useState(false);
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [newTagValue, setNewTagValue] = useState('');
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
 
   useEffect(() => {
     setLocalDeal(deal);
+    // Ensure tags is always an array
+    if (deal && (!deal.tags || !Array.isArray(deal.tags))) {
+      setLocalDeal({ ...deal, tags: [] });
+    }
   }, [deal]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.stage-selector') && !target.closest('.tag-dropdown')) {
+        setShowStageSelect(false);
+        setShowTagDropdown(false);
+      }
+    };
+
+    if (showStageSelect || showTagDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showStageSelect, showTagDropdown]);
 
   const handleDelete = async () => {
     if (!confirm('Вы уверены, что хотите удалить эту сделку?')) return;
@@ -77,6 +102,59 @@ export const DealModal: React.FC<DealModalProps> = ({
 
   const currentStage = stages.find(s => s.id === localDeal.stageId);
 
+  const handleAddTag = async () => {
+    if (!newTagValue.trim()) {
+      setShowTagInput(false);
+      setNewTagValue('');
+      return;
+    }
+
+    const trimmedTag = newTagValue.trim();
+    const currentTags = localDeal.tags || [];
+    
+    if (currentTags.includes(trimmedTag)) {
+      setShowTagInput(false);
+      setNewTagValue('');
+      return;
+    }
+
+    const updatedTags = [...currentTags, trimmedTag];
+    
+    try {
+      await handleFieldUpdate('tags', updatedTags);
+      setShowTagInput(false);
+      setNewTagValue('');
+    } catch (error) {
+      console.error('Failed to add tag:', error);
+    }
+  };
+
+  const handleRemoveTag = async (tagToRemove: string) => {
+    const currentTags = localDeal.tags || [];
+    const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
+    
+    try {
+      await handleFieldUpdate('tags', updatedTags);
+    } catch (error) {
+      console.error('Failed to remove tag:', error);
+    }
+  };
+
+  const handleNameUpdate = async (newName: string) => {
+    if (newName.trim() === localDeal.leadName) {
+      setEditingName(false);
+      return;
+    }
+
+    try {
+      await handleFieldUpdate('leadName', newName.trim());
+      setEditingName(false);
+    } catch (error) {
+      console.error('Failed to update name:', error);
+      setEditingName(false);
+    }
+  };
+
   const handleFieldUpdate = async (field: string, value: any) => {
     // List of fields that backend supports for updates
     const supportedFields = [
@@ -88,7 +166,8 @@ export const DealModal: React.FC<DealModalProps> = ({
       'materialPurchaseType', 'desiredStartDate', 'urgency', 'measurementNotes',
       'measurementDate', 'measurementTime',
       'trafficSource', 'utmSource', 'utmMedium', 'utmCampaign', 'utmContent',
-      'utmTerm', 'utmDevice', 'utmRegionName', 'clientId'
+      'utmTerm', 'utmDevice', 'utmRegionName', 'clientId',
+      'tags'
     ];
     
     // Skip if field is not supported by backend
@@ -129,6 +208,13 @@ export const DealModal: React.FC<DealModalProps> = ({
         }
         return null;
       }
+      // For tags, ensure it's an array
+      if (field === 'tags') {
+        if (Array.isArray(val)) {
+          return val.filter(tag => tag && typeof tag === 'string' && tag.trim() !== '');
+        }
+        return [];
+      }
       // For numbers, convert to number type
       const numericFields = ['area', 'budgetFrom', 'budgetTo', 'ceilingHeight', 'prepaymentAmount'];
       if (numericFields.includes(field)) {
@@ -146,19 +232,35 @@ export const DealModal: React.FC<DealModalProps> = ({
     const normalizedCurrent = normalizeValue(currentValue);
     const normalizedNew = normalizeValue(value);
     
-    // Simple comparison - if values are the same, don't update
-    if (normalizedCurrent === normalizedNew || 
-        (normalizedCurrent === null && normalizedNew === null) ||
-        (normalizedCurrent === '' && normalizedNew === null) ||
-        (normalizedCurrent === null && normalizedNew === '')) {
-      setEditingField(null);
-      return;
+    // Special handling for arrays (tags)
+    if (field === 'tags') {
+      const currentTags = Array.isArray(normalizedCurrent) ? normalizedCurrent : [];
+      const newTags = Array.isArray(normalizedNew) ? normalizedNew : [];
+      if (currentTags.length === newTags.length && 
+          currentTags.every((tag, idx) => tag === newTags[idx])) {
+        setEditingField(null);
+        return;
+      }
+    } else {
+      // Simple comparison - if values are the same, don't update
+      if (normalizedCurrent === normalizedNew || 
+          (normalizedCurrent === null && normalizedNew === null) ||
+          (normalizedCurrent === '' && normalizedNew === null) ||
+          (normalizedCurrent === null && normalizedNew === '')) {
+        setEditingField(null);
+        return;
+      }
     }
 
     try {
       setSaving(true);
       // Prepare value for backend - normalize empty strings to null
-      const updateValue = normalizedNew;
+      let updateValue = normalizedNew;
+      
+      // For tags, ensure it's an array
+      if (field === 'tags') {
+        updateValue = Array.isArray(updateValue) ? updateValue : [];
+      }
       
       await api.updateDeal(localDeal.id, { [field]: updateValue });
       setLocalDeal({ ...localDeal, [field]: updateValue });
@@ -375,43 +477,143 @@ export const DealModal: React.FC<DealModalProps> = ({
       <div className="bg-white dark:bg-architect-800 rounded-xl shadow-xl max-w-7xl w-full max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-architect-200 dark:border-architect-700">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="p-1 hover:bg-architect-100 dark:hover:bg-architect-700 rounded-lg mr-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h2 className="text-xl font-semibold text-architect-900 dark:text-architect-100">
-              {deal.leadName}
-            </h2>
-            <span className="text-sm text-architect-500 dark:text-architect-400">#{deal.id.slice(0, 8)}</span>
-            <button className="px-2 py-1 text-xs border border-architect-200 dark:border-architect-700 rounded hover:bg-architect-50 dark:hover:bg-architect-700">
-              #ТЕГИРОВАТЬ
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            {currentStage && (
-              <div
-                className="px-3 py-1.5 rounded text-sm font-medium text-white flex items-center gap-2"
-                style={{ backgroundColor: currentStage.color }}
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {/* Stage selector dropdown */}
+            <div className="relative stage-selector">
+              <button
+                onClick={() => setShowStageSelect(!showStageSelect)}
+                className="px-3 py-1.5 rounded text-sm font-medium text-white flex items-center gap-2 hover:opacity-80"
+                style={{ backgroundColor: currentStage?.color || '#3B82F6' }}
               >
-                {currentStage.name}
+                {currentStage?.name || 'Выберите этап'}
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
+              </button>
+              {showStageSelect && (
+                <div
+                  className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-lg shadow-lg min-w-[200px] max-h-[300px] overflow-y-auto stage-selector"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {stages.map((stage) => (
+                    <button
+                      key={stage.id}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (stage.id !== localDeal.stageId) {
+                          await handleMoveStage(stage.id);
+                        }
+                        setShowStageSelect(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-architect-50 dark:hover:bg-architect-700 flex items-center gap-2 ${
+                        stage.id === localDeal.stageId ? 'bg-architect-50 dark:bg-architect-700' : ''
+                      }`}
+                    >
+                      <div
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: stage.color }}
+                      />
+                      <span>{stage.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Deal name - editable */}
+            {editingName ? (
+              <input
+                type="text"
+                autoFocus
+                defaultValue={localDeal.leadName}
+                onBlur={(e) => handleNameUpdate(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                  } else if (e.key === 'Escape') {
+                    setEditingName(false);
+                  }
+                }}
+                className="text-xl font-semibold text-architect-900 dark:text-architect-100 bg-transparent border-b border-architect-400 dark:border-architect-500 rounded-none px-0 py-0.5 focus:outline-none focus:border-architect-600 dark:focus:border-architect-400 min-w-[200px]"
+              />
+            ) : (
+              <h2
+                onClick={() => hasPermission('edit_deals') && setEditingName(true)}
+                className={`text-xl font-semibold text-architect-900 dark:text-architect-100 ${hasPermission('edit_deals') ? 'cursor-pointer hover:text-architect-600 dark:hover:text-architect-300' : ''}`}
+              >
+                {localDeal.leadName}
+              </h2>
+            )}
+
+            {/* Tags */}
+            {(localDeal.tags || []).map((tag, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-1 px-2 py-1 bg-architect-100 dark:bg-architect-700 rounded text-xs text-architect-700 dark:text-architect-300"
+              >
+                <span>#{tag}</span>
+                {hasPermission('edit_deals') && (
+                  <button
+                    onClick={() => handleRemoveTag(tag)}
+                    className="hover:text-red-600 dark:hover:text-red-400"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {/* Tag input or button */}
+            {showTagInput ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  autoFocus
+                  value={newTagValue}
+                  onChange={(e) => setNewTagValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddTag();
+                    } else if (e.key === 'Escape') {
+                      setShowTagInput(false);
+                      setNewTagValue('');
+                    }
+                  }}
+                  onBlur={handleAddTag}
+                  placeholder="Введите тег"
+                  className="px-2 py-1 text-xs border border-architect-300 dark:border-architect-600 rounded dark:bg-architect-700 dark:text-architect-100 focus:outline-none focus:border-architect-500 dark:focus:border-architect-400 min-w-[120px]"
+                />
+              </div>
+            ) : (
+              <div className="relative tag-dropdown">
+                <button
+                  onClick={() => {
+                    if (hasPermission('edit_deals')) {
+                      setShowTagInput(true);
+                    } else {
+                      setShowTagDropdown(!showTagDropdown);
+                    }
+                  }}
+                  className="px-2 py-1 text-xs border border-architect-200 dark:border-architect-700 rounded hover:bg-architect-50 dark:hover:bg-architect-700"
+                >
+                  #ТЕГИРОВАТЬ
+                </button>
+                {showTagDropdown && (localDeal.tags || []).length > 0 && (
+                  <div className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-architect-800 border border-architect-200 dark:border-architect-700 rounded-lg shadow-lg min-w-[150px] max-h-[200px] overflow-y-auto tag-dropdown">
+                    {(localDeal.tags || []).map((tag, index) => (
+                      <div
+                        key={index}
+                        className="px-3 py-2 text-sm text-architect-700 dark:text-architect-300 hover:bg-architect-50 dark:hover:bg-architect-700"
+                      >
+                        #{tag}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
-            {hasPermission('edit_deals') && (
-              <button
-                onClick={() => onEdit(deal)}
-                className="p-2 hover:bg-architect-100 dark:hover:bg-architect-700 rounded-lg"
-              >
-                <Edit className="w-5 h-5" />
-              </button>
-            )}
+          </div>
+          <div className="flex items-center gap-2">
             {hasPermission('delete_deals') && (
               <button
                 onClick={handleDelete}

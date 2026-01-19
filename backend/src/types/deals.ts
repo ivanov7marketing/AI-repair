@@ -90,6 +90,7 @@ export interface Deal {
   isClosed: boolean;
   closedReason: string | null;
   closedAt: Date | null;
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
