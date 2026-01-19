@@ -36,6 +36,15 @@ const createDealSchema = z.object({
   measurementNotes: z.string().optional().nullable(),
   measurementDate: z.string().optional().nullable(),
   measurementTime: z.string().optional().nullable(),
+  trafficSource: z.string().optional().nullable(),
+  utmSource: z.string().optional().nullable(),
+  utmMedium: z.string().optional().nullable(),
+  utmCampaign: z.string().optional().nullable(),
+  utmContent: z.string().optional().nullable(),
+  utmTerm: z.string().optional().nullable(),
+  utmDevice: z.string().optional().nullable(),
+  utmRegionName: z.string().optional().nullable(),
+  clientId: z.string().optional().nullable(),
 });
 
 const updateDealSchema = createDealSchema.partial();
@@ -86,6 +95,15 @@ const mapDealRow = (row: any): Deal => ({
   measurementTime: row.measurement_time,
   measurementCompleted: row.measurement_completed || false,
   measurementNotes: row.measurement_notes,
+  trafficSource: row.traffic_source,
+  utmSource: row.utm_source,
+  utmMedium: row.utm_medium,
+  utmCampaign: row.utm_campaign,
+  utmContent: row.utm_content,
+  utmTerm: row.utm_term,
+  utmDevice: row.utm_device,
+  utmRegionName: row.utm_region_name,
+  clientId: row.client_id,
   contractFileUrl: row.contract_file_url,
   contractSignedDate: row.contract_signed_date,
   prepaymentAmount: row.prepayment_amount ? parseFloat(row.prepayment_amount) : null,
@@ -337,10 +355,11 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.CREATE_DEALS), as
         responsible_manager_id, lead_temperature, address, building_type, area, rooms_count,
         bathroom_type, ceiling_height, has_elevator, repair_type, object_condition,
         budget_from, budget_to, needs_design, needs_demolition, material_purchase_type,
-        desired_start_date, urgency, stage_entered_at
+        desired_start_date, urgency, traffic_source, utm_source, utm_medium, 
+        utm_campaign, utm_content, utm_term, utm_device, utm_region_name, client_id, stage_entered_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-        $20, $21, $22, $23, $24, $25, $26, NOW()
+        $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, NOW()
       ) RETURNING *
     `;
 
@@ -371,6 +390,15 @@ router.post('/', authMiddleware, requirePermission(PERMISSIONS.CREATE_DEALS), as
       validatedData.materialPurchaseType || null,
       validatedData.desiredStartDate || null,
       validatedData.urgency || null,
+      validatedData.trafficSource || null,
+      validatedData.utmSource || null,
+      validatedData.utmMedium || null,
+      validatedData.utmCampaign || null,
+      validatedData.utmContent || null,
+      validatedData.utmTerm || null,
+      validatedData.utmDevice || null,
+      validatedData.utmRegionName || null,
+      validatedData.clientId || null,
     ]);
 
     const deal = mapDealRow(result.rows[0]);
@@ -456,6 +484,15 @@ router.put('/:id', authMiddleware, requirePermission(PERMISSIONS.EDIT_DEALS), as
       measurementNotes: 'measurement_notes',
       measurementDate: 'measurement_date',
       measurementTime: 'measurement_time',
+      trafficSource: 'traffic_source',
+      utmSource: 'utm_source',
+      utmMedium: 'utm_medium',
+      utmCampaign: 'utm_campaign',
+      utmContent: 'utm_content',
+      utmTerm: 'utm_term',
+      utmDevice: 'utm_device',
+      utmRegionName: 'utm_region_name',
+      clientId: 'client_id',
     };
 
     for (const [key, value] of Object.entries(validatedData)) {

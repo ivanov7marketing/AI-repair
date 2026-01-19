@@ -28,6 +28,15 @@ export const DealForm: React.FC<DealFormProps> = ({ deal, onClose, onSave, users
     repairType: deal?.repairType || '',
     budgetFrom: deal?.budgetFrom?.toString() || '',
     budgetTo: deal?.budgetTo?.toString() || '',
+    trafficSource: deal?.trafficSource || '',
+    utmSource: deal?.utmSource || '',
+    utmMedium: deal?.utmMedium || '',
+    utmCampaign: deal?.utmCampaign || '',
+    utmContent: deal?.utmContent || '',
+    utmTerm: deal?.utmTerm || '',
+    utmDevice: deal?.utmDevice || '',
+    utmRegionName: deal?.utmRegionName || '',
+    clientId: deal?.clientId || '',
   });
 
   const [saving, setSaving] = useState(false);
@@ -47,6 +56,15 @@ export const DealForm: React.FC<DealFormProps> = ({ deal, onClose, onSave, users
         email: formData.email || null,
         telegram: formData.telegram || null,
         whatsapp: formData.whatsapp || null,
+        trafficSource: formData.trafficSource || null,
+        utmSource: formData.utmSource || null,
+        utmMedium: formData.utmMedium || null,
+        utmCampaign: formData.utmCampaign || null,
+        utmContent: formData.utmContent || null,
+        utmTerm: formData.utmTerm || null,
+        utmDevice: formData.utmDevice || null,
+        utmRegionName: formData.utmRegionName || null,
+        clientId: formData.clientId || null,
       };
 
       let savedDeal;
@@ -207,6 +225,96 @@ export const DealForm: React.FC<DealFormProps> = ({ deal, onClose, onSave, users
                 onChange={(e) => setFormData({ ...formData, budgetTo: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"
               />
+            </div>
+          </div>
+
+          {/* Traffic Source Section */}
+          <div className="pt-4 border-t border-architect-200 dark:border-architect-700">
+            <h3 className="text-lg font-semibold mb-4 text-architect-900 dark:text-architect-100">
+              Источник трафика
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Источник</label>
+                <input
+                  type="text"
+                  value={formData.trafficSource}
+                  onChange={(e) => setFormData({ ...formData, trafficSource: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">UTM Source</label>
+                <input
+                  type="text"
+                  value={formData.utmSource}
+                  onChange={(e) => setFormData({ ...formData, utmSource: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">UTM Medium</label>
+                <input
+                  type="text"
+                  value={formData.utmMedium}
+                  onChange={(e) => setFormData({ ...formData, utmMedium: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">UTM Campaign</label>
+                <input
+                  type="text"
+                  value={formData.utmCampaign}
+                  onChange={(e) => setFormData({ ...formData, utmCampaign: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">UTM Content</label>
+                <input
+                  type="text"
+                  value={formData.utmContent}
+                  onChange={(e) => setFormData({ ...formData, utmContent: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">UTM Term</label>
+                <input
+                  type="text"
+                  value={formData.utmTerm}
+                  onChange={(e) => setFormData({ ...formData, utmTerm: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">UTM Device</label>
+                <input
+                  type="text"
+                  value={formData.utmDevice}
+                  onChange={(e) => setFormData({ ...formData, utmDevice: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">UTM Region name</label>
+                <input
+                  type="text"
+                  value={formData.utmRegionName}
+                  onChange={(e) => setFormData({ ...formData, utmRegionName: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Client ID</label>
+                <input
+                  type="text"
+                  value={formData.clientId}
+                  onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-architect-700 dark:text-white"
+                />
+              </div>
             </div>
           </div>
 

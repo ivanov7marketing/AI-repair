@@ -68,6 +68,17 @@ export interface Deal {
   measurementCompleted: boolean;
   measurementNotes: string | null;
   
+  // Traffic source
+  trafficSource: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmContent: string | null;
+  utmTerm: string | null;
+  utmDevice: string | null;
+  utmRegionName: string | null;
+  clientId: string | null;
+  
   // Documents
   contractFileUrl: string | null;
   contractSignedDate: Date | null;

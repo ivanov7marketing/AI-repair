@@ -86,7 +86,9 @@ export const DealModal: React.FC<DealModalProps> = ({
       'ceilingHeight', 'hasElevator', 'repairType', 'objectCondition',
       'budgetFrom', 'budgetTo', 'needsDesign', 'needsDemolition',
       'materialPurchaseType', 'desiredStartDate', 'urgency', 'measurementNotes',
-      'measurementDate', 'measurementTime'
+      'measurementDate', 'measurementTime',
+      'trafficSource', 'utmSource', 'utmMedium', 'utmCampaign', 'utmContent',
+      'utmTerm', 'utmDevice', 'utmRegionName', 'clientId'
     ];
     
     // Skip if field is not supported by backend
@@ -569,6 +571,76 @@ export const DealModal: React.FC<DealModalProps> = ({
                 type="text"
                 render={(v) => v || '...'}
               />
+              </div>
+
+              {/* Block 3: Traffic source */}
+              <div className="space-y-1.5 pt-4 border-t border-architect-200 dark:border-architect-700">
+                <div className="text-xs font-medium text-architect-700 dark:text-architect-300 mb-2">
+                  Источник трафика
+                </div>
+                <EditableField
+                  label="Источник"
+                  field="trafficSource"
+                  value={localDeal.trafficSource}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="UTM Source"
+                  field="utmSource"
+                  value={localDeal.utmSource}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="UTM Medium"
+                  field="utmMedium"
+                  value={localDeal.utmMedium}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="UTM Campaign"
+                  field="utmCampaign"
+                  value={localDeal.utmCampaign}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="UTM Content"
+                  field="utmContent"
+                  value={localDeal.utmContent}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="UTM Term"
+                  field="utmTerm"
+                  value={localDeal.utmTerm}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="UTM Device"
+                  field="utmDevice"
+                  value={localDeal.utmDevice}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="UTM Region name"
+                  field="utmRegionName"
+                  value={localDeal.utmRegionName}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
+                <EditableField
+                  label="Client ID"
+                  field="clientId"
+                  value={localDeal.clientId}
+                  type="text"
+                  render={(v) => v || '...'}
+                />
               </div>
             </div>
           </div>
