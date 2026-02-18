@@ -437,6 +437,33 @@ export interface DealTask {
   };
 }
 
+export interface Task {
+  id: string;
+  organizationId: string;
+  title: string;
+  description: string | null;
+  assignedTo: string | null;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  taskType: string | null;
+  dueDate: Date | string | null;
+  status: 'today' | 'tomorrow' | 'week';
+  completed: boolean;
+  completedAt: Date | string | null;
+  createdBy: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  assignedToUser?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  createdByUser?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
 export interface Deal {
   id: string;
   organizationId: string;

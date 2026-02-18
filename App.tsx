@@ -30,6 +30,7 @@ import { ReturnsList } from './components/Warehouse/ReturnsList.tsx';
 import { ReturnForm } from './components/Warehouse/ReturnForm.tsx';
 import { OperationsList } from './components/Warehouse/OperationsList.tsx';
 import { DealsKanban } from './components/Sales/DealsKanban.tsx';
+import { TasksKanban } from './components/Tasks/TasksKanban.tsx';
 import { exportEstimateToXLSX } from './services/estimateExporter.ts';
 import { ExportOptions } from './types.ts';
 import { analyzeFloorPlan, generateIsometricView, generateRoomInterior, fileToGenerativePart, identifyStyleFromImage, parseVoiceEstimation, VoiceEstimationItem } from './services/routeraiService.ts';
@@ -3320,34 +3321,8 @@ const App: React.FC = () => {
                 </div>
             )}
             {activeTab === 'tasks' && (
-                <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
-                    <div className="bg-white dark:bg-architect-800 rounded-2xl shadow-lg border border-architect-100 dark:border-architect-700 p-8">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="bg-architect-900 dark:bg-architect-100 p-3 rounded-xl">
-                                <CheckSquare className="w-8 h-8 text-white dark:text-architect-900" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-architect-900 dark:text-white">Задачи</h1>
-                                <p className="text-architect-500 dark:text-architect-400 text-sm">Управление задачами в формате канбан</p>
-                            </div>
-                        </div>
-                        <div className="space-y-4 text-architect-700 dark:text-architect-300">
-                            <p className="text-lg font-semibold text-architect-900 dark:text-white mb-4">В этом разделе будет реализовано:</p>
-                            <ul className="space-y-3 list-disc list-inside">
-                                <li><strong>Канбан-доска с 3 столбцами:</strong>
-                                    <ul className="ml-6 mt-2 space-y-2 list-disc">
-                                        <li>Задачи на сегодня</li>
-                                        <li>Задачи на завтра</li>
-                                        <li>Задачи на неделю</li>
-                                    </ul>
-                                </li>
-                                <li><strong>Карточки задач</strong> - с информацией о задаче, исполнителе, приоритете, статусе</li>
-                                <li><strong>Перетаскивание задач</strong> - между столбцами для изменения сроков</li>
-                                <li><strong>Фильтры и сортировка</strong> - по исполнителю, приоритету, типу задачи</li>
-                                <li><strong>Уведомления</strong> - о просроченных задачах и приближающихся дедлайнах</li>
-                            </ul>
-                        </div>
-                    </div>
+                <div className="animate-in fade-in duration-300 h-full overflow-hidden flex flex-col">
+                    <TasksKanban />
                 </div>
             )}
             {activeTab === 'sales' && (

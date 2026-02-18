@@ -1,4 +1,4 @@
-import { LoginRequest, LoginResponse, RegisterAdminRequest } from '../types';
+import { LoginRequest, LoginResponse, RegisterAdminRequest, Task } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -814,6 +814,55 @@ class ApiClient {
 
   async deleteDealSource(id: string) {
     return this.request(`/api/deal-sources/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Tasks endpoints
+  async getTasks() {
+    return this.request<Task[]>('/api/tasks');
+  }
+
+  async createTask(data: {
+    title: string;
+    description?: string | null;
+    assignedTo?: string | null;
+    priority?: 'low' | 'medium' | 'high' | 'urgent';
+    taskType?: string | null;
+    dueDate?: string | null;
+    status?: 'today' | 'tomorrow' | 'week';
+  }) {
+    return this.request<Task>('/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTask(id: string, data: {
+    title?: string;
+    description?: string | null;
+    assignedTo?: string | null;
+    priority?: 'low' | 'medium' | 'high' | 'urgent';
+    taskType?: string | null;
+    dueDate?: string | null;
+    status?: 'today' | 'tomorrow' | 'week';
+    completed?: boolean;
+  }) {
+    return this.request<Task>(`/api/tasks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async moveTask(id: string, status: 'today' | 'tomorrow' | 'week') {
+    return this.request<Task>(`/api/tasks/${id}/move`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async deleteTask(id: string) {
+    return this.request(`/api/tasks/${id}`, {
       method: 'DELETE',
     });
   }
