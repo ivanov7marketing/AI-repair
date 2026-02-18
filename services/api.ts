@@ -830,7 +830,7 @@ class ApiClient {
     priority?: 'low' | 'medium' | 'high' | 'urgent';
     taskType?: string | null;
     dueDate?: string | null;
-    status?: 'today' | 'tomorrow' | 'week';
+    // status is auto-determined from dueDate on backend
   }) {
     return this.request<Task>('/api/tasks', {
       method: 'POST',
@@ -845,7 +845,7 @@ class ApiClient {
     priority?: 'low' | 'medium' | 'high' | 'urgent';
     taskType?: string | null;
     dueDate?: string | null;
-    status?: 'today' | 'tomorrow' | 'week';
+    status?: 'today' | 'tomorrow' | 'week' | 'overdue' | 'future';
     completed?: boolean;
   }) {
     return this.request<Task>(`/api/tasks/${id}`, {
@@ -854,12 +854,12 @@ class ApiClient {
     });
   }
 
-  async moveTask(id: string, status: 'today' | 'tomorrow' | 'week') {
-    return this.request<Task>(`/api/tasks/${id}/move`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
-  }
+async moveTask(id: string, status: 'today' | 'tomorrow' | 'week' | 'overdue' | 'future') {
+  return this.request<Task>(`/api/tasks/${id}/move`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
 
   async deleteTask(id: string) {
     return this.request(`/api/tasks/${id}`, {

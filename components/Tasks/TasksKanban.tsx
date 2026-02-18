@@ -16,10 +16,15 @@ import { api } from '../../services/api';
 import { Task, User as UserType } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 
-const STATUS_COLUMNS = [
+const BASE_STATUS_COLUMNS = [
   { id: 'today', title: 'Задачи на сегодня', color: 'bg-red-50 dark:bg-red-900/20' },
   { id: 'tomorrow', title: 'Задачи на завтра', color: 'bg-yellow-50 dark:bg-yellow-900/20' },
   { id: 'week', title: 'Задачи на неделю', color: 'bg-blue-50 dark:bg-blue-900/20' },
+] as const;
+
+const OPTIONAL_STATUS_COLUMNS = [
+  { id: 'overdue', title: 'Просроченные задачи', color: 'bg-red-100 dark:bg-red-900/40' },
+  { id: 'future', title: 'Задачи на будущее', color: 'bg-purple-50 dark:bg-purple-900/20' },
 ] as const;
 
 const PRIORITY_COLORS = {
@@ -97,9 +102,9 @@ export const TasksKanban: React.FC = () => {
     if (!over || active.id === over.id) return;
 
     const taskId = active.id as string;
-    const newStatus = over.id as 'today' | 'tomorrow' | 'week';
+    const newStatus = over.id as 'today' | 'tomorrow' | 'week' | 'overdue' | 'future';
 
-    if (!['today', 'tomorrow', 'week'].includes(newStatus)) return;
+    if (!['today', 'tomorrow', 'week', 'overdue', 'future'].includes(newStatus)) return;
 
     try {
       await api.moveTask(taskId, newStatus);
@@ -118,7 +123,7 @@ export const TasksKanban: React.FC = () => {
     priority?: 'low' | 'medium' | 'high' | 'urgent';
     taskType?: string | null;
     dueDate?: string | null;
-    status?: 'today' | 'tomorrow' | 'week';
+    // status is now auto-determined from dueDate on backend
   }) => {
     try {
       const newTask = await api.createTask(data);
@@ -181,6 +186,25 @@ export const TasksKanban: React.FC = () => {
 
   const getTasksByStatus = (status: string) => {
     return filteredTasks.filter(t => t.status === status && !t.completed);
+  };
+
+  // Determine which columns to show based on available tasks
+  const getVisibleColumns = () => {
+    const columns = [...BASE_STATUS_COLUMNS];
+    
+    // Add overdue column if there are overdue tasks
+    const hasOverdue = filteredTasks.some(t => t.status === 'overdue' && !t.completed);
+    if (hasOverdue) {
+      columns.unshift(OPTIONAL_STATUS_COLUMNS[0]); // Add overdue at the beginning
+    }
+    
+    // Add future column if there are future tasks
+    const hasFuture = filteredTasks.some(t => t.status === 'future' && !t.completed);
+    if (hasFuture) {
+      columns.push(OPTIONAL_STATUS_COLUMNS[1]); // Add future at the end
+    }
+    
+    return columns;
   };
 
   const formatDate = (date: Date | string | null) => {
@@ -335,7 +359,7 @@ export const TasksKanban: React.FC = () => {
       >
         <div className="flex-1 overflow-x-auto p-4">
           <div className="flex gap-4 h-full min-w-max">
-            {STATUS_COLUMNS.map(column => {
+            {getVisibleColumns().map(column => {
               const columnTasks = getTasksByStatus(column.id);
               return (
                 <DroppableColumn
@@ -575,7 +599,6 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, users, taskTypes, o
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>(task?.priority || 'medium');
   const [taskType, setTaskType] = useState(task?.taskType || '');
   const [dueDate, setDueDate] = useState(task?.dueDate ? (typeof task.dueDate === 'string' ? task.dueDate : task.dueDate.toISOString().split('T')[0]) : '');
-  const [status, setStatus] = useState<'today' | 'tomorrow' | 'week'>(task?.status || 'today');
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -591,7 +614,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, users, taskTypes, o
         priority,
         taskType: taskType.trim() || null,
         dueDate: dueDate || null,
-        status,
+        // status is auto-determined from dueDate on backend
       });
     } catch (error) {
       console.error('Error saving task:', error);
@@ -699,22 +722,6 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, users, taskTypes, o
             </div>
           </div>
           
-          {!task && (
-            <div>
-              <label className="block text-sm font-medium text-architect-700 dark:text-architect-300 mb-1">
-                Столбец
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-700 text-architect-900 dark:text-white"
-              >
-                <option value="today">Задачи на сегодня</option>
-                <option value="tomorrow">Задачи на завтра</option>
-                <option value="week">Задачи на неделю</option>
-              </select>
-            </div>
-          )}
           
           <div className="flex justify-end gap-3 pt-4">
             <button

@@ -446,7 +446,7 @@ export interface Task {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   taskType: string | null;
   dueDate: Date | string | null;
-  status: 'today' | 'tomorrow' | 'week';
+  status: 'today' | 'tomorrow' | 'week' | 'overdue' | 'future';
   completed: boolean;
   completedAt: Date | string | null;
   createdBy: string;

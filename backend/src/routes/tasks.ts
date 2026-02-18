@@ -13,16 +13,58 @@ const createTaskSchema = z.object({
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   taskType: z.string().optional().nullable(),
   dueDate: z.string().optional().nullable(),
-  status: z.enum(['today', 'tomorrow', 'week']).optional(),
+  // status is now auto-determined from dueDate, but can be manually set for moving tasks
+  status: z.enum(['today', 'tomorrow', 'week', 'overdue', 'future']).optional(),
 });
 
 const updateTaskSchema = createTaskSchema.partial().extend({
   completed: z.boolean().optional(),
+  // When updating, if dueDate changes, we should recalculate status
+  // But allow manual status override for moving tasks
 });
 
 const moveTaskSchema = z.object({
-  status: z.enum(['today', 'tomorrow', 'week']),
+  status: z.enum(['today', 'tomorrow', 'week', 'overdue', 'future']),
 });
+
+// Helper function to determine status based on due date
+function determineStatusFromDate(dueDate: string | null | undefined): 'today' | 'tomorrow' | 'week' | 'overdue' | 'future' {
+  if (!dueDate) {
+    return 'today'; // Default to today if no date
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  
+  const diffTime = due.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  // Overdue: date is in the past
+  if (diffDays < 0) {
+    return 'overdue';
+  }
+  
+  // Today: date is today
+  if (diffDays === 0) {
+    return 'today';
+  }
+  
+  // Tomorrow: date is tomorrow
+  if (diffDays === 1) {
+    return 'tomorrow';
+  }
+  
+  // Week: date is within this week (2-7 days)
+  if (diffDays >= 2 && diffDays <= 7) {
+    return 'week';
+  }
+  
+  // Future: date is more than a week away
+  return 'future';
+}
 
 // Helper function to map database row to Task object
 const mapTaskRow = (row: any) => ({
@@ -102,6 +144,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
     const data = createTaskSchema.parse(req.body);
 
+    // Automatically determine status from dueDate if not provided
+    const status = data.status || determineStatusFromDate(data.dueDate);
+
     const result = await pool.query(`
       INSERT INTO tasks (
         organization_id, title, description, assigned_to, priority, 
@@ -117,7 +162,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       data.priority || 'medium',
       data.taskType || null,
       data.dueDate || null,
-      data.status || 'today',
+      status,
       userId,
     ]);
 
@@ -189,11 +234,20 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
       updates.push(`task_type = $${paramIndex++}`);
       values.push(data.taskType);
     }
+    // If dueDate changes and status is not explicitly set, recalculate status
+    let finalStatus = data.status;
     if (data.dueDate !== undefined) {
       updates.push(`due_date = $${paramIndex++}`);
       values.push(data.dueDate);
+      // Recalculate status if not explicitly provided
+      if (data.status === undefined) {
+        finalStatus = determineStatusFromDate(data.dueDate);
+        updates.push(`status = $${paramIndex++}`);
+        values.push(finalStatus);
+      }
     }
-    if (data.status !== undefined) {
+    if (data.status !== undefined && data.dueDate === undefined) {
+      // Only update status if dueDate is not being updated
       updates.push(`status = $${paramIndex++}`);
       values.push(data.status);
     }
