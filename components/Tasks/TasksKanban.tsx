@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Filter, X, Calendar, User, Flag, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Filter, X, Calendar, User, Flag, CheckCircle2, Circle, CheckSquare, RefreshCw, Briefcase, FileText, Clock } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -40,6 +40,13 @@ const PRIORITY_LABELS = {
   medium: 'Средний',
   low: 'Низкий',
 };
+
+const TASK_TYPES = [
+  { id: 'contact', label: 'Связаться', icon: CheckSquare, secondaryIcon: RefreshCw, color: 'text-green-600' },
+  { id: 'meeting', label: 'Встреча', icon: Briefcase, color: 'text-amber-700' },
+  { id: 'task', label: 'Задача', icon: FileText, color: 'text-red-600' },
+  { id: 'other', label: 'Другой', icon: Clock, color: 'text-gray-600' },
+] as const;
 
 export const TasksKanban: React.FC = () => {
   const { user } = useAuth();
@@ -573,11 +580,21 @@ const DraggableTaskCard: React.FC<TaskCardProps> = ({ task, onEdit, onDelete, on
           </div>
         )}
         
-        {task.taskType && (
-          <div className="px-2 py-0.5 rounded text-xs bg-architect-100 dark:bg-architect-700 text-architect-700 dark:text-architect-300">
-            {task.taskType}
-          </div>
-        )}
+        {task.taskType && (() => {
+          const taskTypeConfig = TASK_TYPES.find(t => t.id === task.taskType);
+          const Icon = taskTypeConfig?.icon || FileText;
+          const SecondaryIcon = taskTypeConfig?.secondaryIcon;
+          const label = taskTypeConfig?.label || task.taskType;
+          const color = taskTypeConfig?.color || 'text-architect-700 dark:text-architect-300';
+          
+          return (
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-architect-100 dark:bg-architect-700 ${color}`}>
+              <Icon className="w-3 h-3" />
+              {SecondaryIcon && <SecondaryIcon className="w-3 h-3" />}
+              {label}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
@@ -597,7 +614,14 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, users, taskTypes, o
   const [description, setDescription] = useState(task?.description || '');
   const [assignedTo, setAssignedTo] = useState(task?.assignedTo || '');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>(task?.priority || 'medium');
-  const [taskType, setTaskType] = useState(task?.taskType || '');
+  const [taskType, setTaskType] = useState(() => {
+    if (!task?.taskType) return '';
+    const isStandardType = TASK_TYPES.some(t => t.id === task.taskType);
+    return isStandardType ? task.taskType : 'other';
+  });
+  const [customTaskType, setCustomTaskType] = useState(
+    task?.taskType && !TASK_TYPES.some(t => t.id === task.taskType) ? task.taskType : ''
+  );
   const [dueDate, setDueDate] = useState(task?.dueDate ? (typeof task.dueDate === 'string' ? task.dueDate : task.dueDate.toISOString().split('T')[0]) : '');
   const [saving, setSaving] = useState(false);
 
@@ -607,12 +631,14 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, users, taskTypes, o
     
     setSaving(true);
     try {
+      const finalTaskType = taskType === 'other' ? (customTaskType.trim() || null) : (taskType.trim() || null);
+      
       await onSubmit({
         title: title.trim(),
         description: description.trim() || null,
         assignedTo: assignedTo || null,
         priority,
-        taskType: taskType.trim() || null,
+        taskType: finalTaskType,
         dueDate: dueDate || null,
         // status is auto-determined from dueDate on backend
       });
@@ -695,18 +721,42 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, users, taskTypes, o
               <label className="block text-sm font-medium text-architect-700 dark:text-architect-300 mb-1">
                 Тип задачи
               </label>
-              <input
-                type="text"
-                value={taskType}
-                onChange={(e) => setTaskType(e.target.value)}
-                list="taskTypes"
-                className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-700 text-architect-900 dark:text-white"
-              />
-              <datalist id="taskTypes">
-                {taskTypes.map(type => (
-                  <option key={type} value={type} />
-                ))}
-              </datalist>
+              <div className="relative">
+                <select
+                  value={taskType === '' || TASK_TYPES.some(t => t.id === taskType) ? taskType : 'other'}
+                  onChange={(e) => {
+                    if (e.target.value === 'other') {
+                      setTaskType('other');
+                    } else {
+                      setTaskType(e.target.value);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-700 text-architect-900 dark:text-white appearance-none pr-10"
+                >
+                  <option value="">Не выбран</option>
+                  {TASK_TYPES.map(type => (
+                    <option key={type.id} value={type.id}>{type.label}</option>
+                  ))}
+                </select>
+                {taskType && TASK_TYPES.find(t => t.id === taskType) && (() => {
+                  const selectedType = TASK_TYPES.find(t => t.id === taskType)!;
+                  const Icon = selectedType.icon;
+                  return (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                      <Icon className={`w-4 h-4 ${selectedType.color}`} />
+                    </div>
+                  );
+                })()}
+              </div>
+              {taskType === 'other' && (
+                <input
+                  type="text"
+                  value={customTaskType}
+                  onChange={(e) => setCustomTaskType(e.target.value)}
+                  placeholder="Введите тип задачи"
+                  className="w-full mt-2 px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-700 text-architect-900 dark:text-white"
+                />
+              )}
             </div>
             
             <div>
