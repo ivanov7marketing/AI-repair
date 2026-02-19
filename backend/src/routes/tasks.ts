@@ -13,6 +13,7 @@ const createTaskSchema = z.object({
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   taskType: z.string().optional().nullable(),
   dueDate: z.string().optional().nullable(),
+  dueTime: z.string().optional().nullable(),
   // status is now auto-determined from dueDate, but can be manually set for moving tasks
   status: z.enum(['today', 'tomorrow', 'week', 'overdue', 'future']).optional(),
 });
@@ -76,6 +77,7 @@ const mapTaskRow = (row: any) => ({
   priority: row.priority,
   taskType: row.task_type,
   dueDate: row.due_date,
+  dueTime: row.due_time,
   status: row.status,
   completed: row.completed,
   completedAt: row.completed_at,
@@ -150,9 +152,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     const result = await pool.query(`
       INSERT INTO tasks (
         organization_id, title, description, assigned_to, priority, 
-        task_type, due_date, status, created_by
+        task_type, due_date, due_time, status, created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `, [
       organizationId,
@@ -162,6 +164,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       data.priority || 'medium',
       data.taskType || null,
       data.dueDate || null,
+      data.dueTime || null,
       status,
       userId,
     ]);
@@ -245,6 +248,10 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
         updates.push(`status = $${paramIndex++}`);
         values.push(finalStatus);
       }
+    }
+    if (data.dueTime !== undefined) {
+      updates.push(`due_time = $${paramIndex++}`);
+      values.push(data.dueTime);
     }
     if (data.status !== undefined && data.dueDate === undefined) {
       // Only update status if dueDate is not being updated

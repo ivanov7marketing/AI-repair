@@ -570,6 +570,9 @@ const DraggableTaskCard: React.FC<TaskCardProps> = ({ task, onEdit, onDelete, on
           }`}>
             <Calendar className="w-3 h-3" />
             {formatDate(task.dueDate)}
+            {task.dueTime && (
+              <span className="ml-1">{task.dueTime}</span>
+            )}
           </div>
         )}
         
@@ -613,7 +616,6 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, users, taskTypes, o
   const [title, setTitle] = useState(task?.title || '');
   const [description, setDescription] = useState(task?.description || '');
   const [assignedTo, setAssignedTo] = useState(task?.assignedTo || '');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>(task?.priority || 'medium');
   const [taskType, setTaskType] = useState(() => {
     if (!task?.taskType) return '';
     const isStandardType = TASK_TYPES.some(t => t.id === task.taskType);
@@ -622,7 +624,13 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, users, taskTypes, o
   const [customTaskType, setCustomTaskType] = useState(
     task?.taskType && !TASK_TYPES.some(t => t.id === task.taskType) ? task.taskType : ''
   );
-  const [dueDate, setDueDate] = useState(task?.dueDate ? (typeof task.dueDate === 'string' ? task.dueDate : task.dueDate.toISOString().split('T')[0]) : '');
+  const [dueDate, setDueDate] = useState(task?.dueDate ? (typeof task.dueDate === 'string' ? task.dueDate.split('T')[0] : task.dueDate.toISOString().split('T')[0]) : '');
+  const [dueTime, setDueTime] = useState(() => {
+    if (task?.dueTime) {
+      return typeof task.dueTime === 'string' ? task.dueTime : task.dueTime;
+    }
+    return '';
+  });
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -682,38 +690,20 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, users, taskTypes, o
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-architect-700 dark:text-architect-300 mb-1">
-                Исполнитель
-              </label>
-              <select
-                value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-700 text-architect-900 dark:text-white"
-              >
-                <option value="">Не назначен</option>
-                {users.map(user => (
-                  <option key={user.id} value={user.id}>{user.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-architect-700 dark:text-architect-300 mb-1">
-                Приоритет
-              </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
-                className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-700 text-architect-900 dark:text-white"
-              >
-                <option value="low">Низкий</option>
-                <option value="medium">Средний</option>
-                <option value="high">Высокий</option>
-                <option value="urgent">Срочно</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-architect-700 dark:text-architect-300 mb-1">
+              Исполнитель
+            </label>
+            <select
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+              className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-700 text-architect-900 dark:text-white"
+            >
+              <option value="">Не назначен</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>{user.name}</option>
+              ))}
+            </select>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -761,12 +751,24 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, users, taskTypes, o
             
             <div>
               <label className="block text-sm font-medium text-architect-700 dark:text-architect-300 mb-1">
-                Срок выполнения
+                Дата выполнения
               </label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+                className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-700 text-architect-900 dark:text-white"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-architect-700 dark:text-architect-300 mb-1">
+                Время выполнения
+              </label>
+              <input
+                type="time"
+                value={dueTime}
+                onChange={(e) => setDueTime(e.target.value)}
                 className="w-full px-3 py-2 border border-architect-300 dark:border-architect-600 rounded-lg bg-white dark:bg-architect-700 text-architect-900 dark:text-white"
               />
             </div>

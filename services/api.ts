@@ -830,6 +830,7 @@ class ApiClient {
     priority?: 'low' | 'medium' | 'high' | 'urgent';
     taskType?: string | null;
     dueDate?: string | null;
+    dueTime?: string | null;
     // status is auto-determined from dueDate on backend
   }) {
     return this.request<Task>('/api/tasks', {
@@ -845,6 +846,7 @@ class ApiClient {
     priority?: 'low' | 'medium' | 'high' | 'urgent';
     taskType?: string | null;
     dueDate?: string | null;
+    dueTime?: string | null;
     status?: 'today' | 'tomorrow' | 'week' | 'overdue' | 'future';
     completed?: boolean;
   }) {
